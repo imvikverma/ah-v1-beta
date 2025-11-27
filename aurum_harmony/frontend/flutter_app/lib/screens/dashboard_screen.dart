@@ -2,6 +2,9 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../constants.dart';
+import '../services/auth_service.dart';
+import '../widgets/account_balance_card.dart';
+import '../widgets/api_key_dialog.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -16,12 +19,48 @@ class _DashboardScreenState extends State<DashboardScreen> {
   bool _isError = false;
   Map<String, dynamic>? _userReport;
   bool _loadingReport = false;
+  String? _userId;
+
+  // Account balances (placeholder - will be fetched from backend in production)
+  double _dematOpening = 100000.0;
+  double _dematCurrent = 100000.0;
+  double _dematClosing = 0.0;
+  double _savingsOpening = 50000.0;
+  double _savingsCurrent = 50000.0;
+  double _savingsClosing = 0.0;
 
   @override
   void initState() {
     super.initState();
+    _loadUserId();
     _load();
-    _loadUserReport('user001'); // TODO: Get from auth context
+    _loadUserReport('user001');
+    _startBalanceUpdates();
+  }
+
+  Future<void> _loadUserId() async {
+    final userId = await AuthService.getUserId();
+    setState(() {
+      _userId = userId;
+    });
+    if (userId != null) {
+      _loadUserReport(userId);
+    }
+  }
+
+  void _startBalanceUpdates() {
+    // Simulate live balance updates during trading hours
+    // In production, this would be a WebSocket or polling connection
+    Future.delayed(const Duration(seconds: 5), () {
+      if (mounted) {
+        setState(() {
+          // Simulate small changes during trading
+          _dematCurrent = _dematOpening + (DateTime.now().millisecond % 1000) - 500;
+          _savingsCurrent = _savingsOpening + (DateTime.now().millisecond % 500) - 250;
+        });
+        _startBalanceUpdates();
+      }
+    });
   }
 
   Future<void> _load() async {
@@ -107,6 +146,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ),
                       ),
                       const Spacer(),
+                      IconButton(
+                        icon: const Icon(Icons.vpn_key, size: 20),
+                        tooltip: 'Manage API Keys',
+                        onPressed: () async {
+                          await showDialog(
+                            context: context,
+                            builder: (context) => const ApiKeyDialog(),
+                          );
+                        },
+                      ),
                       if (_time > 0)
                         Text(
                           '${DateTime.fromMillisecondsSinceEpoch(_time * 1000).toString().substring(11, 19)}',
@@ -181,6 +230,38 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ),
 
+          const SizedBox(height: 16),
+
+          // Account Balances Section
+          Row(
+            children: [
+              Expanded(
+                child: AccountBalanceCard(
+                  accountType: 'Demat',
+                  openingBalance: _dematOpening,
+                  currentBalance: _dematCurrent,
+                  closingBalance: _dematClosing,
+                  icon: Icons.account_balance,
+                  color: Colors.blueAccent,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: AccountBalanceCard(
+                  accountType: 'Savings',
+                  openingBalance: _savingsOpening,
+                  currentBalance: _savingsCurrent,
+                  closingBalance: _savingsClosing,
+                  icon: Icons.savings,
+                  color: Colors.greenAccent,
+                ),
+              ),
+            ],
+          ),
           const SizedBox(height: 16),
 
           // System Overview Card
