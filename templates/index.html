@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Aurum Harmony Dashboard</title>
+</head>
+<body>
+    <h1>Aurum Harmony Dashboard</h1>
+    <h2>Broker Token Status</h2>
+    <ul>
+        <li>HDFC Sky Token: {{ hdfc_token['access_token'] if hdfc_token else 'Not available' }}</li>
+        <li>Kotak Neo Token: {{ kotak_token['access_token'] if kotak_token else 'Not available' }}</li>
+    </ul>
+    <h2>Trade History</h2>
+    <ul>
+        {% for trade in trade_history %}
+            <li>{{ trade }}</li>
+        {% else %}
+            <li>No trades yet.</li>
+        {% endfor %}
+    </ul>
+</body>
+</html> 
