@@ -1,1 +1,27 @@
 .env
+# Local env & secrets
+.env
+Other_Files/API Keys.txt
+Other_Files/api_mangal_keshav.json
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Flutter / Dart
+build/
+.dart_tool/
+.packages
+.pub-cache/
+
+# Flutter platform builds
+aurum_harmony/frontend/flutter_app/android/.gradle/
+aurum_harmony/frontend/flutter_app/ios/Pods/
+
+# IDE / tooling
+.vscode/
+.idea/
+*.iml
+.DS_Store
+.cursor/
