@@ -1,8 +1,10 @@
 # engines/admin/Admin_Panel.py
 from flask import Flask, render_template, request, jsonify
+from flask_cors import CORS
 import time
 
 app = Flask(__name__, template_folder="../../templates")
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 # In-memory user DB (replace with PostgreSQL in production)
 users_db = {
