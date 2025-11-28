@@ -48,26 +48,40 @@ def predict():
 
     # 1. VIX adjustment
     vix_result = vix_adj.adjust(data["vix"], capital)
-
+    
     # 2. AI prediction
     prediction = ai_engine.predict(features)
-
+    
     # 3. Risk check
     risk_result = risk_engine.check_drawdown(capital, data.get("peak", capital))
-
+    
     return jsonify(
         {
-            "vix_adjustment": vix_result,
-            "prediction": prediction,
-            "risk": risk_result,
+        "vix_adjustment": vix_result,
+        "prediction": prediction,
+        "risk": risk_result,
             "timestamp": int(time.time()),
         }
     )
 
 @app.route('/settle', methods=['POST'])
 def settle():
+    """
+    Expected JSON payload (historic beta API):
+    {
+        "user_id": "U123",
+        "category": "restricted",  # NGD / restricted / semi / admin
+        "current_capital": 10000,
+        "gross_profit": 25000
+    }
+    """
     data = request.json
-    result = settlement_engine.settle(data["user_id"], data["gross_profit"])
+    result = settlement_engine.settle(
+        data["user_id"],
+        float(data["gross_profit"]),
+        data.get("category", "restricted"),
+        float(data.get("current_capital", 10000)),
+    )
     return jsonify(result)
 
 

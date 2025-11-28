@@ -21,6 +21,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
   bool _loadingReport = false;
   String? _userId;
 
+  // Historic "sacred" dashboard elements
+  double _liveCapital = 10000; // Live Capital (top bar)
+  double _todayPnL = 0; // Today’s P&L
+  int _tradesToday = 0;
+  int _maxTrades = 180;
+  String _activeIndex = 'NIFTY50'; // progressive unlock: NIFTY50 → BANKNIFTY → SENSEX
+  double _vixLevel = 18; // for VIX Mood Ring
+  Duration _nextIncrementCountdown = const Duration(hours: 3); // placeholder
+
   // Account balances (placeholder - will be fetched from backend in production)
   double _dematOpening = 100000.0;
   double _dematCurrent = 100000.0;
@@ -124,53 +133,179 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // Backend Status Card
+          // 1. Top bar: Live Capital (huge saffron number) + Today P&L
+          Card(
+            color: Colors.black,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Live Capital',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.white70,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '₹${_liveCapital.toStringAsFixed(0)}',
+                    style: TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                      color: colors.primary,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Text(
+                        'Today\'s P&L: ',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.white70,
+                        ),
+                      ),
+                      Text(
+                        '₹${_todayPnL.toStringAsFixed(0)}',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: _todayPnL >= 0
+                              ? Colors.greenAccent
+                              : Colors.redAccent,
+                        ),
+                      ),
+                      const Spacer(),
+                      Icon(
+                        _isError ? Icons.error_outline : Icons.check_circle,
+                        size: 16,
+                        color: _isError ? Colors.redAccent : colors.primary,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        _isError ? 'Backend Error' : 'Backend OK',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color:
+                              _isError ? Colors.redAccent : Colors.grey.shade400,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // 2. Active Indices + Trades Today / Max Trades
           Card(
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Icon(
-                        _isError ? Icons.error_outline : Icons.check_circle,
-                        color: _isError ? Colors.redAccent : colors.secondary,
-                      ),
-                      const SizedBox(width: 8),
-                      const Text(
-                        'Backend Status',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const Spacer(),
-                      IconButton(
-                        icon: const Icon(Icons.vpn_key, size: 20),
-                        tooltip: 'Manage API Keys',
-                        onPressed: () async {
-                          await showDialog(
-                            context: context,
-                            builder: (context) => const ApiKeyDialog(),
-                          );
-                        },
-                      ),
-                      if (_time > 0)
-                        Text(
-                          '${DateTime.fromMillisecondsSinceEpoch(_time * 1000).toString().substring(11, 19)}',
-                          style: TextStyle(
-                            color: Colors.grey.shade400,
-                            fontSize: 12,
-                          ),
-                        ),
-                    ],
+                  const Text(
+                    'Active Indices',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   const SizedBox(height: 8),
-                  Text(
-                    _status,
+                  Row(
+                    children: [
+                      _buildChip('NIFTY50', _activeIndex == 'NIFTY50'),
+                      const SizedBox(width: 8),
+                      _buildChip('BANKNIFTY', _activeIndex == 'BANKNIFTY'),
+                      const SizedBox(width: 8),
+                      _buildChip('SENSEX', _activeIndex == 'SENSEX'),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Trades Today',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.white70,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '$_tradesToday / $_maxTrades',
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                      // VIX Mood Ring (colour circle)
+                      Column(
+                        children: [
+                          const Text(
+                            'VIX Mood',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.white70,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Container(
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: _vixColor(_vixLevel),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            _vixLabel(_vixLevel),
+                            style: const TextStyle(
+                              fontSize: 10,
+                              color: Colors.white70,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // 3. Next Increment Countdown
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  const Icon(Icons.timer, size: 20, color: Colors.white70),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'Next Increment',
                     style: TextStyle(
-                      color: _isError ? Colors.redAccent : Colors.white70,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    _formatCountdown(_nextIncrementCountdown),
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ],
@@ -179,60 +314,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           const SizedBox(height: 16),
 
-          // Account Summary Card
-          if (_userReport != null)
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Account Summary',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        _buildStatColumn(
-                          'Capital',
-                          '₹${_userReport!['capital'] ?? '0'}',
-                          Icons.account_balance_wallet,
-                        ),
-                        _buildStatColumn(
-                          'P&L',
-                          '₹${_userReport!['pnl'] ?? '0'}',
-                          Icons.trending_up,
-                          color: (_userReport!['pnl'] as num? ?? 0) >= 0
-                              ? Colors.greenAccent
-                              : Colors.redAccent,
-                        ),
-                        _buildStatColumn(
-                          'Trades',
-                          '${_userReport!['total_trades'] ?? 0}',
-                          Icons.swap_horiz,
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            )
-          else if (_loadingReport)
-            const Card(
-              child: Padding(
-                padding: EdgeInsets.all(32),
-                child: Center(child: CircularProgressIndicator()),
-              ),
-            ),
-
-          const SizedBox(height: 16),
-
-          // Account Balances Section
+          // 4. Demat + Savings account balances (historic placeholders)
           Row(
             children: [
               Expanded(
@@ -245,11 +327,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   color: Colors.blueAccent,
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
+              const SizedBox(width: 12),
               Expanded(
                 child: AccountBalanceCard(
                   accountType: 'Savings',
@@ -262,41 +340,50 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 16),
-
-          // System Overview Card
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
-                  Text(
-                    'System Overview',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  SizedBox(height: 8),
-                  Text(
-                    'AurumHarmony v1.0 Beta\n'
-                    'Trading Mode: PAPER\n'
-                    'Orchestrator: Idle\n\n'
-                    'Future versions will show:\n'
-                    '• Real-time P&L charts\n'
-                    '• Risk usage vs limits\n'
-                    '• Recent trades feed\n'
-                    '• VIX-adjusted capacity',
-                    style: TextStyle(color: Colors.white70),
-                  ),
-                ],
-              ),
-            ),
-          ),
         ],
       ),
     );
+  }
+
+  Widget _buildChip(String label, bool active) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: active ? Colors.orange.withOpacity(0.2) : Colors.grey.shade900,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: active ? Colors.orange : Colors.grey.shade700,
+        ),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 12,
+          color: active ? Colors.orange : Colors.white70,
+        ),
+      ),
+    );
+  }
+
+  Color _vixColor(double vix) {
+    if (vix < 15) return Colors.green;
+    if (vix < 20) return Colors.lightGreen;
+    if (vix < 30) return Colors.orange;
+    return Colors.red;
+  }
+
+  String _vixLabel(double vix) {
+    if (vix < 15) return 'Calm';
+    if (vix < 20) return 'Normal';
+    if (vix < 30) return 'Anxious';
+    return 'Volatile';
+  }
+
+  String _formatCountdown(Duration d) {
+    final h = d.inHours.toString().padLeft(2, '0');
+    final m = (d.inMinutes % 60).toString().padLeft(2, '0');
+    final s = (d.inSeconds % 60).toString().padLeft(2, '0');
+    return '$h:$m:$s';
   }
 
   Widget _buildStatColumn(String label, String value, IconData icon,
