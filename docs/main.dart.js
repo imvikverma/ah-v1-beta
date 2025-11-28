@@ -43130,7 +43130,7 @@ var $async$tB=A.O(function(a,b){if(a===1){p.push(b)
 s=q}for(;;)switch(s){case 0:q=3
 o.Z(new A.an9(o))
 s=6
-return A.Q(A.a_G(A.f7("http://localhost:5000/health")),$async$tB)
+return A.Q(A.a_G(A.f7("https://511c2957361a.ngrok-free.app/health")),$async$tB)
 case 6:n=b
 if(n.b===200){k=n
 m=t.P.a(B.bf.oc(A.IC(A.Iw(k.e)).dF(k.w),null))
@@ -43155,7 +43155,7 @@ var $async$pH=A.O(function(b,c){if(b===1){p.push(c)
 s=q}for(;;)switch(s){case 0:n.Z(new A.an6(n))
 q=3
 s=6
-return A.Q(A.a_G(A.f7("http://localhost:5000/report/user/"+a)),$async$pH)
+return A.Q(A.a_G(A.f7("https://511c2957361a.ngrok-free.app/report/user/"+a)),$async$pH)
 case 6:m=c
 if(m.b===200){k=m
 l=t.P.a(B.bf.oc(A.IC(A.Iw(k.e)).dF(k.w),null))
@@ -43443,7 +43443,7 @@ var $async$tF=A.O(function(a,b){if(a===1){p.push(b)
 s=q}for(;;)switch(s){case 0:n.Z(new A.arO(n))
 q=3
 s=6
-return A.Q(A.a_G(A.f7("http://localhost:5000/report/user/user001")),$async$tF)
+return A.Q(A.a_G(A.f7("https://511c2957361a.ngrok-free.app/report/user/user001")),$async$tF)
 case 6:m=b
 if(m.b===200){j=m
 l=t.P.a(B.bf.oc(A.IC(A.Iw(j.e)).dF(j.w),null))
@@ -43473,7 +43473,7 @@ s=q}for(;;)switch(s){case 0:n.Z(new A.arT(n))
 q=3
 m=a==="realistic"?"/backtest/realistic":"/backtest/edge"
 s=6
-return A.Q(A.a_G(A.f7("http://localhost:5000"+A.k(m))),$async$tT)
+return A.Q(A.a_G(A.f7("https://511c2957361a.ngrok-free.app"+A.k(m))),$async$tT)
 case 6:l=c
 if(l.b===200){i=l
 k=t.P.a(B.bf.oc(A.IC(A.Iw(i.e)).dF(i.w),null))
@@ -43575,7 +43575,7 @@ y0(){var s=0,r=A.N(t.H),q=1,p=[],o=[],n=this,m,l,k,j,i,h,g,f
 var $async$y0=A.O(function(a,b){if(a===1){p.push(b)
 s=q}for(;;)switch(s){case 0:n.Z(new A.atM(n))
 q=3
-j=A.f7("http://localhost:5000/predict")
+j=A.f7("https://511c2957361a.ngrok-free.app/predict")
 i=t.N
 h=A.ap(["Content-Type","application/json"],i,i)
 s=6
