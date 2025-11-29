@@ -69,9 +69,16 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add docs
+          git status
           if ! git diff --staged --quiet; then
+            echo "Committing fallback changes..."
             git commit -m "Auto-deploy: Update Flutter web build (fallback)"
+            echo "Pushing to GitHub..."
+            git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
             git push origin HEAD:${{ github.ref }}
+            echo "Fallback push completed"
+          else
+            echo "No changes to commit in fallback"
           fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
