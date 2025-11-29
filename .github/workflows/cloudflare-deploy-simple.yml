@@ -1,0 +1,61 @@
+name: Deploy to Cloudflare Pages (Simple)
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - 'aurum_harmony/frontend/**'
+      - '.github/workflows/cloudflare-deploy-simple.yml'
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    name: Build Flutter Web and Commit to docs/
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'  # Update to your Flutter version
+          channel: 'stable'
+
+      - name: Get Flutter dependencies
+        working-directory: aurum_harmony/frontend/flutter_app
+        run: flutter pub get
+
+      - name: Build Flutter web
+        working-directory: aurum_harmony/frontend/flutter_app
+        run: |
+          flutter clean
+          flutter build web --release
+
+      - name: Prepare docs directory
+        run: |
+          if [ -d "docs" ]; then
+            rm -rf docs
+          fi
+          mkdir -p docs
+
+      - name: Copy build to docs
+        run: |
+          cp -r aurum_harmony/frontend/flutter_app/build/web/* docs/
+
+      - name: Commit and push docs
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add docs
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Auto-deploy: Update Flutter web build [skip ci]"
+            git push
+          fi
