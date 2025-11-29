@@ -8,12 +8,15 @@ on:
     paths:
       - 'aurum_harmony/frontend/**'
       - '.github/workflows/cloudflare-deploy.yml'
+      - 'docs/**'  # Also trigger when docs/ changes
   workflow_dispatch:  # Allow manual trigger
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     name: Build and Deploy Flutter Web
+    permissions:
+      contents: write  # Required to push commits
     
     steps:
       - name: Checkout code
@@ -24,8 +27,9 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.0'  # Update to your Flutter version
+          flutter-version: '3.27.0'  # Latest stable
           channel: 'stable'
+          cache: true
 
       - name: Get Flutter dependencies
         working-directory: aurum_harmony/frontend/flutter_app
@@ -35,7 +39,9 @@ jobs:
         working-directory: aurum_harmony/frontend/flutter_app
         run: |
           flutter clean
-          flutter build web --release
+          flutter pub get
+          flutter build web --release --verbose
+        continue-on-error: false
 
       - name: Prepare docs directory
         run: |
@@ -63,5 +69,9 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add docs
-          git diff --staged --quiet || git commit -m "Auto-deploy: Update Flutter web build [skip ci]"
-          git push
+          if ! git diff --staged --quiet; then
+            git commit -m "Auto-deploy: Update Flutter web build (fallback)"
+            git push origin HEAD:${{ github.ref }}
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
