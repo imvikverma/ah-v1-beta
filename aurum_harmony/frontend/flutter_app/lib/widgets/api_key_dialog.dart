@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/auth_service.dart';
 
 class ApiKeyDialog extends StatefulWidget {
@@ -46,20 +47,16 @@ class _ApiKeyDialogState extends State<ApiKeyDialog> {
     });
 
     try {
-      final creds = await AuthService.getCredentials();
-      final userId = creds['user_id'] ?? 'user001';
-
-      await AuthService.login(
-        userId: userId,
-        apiKey: _apiKeyController.text.trim(),
-        apiSecret: _apiSecretController.text.trim(),
-      );
+      // Save API credentials to SharedPreferences
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('api_key', _apiKeyController.text.trim());
+      await prefs.setString('api_secret', _apiSecretController.text.trim());
 
       if (mounted) {
         Navigator.of(context).pop(true);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('API credentials updated successfully'),
+          SnackBar(
+            content: SelectableText('API credentials saved successfully'),
             backgroundColor: Colors.green,
           ),
         );
@@ -68,7 +65,7 @@ class _ApiKeyDialogState extends State<ApiKeyDialog> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: $e'),
+            content: SelectableText('Error saving credentials: $e'),
             backgroundColor: Colors.red,
           ),
         );
