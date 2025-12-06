@@ -7,8 +7,7 @@
 
 ### Prerequisites
 - Python 3.8+
-- Flutter SDK
-- ngrok (for webhook testing)
+- Flutter SDK
 - Broker API credentials (HDFC Sky, Kotak Neo)
 
 ### Quick Launch
@@ -18,15 +17,13 @@
 
 # Or start services individually:
 .\scripts\start_backend.ps1      # Flask backend (port 5000)
-.\scripts\start_ngrok.ps1        # Ngrok tunnel
 .\scripts\start_flutter.ps1       # Flutter web app
 \\\
 
 ### First Time Setup
 1. **Environment Variables**: Create \.env\ file with broker credentials
    - See \docs/setup/\ for detailed guides
-2. **Ngrok Setup**: Run \.\scripts\setup\setup_ngrok_authtoken.ps1\
-3. **Broker Integration**: 
+2. **Broker Integration**: 
    - HDFC Sky: \.\scripts\brokers\get_hdfc_request_token.ps1\
    - Kotak Neo: \.\scripts\brokers\add_kotak_token.ps1\
 
@@ -96,11 +93,7 @@ KOTAK_NEO_ACCESS_TOKEN=your_token
 
 # Trading Mode
 AURUM_TRADING_MODE=PAPER  # or LIVE
-
-# Ngrok (for webhooks)
-NGROK_URL=https://your-url.ngrok-free.app
-\\\
-
+
 See \docs/setup/\ for detailed configuration guides.
 
 ## 📚 Documentation
