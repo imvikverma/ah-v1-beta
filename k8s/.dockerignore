@@ -1,0 +1,55 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info
+dist
+build
+.venv
+venv
+env
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Logs
+logs/
+*.log
+
+# Environment
+.env
+.env.local
+
+# Documentation
+docs/
+*.md
+README.md
+
+# Tests
+tests/
+test_*.py
+
+# Flutter
+aurum_harmony/frontend/
+
+# Scripts
+scripts/
+zzz-quick-access/
+
+# Other
+Old_Files/
+Other_Files/
+fabric/
+templates/
+

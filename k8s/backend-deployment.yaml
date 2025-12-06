@@ -1,0 +1,204 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aurumharmony-backend
+  namespace: aurumharmony
+  labels:
+    app: aurumharmony-backend
+spec:
+  replicas: 3  # Start with 3, scale based on load
+  selector:
+    matchLabels:
+      app: aurumharmony-backend
+  template:
+    metadata:
+      labels:
+        app: aurumharmony-backend
+    spec:
+      containers:
+      - name: flask-backend
+        image: aurumharmony/backend:latest  # Update with your container registry
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 5000
+          name: http
+          protocol: TCP
+        - containerPort: 5001
+          name: admin
+          protocol: TCP
+        env:
+        # ConfigMap values
+        - name: FLASK_ENV
+          valueFrom:
+            configMapKeyRef:
+              name: aurumharmony-config
+              key: FLASK_ENV
+        - name: PYTHONUNBUFFERED
+          valueFrom:
+            configMapKeyRef:
+              name: aurumharmony-config
+              key: PYTHONUNBUFFERED
+        - name: DATABASE_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: aurumharmony-config
+              key: DATABASE_HOST
+        - name: DATABASE_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: aurumharmony-config
+              key: DATABASE_PORT
+        - name: DATABASE_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: aurumharmony-config
+              key: DATABASE_NAME
+        - name: REDIS_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: aurumharmony-config
+              key: REDIS_HOST
+        - name: REDIS_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: aurumharmony-config
+              key: REDIS_PORT
+        - name: AURUM_TRADING_MODE
+          valueFrom:
+            configMapKeyRef:
+              name: aurumharmony-config
+              key: AURUM_TRADING_MODE
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: aurumharmony-config
+              key: LOG_LEVEL
+        # Secret values
+        - name: DATABASE_USER
+          valueFrom:
+            secretKeyRef:
+              name: aurumharmony-secrets
+              key: DATABASE_USER
+        - name: DATABASE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: aurumharmony-secrets
+              key: DATABASE_PASSWORD
+        - name: FLASK_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: aurumharmony-secrets
+              key: FLASK_SECRET_KEY
+        - name: JWT_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: aurumharmony-secrets
+              key: JWT_SECRET_KEY
+        - name: AURUM_ENCRYPTION_KEY
+          valueFrom:
+            secretKeyRef:
+              name: aurumharmony-secrets
+              key: AURUM_ENCRYPTION_KEY
+        - name: HDFC_SKY_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: aurumharmony-secrets
+              key: HDFC_SKY_API_KEY
+        - name: HDFC_SKY_API_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: aurumharmony-secrets
+              key: HDFC_SKY_API_SECRET
+        - name: HDFC_SKY_TOKEN_ID
+          valueFrom:
+            secretKeyRef:
+              name: aurumharmony-secrets
+              key: HDFC_SKY_TOKEN_ID
+        - name: KOTAK_NEO_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: aurumharmony-secrets
+              key: KOTAK_NEO_API_KEY
+        - name: KOTAK_NEO_API_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: aurumharmony-secrets
+              key: KOTAK_NEO_API_SECRET
+        - name: KOTAK_NEO_ACCESS_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: aurumharmony-secrets
+              key: KOTAK_NEO_ACCESS_TOKEN
+        - name: MANGAL_KESHAV_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: aurumharmony-secrets
+              key: MANGAL_KESHAV_API_KEY
+        - name: MANGAL_KESHAV_API_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: aurumharmony-secrets
+              key: MANGAL_KESHAV_API_SECRET
+        - name: NGROK_URL
+          valueFrom:
+            secretKeyRef:
+              name: aurumharmony-secrets
+              key: NGROK_URL
+        volumeMounts:
+        - name: logs
+          mountPath: /app/logs
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 5000
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 5000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 3
+        startupProbe:
+          httpGet:
+            path: /health
+            port: 5000
+          initialDelaySeconds: 0
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 30
+      volumes:
+      - name: logs
+        emptyDir: {}  # For production, use PersistentVolumeClaim or log aggregation
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: aurumharmony-backend-service
+  namespace: aurumharmony
+spec:
+  type: ClusterIP
+  selector:
+    app: aurumharmony-backend
+  ports:
+  - name: http
+    port: 5000
+    targetPort: 5000
+    protocol: TCP
+  - name: admin
+    port: 5001
+    targetPort: 5001
+    protocol: TCP
+

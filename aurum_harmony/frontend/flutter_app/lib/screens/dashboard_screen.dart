@@ -5,6 +5,7 @@ import '../constants.dart';
 import '../services/auth_service.dart';
 import '../widgets/account_balance_card.dart';
 import '../widgets/api_key_dialog.dart';
+import '../utils/theme_colors.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -135,17 +136,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
         children: [
           // 1. Top bar: Live Capital (huge saffron number) + Today P&L
           Card(
-            color: Colors.black,
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'Live Capital',
                     style: TextStyle(
                       fontSize: 12,
-                      color: Colors.white70,
+                      color: ThemeColors.textSecondary(context),
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -162,9 +162,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     children: [
                       Text(
                         'Today\'s P&L: ',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
-                          color: Colors.white70,
+                          color: ThemeColors.textSecondary(context),
                         ),
                       ),
                       Text(
@@ -173,23 +173,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
                           color: _todayPnL >= 0
-                              ? Colors.greenAccent
-                              : Colors.redAccent,
+                              ? ThemeColors.success(context)
+                              : ThemeColors.error(context),
                         ),
                       ),
                       const Spacer(),
                       Icon(
                         _isError ? Icons.error_outline : Icons.check_circle,
                         size: 16,
-                        color: _isError ? Colors.redAccent : colors.primary,
+                        color: _isError
+                            ? ThemeColors.error(context)
+                            : colors.primary,
                       ),
                       const SizedBox(width: 4),
                       Text(
                         _isError ? 'Backend Error' : 'Backend OK',
                         style: TextStyle(
                           fontSize: 12,
-                          color:
-                              _isError ? Colors.redAccent : Colors.grey.shade400,
+                          color: _isError
+                              ? ThemeColors.error(context)
+                              : ThemeColors.textTertiary(context),
                         ),
                       ),
                     ],
@@ -264,7 +267,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             height: 32,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              color: _vixColor(_vixLevel),
+                              color: _vixColor(context, _vixLevel),
                             ),
                           ),
                           const SizedBox(height: 4),
@@ -365,11 +368,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Color _vixColor(double vix) {
-    if (vix < 15) return Colors.green;
-    if (vix < 20) return Colors.lightGreen;
-    if (vix < 30) return Colors.orange;
-    return Colors.red;
+  Color _vixColor(BuildContext context, double vix) {
+    if (vix < 15) return ThemeColors.success(context);
+    if (vix < 20) return ThemeColors.success(context).withOpacity(0.7);
+    if (vix < 30) return ThemeColors.warning(context);
+    return ThemeColors.error(context);
   }
 
   String _vixLabel(double vix) {

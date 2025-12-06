@@ -1,0 +1,61 @@
+2025-11-29 12:43:47 - AurumHarmony - INFO - <module>:46 - Kotak Neo integration loaded successfully
+2025-11-29 12:43:47 - AurumHarmony - INFO - <module>:54 - HDFC Sky integration loaded successfully
+2025-11-29 12:43:47 - AurumHarmony - INFO - <module>:752 - ============================================================
+2025-11-29 12:43:47 - AurumHarmony - INFO - <module>:753 - Starting AurumHarmony v1.0 Beta
+2025-11-29 12:43:47 - AurumHarmony - INFO - <module>:754 - Broker integrations: Kotak Neo=True, HDFC Sky=True
+2025-11-29 12:43:47 - AurumHarmony - INFO - <module>:755 - ============================================================
+2025-11-29 12:43:47 - AurumHarmony - INFO - <module>:762 - Main Flask app started on port 5000
+2025-11-29 12:49:12 - AurumHarmony - INFO - <module>:46 - Kotak Neo integration loaded successfully
+2025-11-29 12:49:12 - AurumHarmony - INFO - <module>:54 - HDFC Sky integration loaded successfully
+2025-11-29 12:49:12 - AurumHarmony - INFO - <module>:752 - ============================================================
+2025-11-29 12:49:12 - AurumHarmony - INFO - <module>:753 - Starting AurumHarmony v1.0 Beta
+2025-11-29 12:49:12 - AurumHarmony - INFO - <module>:754 - Broker integrations: Kotak Neo=True, HDFC Sky=True
+2025-11-29 12:49:12 - AurumHarmony - INFO - <module>:755 - ============================================================
+2025-11-29 12:49:12 - AurumHarmony - INFO - <module>:762 - Main Flask app started on port 5000
+2025-11-29 12:57:50 - AurumHarmony - INFO - <module>:46 - Kotak Neo integration loaded successfully
+2025-11-29 12:57:50 - AurumHarmony - INFO - <module>:54 - HDFC Sky integration loaded successfully
+2025-11-29 12:57:50 - AurumHarmony - INFO - <module>:752 - ============================================================
+2025-11-29 12:57:50 - AurumHarmony - INFO - <module>:753 - Starting AurumHarmony v1.0 Beta
+2025-11-29 12:57:50 - AurumHarmony - INFO - <module>:754 - Broker integrations: Kotak Neo=True, HDFC Sky=True
+2025-11-29 12:57:50 - AurumHarmony - INFO - <module>:755 - ============================================================
+2025-11-29 12:57:50 - AurumHarmony - INFO - <module>:762 - Main Flask app started on port 5000
+2025-11-29 13:02:06 - AurumHarmony - INFO - <module>:46 - Kotak Neo integration loaded successfully
+2025-11-29 13:02:06 - AurumHarmony - INFO - <module>:54 - HDFC Sky integration loaded successfully
+2025-11-29 13:02:06 - AurumHarmony - INFO - <module>:752 - ============================================================
+2025-11-29 13:02:06 - AurumHarmony - INFO - <module>:753 - Starting AurumHarmony v1.0 Beta
+2025-11-29 13:02:06 - AurumHarmony - INFO - <module>:754 - Broker integrations: Kotak Neo=True, HDFC Sky=True
+2025-11-29 13:02:06 - AurumHarmony - INFO - <module>:755 - ============================================================
+2025-11-29 13:02:06 - AurumHarmony - INFO - <module>:762 - Main Flask app started on port 5000
+2025-11-29 13:30:38 - AurumHarmony - INFO - <module>:46 - Kotak Neo integration loaded successfully
+2025-11-29 13:30:38 - AurumHarmony - INFO - <module>:54 - HDFC Sky integration loaded successfully
+2025-11-29 13:30:38 - AurumHarmony - INFO - <module>:752 - ============================================================
+2025-11-29 13:30:38 - AurumHarmony - INFO - <module>:753 - Starting AurumHarmony v1.0 Beta
+2025-11-29 13:30:38 - AurumHarmony - INFO - <module>:754 - Broker integrations: Kotak Neo=True, HDFC Sky=True
+2025-11-29 13:30:38 - AurumHarmony - INFO - <module>:755 - ============================================================
+2025-11-29 13:30:38 - AurumHarmony - INFO - <module>:762 - Main Flask app started on port 5000
+2025-11-29 14:58:44 - AurumHarmony - INFO - <module>:47 - Kotak Neo integration loaded successfully
+2025-11-29 14:58:44 - AurumHarmony - INFO - <module>:55 - HDFC Sky integration loaded successfully
+2025-11-29 14:58:44 - AurumHarmony - WARNING - <module>:69 - Database/auth modules not available: No module named 'flask_sqlalchemy'
+2025-11-29 14:58:44 - AurumHarmony - INFO - <module>:824 - ============================================================
+2025-11-29 14:58:44 - AurumHarmony - INFO - <module>:825 - Starting AurumHarmony v1.0 Beta
+2025-11-29 14:58:44 - AurumHarmony - INFO - <module>:826 - Broker integrations: Kotak Neo=True, HDFC Sky=True
+2025-11-29 14:58:44 - AurumHarmony - INFO - <module>:827 - ============================================================
+2025-11-29 14:58:44 - AurumHarmony - INFO - <module>:834 - Main Flask app started on port 5000
+2025-11-29 15:19:13 - AurumHarmony - INFO - <module>:47 - Kotak Neo integration loaded successfully
+2025-11-29 15:19:14 - AurumHarmony - INFO - <module>:55 - HDFC Sky integration loaded successfully
+2025-11-29 15:19:14 - AurumHarmony - WARNING - <module>:69 - Database/auth modules not available: No module named 'flask_sqlalchemy'
+2025-11-29 15:19:14 - AurumHarmony - INFO - <module>:824 - ============================================================
+2025-11-29 15:19:14 - AurumHarmony - INFO - <module>:825 - Starting AurumHarmony v1.0 Beta
+2025-11-29 15:19:14 - AurumHarmony - INFO - <module>:826 - Broker integrations: Kotak Neo=True, HDFC Sky=True
+2025-11-29 15:19:14 - AurumHarmony - INFO - <module>:827 - ============================================================
+2025-11-29 15:19:14 - AurumHarmony - INFO - <module>:834 - Main Flask app started on port 5000
+2025-11-29 16:17:43 - AurumHarmony - INFO - <module>:837 - Admin panel started on port 5001
+2025-11-29 18:53:56 - AurumHarmony - INFO - <module>:47 - Kotak Neo integration loaded successfully
+2025-11-29 18:53:56 - AurumHarmony - INFO - <module>:55 - HDFC Sky integration loaded successfully
+2025-11-29 18:53:56 - AurumHarmony - WARNING - <module>:69 - Database/auth modules not available: No module named 'flask_sqlalchemy'
+2025-11-29 18:53:56 - AurumHarmony - INFO - <module>:824 - ============================================================
+2025-11-29 18:53:56 - AurumHarmony - INFO - <module>:825 - Starting AurumHarmony v1.0 Beta
+2025-11-29 18:53:56 - AurumHarmony - INFO - <module>:826 - Broker integrations: Kotak Neo=True, HDFC Sky=True
+2025-11-29 18:53:56 - AurumHarmony - INFO - <module>:827 - ============================================================
+2025-11-29 18:53:56 - AurumHarmony - INFO - <module>:834 - Main Flask app started on port 5000
+2025-11-29 19:56:22 - AurumHarmony - INFO - <module>:837 - Admin panel started on port 5001
