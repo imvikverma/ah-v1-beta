@@ -33,7 +33,7 @@ class _AurumHarmonyAppState extends State<AurumHarmonyApp> {
   int _index = 0;
   bool _isLoggedIn = false;
   bool _checkingAuth = true;
-  final ThemeService _themeService = ThemeService();
+  final ThemeService _themeService = ThemeService.instance;
 
   @override
   void initState() {
@@ -126,7 +126,15 @@ class _AurumHarmonyAppState extends State<AurumHarmonyApp> {
       themeMode: _themeService.themeMode,
       home: Scaffold(
         appBar: AppBar(
-          title: const Text('AurumHarmony v1.0 Beta'),
+          title: Image.asset(
+            'assets/logo/AurumHarmony_logo.png',
+            height: 32,
+            fit: BoxFit.contain,
+            errorBuilder: (context, error, stackTrace) {
+              // Fallback to text if logo not found
+              return const Text('AurumHarmony v1.0 Beta');
+            },
+          ),
           actions: [
             // Theme Toggle
             IconButton(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/theme_colors.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -77,15 +78,16 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   Color _getColorForType(String type) {
+    final colors = Theme.of(context).colorScheme;
     switch (type) {
       case 'trade':
-        return Colors.blueAccent;
+        return colors.primary; // Use theme primary (saffron) for trades
       case 'risk':
-        return Colors.orangeAccent;
+        return ThemeColors.warning(context);
       case 'system':
-        return Colors.greenAccent;
+        return ThemeColors.info(context);
       default:
-        return Colors.grey;
+        return colors.onSurface.withOpacity(0.6);
     }
   }
 
@@ -134,13 +136,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         Icon(
                           Icons.notifications_none,
                           size: 64,
-                          color: Colors.grey.shade600,
+                          color: colors.onSurface.withOpacity(0.4),
                         ),
                         const SizedBox(height: 16),
                         Text(
                           'No notifications',
                           style: TextStyle(
-                            color: Colors.grey.shade400,
+                            color: colors.onSurface.withOpacity(0.6),
                             fontSize: 16,
                           ),
                         ),
@@ -149,7 +151,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                           'Alerts will appear here when trades execute,\n'
                           'risk limits are breached, or system events occur.',
                           style: TextStyle(
-                            color: Colors.grey.shade600,
+                            color: colors.onSurface.withOpacity(0.5),
                             fontSize: 12,
                           ),
                           textAlign: TextAlign.center,
@@ -200,7 +202,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                   notif['timestamp'] as DateTime,
                                 ),
                                 style: TextStyle(
-                                  color: Colors.grey.shade500,
+                                  color: colors.onSurface.withOpacity(0.5),
                                   fontSize: 11,
                                 ),
                               ),
@@ -210,8 +212,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                               ? Container(
                                   width: 8,
                                   height: 8,
-                                  decoration: const BoxDecoration(
-                                    color: Colors.blueAccent,
+                                  decoration: BoxDecoration(
+                                    color: colors.primary,
                                     shape: BoxShape.circle,
                                   ),
                                 )
@@ -237,20 +239,49 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     ColorScheme colors,
   ) {
     final isSelected = _filter == value;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return FilterChip(
-      label: Text(label),
+      label: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (isSelected) ...[
+            Icon(
+              Icons.check,
+              size: 16,
+              color: isSelected ? colors.primary : colors.onSurface,
+            ),
+            const SizedBox(width: 4),
+          ],
+          Text(label),
+        ],
+      ),
       selected: isSelected,
       onSelected: (selected) {
         setState(() {
           _filter = value;
         });
       },
-      selectedColor: colors.primary.withOpacity(0.3),
+      backgroundColor: isSelected 
+          ? colors.primary.withOpacity(isDark ? 0.3 : 0.2)
+          : colors.surface,
+      selectedColor: colors.primary.withOpacity(isDark ? 0.3 : 0.2),
       checkmarkColor: colors.primary,
-      labelStyle: TextStyle(
-        color: isSelected ? colors.primary : Colors.white70,
-        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+      side: BorderSide(
+        color: isSelected 
+            ? colors.primary 
+            : (isDark ? colors.outline : colors.outline.withOpacity(0.5)),
+        width: isSelected ? 1.5 : 1,
       ),
+      labelStyle: TextStyle(
+        color: isSelected 
+            ? colors.primary 
+            : colors.onSurface.withOpacity(isDark ? 0.9 : 0.7),
+        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+        fontSize: 13,
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
     );
   }
 }

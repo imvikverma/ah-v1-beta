@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../constants.dart';
+import '../services/auth_service.dart';
 
 class TradeScreen extends StatefulWidget {
   const TradeScreen({super.key});
@@ -14,11 +15,23 @@ class _TradeScreenState extends State<TradeScreen> {
   List<Map<String, dynamic>> _positions = [];
   bool _loading = false;
   String? _error;
+  bool _isAdmin = false;
+  bool _indemnityAccepted = false;
 
   @override
   void initState() {
     super.initState();
+    _checkPermissions();
     _loadPositions();
+  }
+
+  Future<void> _checkPermissions() async {
+    final isAdmin = await AuthService.isAdmin();
+    final indemnityAccepted = await AuthService.hasAcceptedIndemnity();
+    setState(() {
+      _isAdmin = isAdmin;
+      _indemnityAccepted = indemnityAccepted;
+    });
   }
 
   Future<void> _loadPositions() async {
@@ -35,7 +48,102 @@ class _TradeScreenState extends State<TradeScreen> {
     });
   }
 
+  Future<void> _showIndemnityDialog() async {
+    final accepted = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.warning, color: Colors.red, size: 32),
+            SizedBox(width: 12),
+            Expanded(child: Text('Financial Risk Warning')),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'IMPORTANT: HIGH RISK TRADING CONTROLS',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  color: Colors.red,
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'You are about to access advanced trading controls that can result in significant financial losses. By proceeding, you acknowledge and agree to the following:',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 12),
+              const Text('1. Trading involves substantial risk of loss and is not suitable for all investors.'),
+              const SizedBox(height: 8),
+              const Text('2. Past performance is not indicative of future results.'),
+              const SizedBox(height: 8),
+              const Text('3. You are solely responsible for all trading decisions and their consequences.'),
+              const SizedBox(height: 8),
+              const Text('4. AurumHarmony and its operators are not liable for any losses incurred.'),
+              const SizedBox(height: 8),
+              const Text('5. You have the necessary knowledge and experience to use these controls.'),
+              const SizedBox(height: 16),
+              const Text(
+                'This feature requires elevated credentials and is intended for experienced traders only.',
+                style: TextStyle(
+                  fontStyle: FontStyle.italic,
+                  color: Colors.orange,
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('I Accept the Risks'),
+          ),
+        ],
+      ),
+    );
+
+    if (accepted == true) {
+      await AuthService.acceptIndemnity();
+      setState(() {
+        _indemnityAccepted = true;
+      });
+    }
+  }
+
   Future<void> _runPrediction() async {
+    // Check admin access
+    if (!_isAdmin) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Access denied: Admin credentials required'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // Check indemnity
+    if (!_indemnityAccepted) {
+      await _showIndemnityDialog();
+      if (!_indemnityAccepted) {
+        return; // User declined indemnity
+      }
+    }
+
     setState(() {
       _loading = true;
     });
@@ -85,63 +193,110 @@ class _TradeScreenState extends State<TradeScreen> {
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // Strategy Controls Card
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Strategy Controls',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: _loading ? null : _runPrediction,
-                          icon: const Icon(Icons.play_arrow),
-                          label: const Text('Run Prediction'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: colors.primary,
-                            foregroundColor: Colors.black,
+          // Strategy Controls Card (Admin Only)
+          if (_isAdmin) ...[
+            Card(
+              color: colors.surfaceVariant.withOpacity(0.3),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.admin_panel_settings, color: colors.primary),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'Strategy Controls',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Pause All Trading'),
-                              ),
-                            );
-                          },
-                          icon: const Icon(Icons.pause),
-                          label: const Text('Pause All'),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Handsfree trading is controlled by the backend orchestrator.\n'
-                    'Use these controls for manual overrides.',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.white60,
+                        const Spacer(),
+                        if (!_indemnityAccepted)
+                          Chip(
+                            label: const Text('Indemnity Required'),
+                            backgroundColor: Colors.orange.withOpacity(0.3),
+                            labelStyle: const TextStyle(fontSize: 10),
+                          ),
+                      ],
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: _loading ? null : _runPrediction,
+                            icon: const Icon(Icons.play_arrow),
+                            label: const Text('Run Prediction'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: colors.primary,
+                              foregroundColor: Colors.black,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: _indemnityAccepted
+                                ? () {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Pause All Trading'),
+                                      ),
+                                    );
+                                  }
+                                : _showIndemnityDialog,
+                            icon: const Icon(Icons.pause),
+                            label: const Text('Pause All'),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      _indemnityAccepted
+                          ? 'Handsfree trading is controlled by the backend orchestrator.\n'
+                              'Use these controls for manual overrides.'
+                          : '⚠️ You must accept the indemnity agreement to use these controls.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: _indemnityAccepted
+                            ? colors.onSurface.withOpacity(0.7)
+                            : Colors.orange,
+                        fontWeight: _indemnityAccepted ? FontWeight.normal : FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
+          ] else ...[
+            // Hidden for non-admin users - show nothing or a placeholder
+            Card(
+              color: colors.surfaceVariant.withOpacity(0.1),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Icon(Icons.lock, color: colors.onSurface.withOpacity(0.5)),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Advanced trading controls are restricted to authorized personnel only.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: colors.onSurface.withOpacity(0.5),
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
           const SizedBox(height: 16),
 
           // Open Positions Card

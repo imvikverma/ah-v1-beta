@@ -35,10 +35,11 @@ def require_auth(f):
     return wrapper
 
 
-@auth_bp.route('/register', methods=['POST'])
+@auth_bp.route('/register', methods=['POST', 'OPTIONS'])
 def register():
-    # OPTIONS is handled automatically by flask_cors
     """Register a new user."""
+    if request.method == 'OPTIONS':
+        return '', 200
     data = request.get_json() or {}
     
     email = data.get('email', '').strip()
@@ -62,10 +63,12 @@ def register():
         return jsonify({'error': result['error']}), 400
 
 
-@auth_bp.route('/login', methods=['POST'])
+@auth_bp.route('/login', methods=['POST', 'OPTIONS'])
 def login():
-    # OPTIONS is handled automatically by flask_cors
     """Login and get session token."""
+    # Handle OPTIONS preflight request
+    if request.method == 'OPTIONS':
+        return '', 200
     data = request.get_json() or {}
     
     email = data.get('email', '').strip()
@@ -90,9 +93,11 @@ def login():
         return jsonify({'error': result['error']}), 401
 
 
-@auth_bp.route('/logout', methods=['POST'])
+@auth_bp.route('/logout', methods=['POST', 'OPTIONS'])
 def logout():
-    # OPTIONS is handled automatically by flask_cors
+    """Logout and invalidate session token."""
+    if request.method == 'OPTIONS':
+        return '', 200
     
     # Check auth for POST requests
     token = request.headers.get('Authorization')
@@ -108,9 +113,11 @@ def logout():
         return jsonify({'error': 'Logout failed'}), 400
 
 
-@auth_bp.route('/me', methods=['GET'])
+@auth_bp.route('/me', methods=['GET', 'OPTIONS'])
 def get_current_user():
-    # OPTIONS is handled automatically by flask_cors
+    """Get current user information."""
+    if request.method == 'OPTIONS':
+        return '', 200
     
     # Check auth
     token = request.headers.get('Authorization')

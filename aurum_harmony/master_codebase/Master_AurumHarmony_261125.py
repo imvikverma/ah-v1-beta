@@ -31,17 +31,27 @@ from engines.admin.Admin_Panel import app as admin_app
 # Import auth and broker blueprints
 try:
     from aurum_harmony.auth.routes import auth_bp
-    from aurum_harmony.brokers.routes import brokers_bp
+    from aurum_harmony.brokers import brokers_bp
     from aurum_harmony.database.db import init_db
     AUTH_AVAILABLE = True
 except ImportError as e:
     print(f"⚠ Auth blueprint not available: {e}")
+    import traceback
+    traceback.print_exc()
     AUTH_AVAILABLE = False
     auth_bp = None
     brokers_bp = None
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "*"}})
+# Configure CORS to handle OPTIONS requests properly
+CORS(app, resources={
+    r"/*": {
+        "origins": "*",
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization", "X-Requested-With"],
+        "supports_credentials": True
+    }
+})
 
 # Initialize database and register blueprints
 if AUTH_AVAILABLE:

@@ -8,9 +8,9 @@ flutter pub get
 
 Write-Host ""
 Write-Host "Starting Flutter web app..." -ForegroundColor Green
-Write-Host "App will open in Chrome browser" -ForegroundColor Yellow
 Write-Host "Press Ctrl+C to stop" -ForegroundColor Gray
 Write-Host ""
 
-flutter run -d chrome
+# Use web-server to avoid "Launching lib \chrome" message
+flutter run -d web-server --web-port=58643
 

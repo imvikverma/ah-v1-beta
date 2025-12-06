@@ -3,16 +3,30 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 /// Theme Service for managing Light and Dark modes
 /// Persists theme preference and provides theme data
+/// Singleton pattern to ensure all widgets use the same instance
 class ThemeService extends ChangeNotifier {
   static const String _themeKey = 'theme_mode';
   ThemeMode _themeMode = ThemeMode.dark;
+  
+  // Singleton instance
+  static ThemeService? _instance;
+  
+  /// Get the singleton instance
+  static ThemeService get instance {
+    _instance ??= ThemeService._internal();
+    return _instance!;
+  }
+  
+  // Private constructor for singleton
+  ThemeService._internal() {
+    _loadTheme();
+  }
+  
+  // Public constructor that returns the singleton
+  factory ThemeService() => instance;
 
   ThemeMode get themeMode => _themeMode;
   bool get isDarkMode => _themeMode == ThemeMode.dark;
-
-  ThemeService() {
-    _loadTheme();
-  }
 
   /// Load saved theme preference
   Future<void> _loadTheme() async {

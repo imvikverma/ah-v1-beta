@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
+import '../services/theme_service.dart';
 
 class LoginScreen extends StatefulWidget {
   final VoidCallback? onLoginSuccess;
@@ -100,6 +101,29 @@ class _LoginScreenState extends State<LoginScreen> {
         child: SafeArea(
           child: Stack(
             children: [
+              // Theme Toggle Button (top right)
+              Positioned(
+                top: 16,
+                right: 16,
+                child: ListenableBuilder(
+                  listenable: ThemeService.instance,
+                  builder: (context, _) {
+                    final themeService = ThemeService.instance;
+                    final isDark = themeService.isDarkMode;
+                    
+                    return IconButton(
+                      icon: Icon(
+                        isDark ? Icons.light_mode : Icons.dark_mode,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                      onPressed: () {
+                        themeService.toggleTheme();
+                      },
+                      tooltip: isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode',
+                    );
+                  },
+                ),
+              ),
               Center(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(24),

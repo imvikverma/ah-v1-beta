@@ -10,6 +10,8 @@ class AuthService {
   static const String _keyUserId = 'user_id';
   static const String _keyEmail = 'user_email';
   static const String _keyPhone = 'user_phone';
+  static const String _keyIsAdmin = 'user_is_admin';
+  static const String _keyIndemnityAccepted = 'indemnity_accepted';
   static const String _keyApiKey = 'api_key'; // Legacy support
   static const String _keyApiSecret = 'api_secret'; // Legacy support
 
@@ -70,6 +72,9 @@ class AuthService {
         if (user['phone'] != null) {
           await prefs.setString(_keyPhone, user['phone'].toString());
         }
+        // Store admin status
+        final isAdmin = user['is_admin'] == true || user['isAdmin'] == true;
+        await prefs.setBool(_keyIsAdmin, isAdmin);
       } else {
         final error = jsonDecode(response.body) as Map<String, dynamic>;
         throw Exception(error['error']?.toString() ?? 'Login failed');
@@ -108,6 +113,8 @@ class AuthService {
       await prefs.remove(_keyUserId);
       await prefs.remove(_keyEmail);
       await prefs.remove(_keyPhone);
+      await prefs.remove(_keyIsAdmin);
+      await prefs.remove(_keyIndemnityAccepted);
     } catch (e) {
       // Clear local storage even if logout fails
       final prefs = await SharedPreferences.getInstance();
@@ -115,6 +122,38 @@ class AuthService {
       await prefs.remove(_keyUserId);
       await prefs.remove(_keyEmail);
       await prefs.remove(_keyPhone);
+      await prefs.remove(_keyIsAdmin);
+      await prefs.remove(_keyIndemnityAccepted);
+    }
+  }
+
+  /// Check if current user is admin
+  static Future<bool> isAdmin() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getBool(_keyIsAdmin) ?? false;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Check if user has accepted indemnity
+  static Future<bool> hasAcceptedIndemnity() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getBool(_keyIndemnityAccepted) ?? false;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Mark indemnity as accepted
+  static Future<void> acceptIndemnity() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_keyIndemnityAccepted, true);
+    } catch (e) {
+      // Ignore errors
     }
   }
 
