@@ -95,25 +95,44 @@ function Deploy-Cloudflare {
         Set-Location $flutterDir
         
         Write-Host "[1/4] Building Flutter web..." -ForegroundColor Cyan
+        Set-Location $flutterDir
         flutter clean
         flutter pub get
         flutter build web --release
         
         Write-Host "`n[2/4] Copying to docs/..." -ForegroundColor Cyan
         Set-Location $projectRoot
-        if (Test-Path docs) {
-            Remove-Item -Recurse -Force docs
+        
+        # Verify build exists
+        $buildPath = Join-Path $flutterDir "build\web"
+        if (-not (Test-Path $buildPath)) {
+            Write-Host "❌ Build directory not found: $buildPath" -ForegroundColor Red
+            return
         }
-        New-Item -ItemType Directory -Path docs | Out-Null
-        Copy-Item -Recurse "$flutterDir\build\web\*" -Destination "docs\"
+        
+        # Clean and create docs
+        $docsPath = Join-Path $projectRoot "docs"
+        if (Test-Path $docsPath) {
+            Remove-Item -Recurse -Force $docsPath
+        }
+        New-Item -ItemType Directory -Path $docsPath -Force | Out-Null
+        Copy-Item -Recurse "$buildPath\*" -Destination $docsPath -Force
         
         Write-Host "`n[3/4] Committing changes..." -ForegroundColor Cyan
+        # Ensure we're in git repo
+        if (-not (Test-Path ".git")) {
+            Write-Host "❌ Not in a git repository!" -ForegroundColor Red
+            return
+        }
+        
+        $env:GIT_EDITOR = "true"
         git add docs
-        $hasChanges = git diff --staged --quiet
-        if ($LASTEXITCODE -ne 0) {
+        $stagedFiles = git diff --staged --name-only
+        if ($stagedFiles) {
             git commit -m "chore: Update Flutter web build for Cloudflare"
             
             Write-Host "`n[4/4] Pushing to GitHub..." -ForegroundColor Cyan
+            $env:GIT_EDITOR = "true"
             git push origin main
             
             Write-Host "`n✅ Deployment initiated! Cloudflare will auto-deploy in ~60 seconds." -ForegroundColor Green
@@ -175,7 +194,7 @@ do {
             Read-Host
         }
         "5" {
-            Deploy-Cloudflare
+            Publish-Cloudflare
             Write-Host "`nPress any key to return to menu..."
             Read-Host
         }

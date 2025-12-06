@@ -55,22 +55,51 @@ try {
     
     Write-Host "`n[3/5] Copying build to docs/ ..." -ForegroundColor Cyan
     Set-Location $root
-    if (Test-Path docs) {
-        Remove-Item -Recurse -Force docs
+    
+    # Verify build directory exists
+    $buildPath = Join-Path $root "aurum_harmony\frontend\flutter_app\build\web"
+    if (-not (Test-Path $buildPath)) {
+        throw "Build directory not found: $buildPath"
     }
-    New-Item -ItemType Directory -Path docs | Out-Null
-    Copy-Item -Recurse "aurum_harmony\frontend\flutter_app\build\web\*" -Destination "docs\"
+    Write-Host "   Source: $buildPath" -ForegroundColor Gray
+    
+    # Clean and create docs directory
+    $docsPath = Join-Path $root "docs"
+    if (Test-Path $docsPath) {
+        Remove-Item -Recurse -Force $docsPath
+    }
+    New-Item -ItemType Directory -Path $docsPath -Force | Out-Null
+    Write-Host "   Destination: $docsPath" -ForegroundColor Gray
+    
+    # Copy build files
+    Copy-Item -Recurse "$buildPath\*" -Destination $docsPath -Force
+    Write-Host "   ✅ Build files copied successfully" -ForegroundColor Green
 
     Write-Host "`n[4/5] Committing changes..." -ForegroundColor Cyan
-    git add docs README.md CHANGELOG.md
+    
+    # Ensure we're in the git repo root
+    if (-not (Test-Path ".git")) {
+        throw "Not in a git repository. Current directory: $(Get-Location)"
+    }
+    
+    # Add files
+    git add docs README.md CHANGELOG.md 2>&1 | Out-Null
     
     # Check if there are changes to commit
-    $hasChanges = git diff --staged --quiet
-    if ($LASTEXITCODE -ne 0) {
+    $stagedFiles = git diff --staged --name-only
+    if ($stagedFiles) {
+        Write-Host "   Staged files:" -ForegroundColor Gray
+        $stagedFiles | ForEach-Object { Write-Host "     $_" -ForegroundColor Gray }
+        
+        $env:GIT_EDITOR = "true"
         git commit -m "$CommitMessage"
+        
         Write-Host "`n[5/5] Pushing to GitHub (this triggers Cloudflare)..." -ForegroundColor Cyan
-        git push
+        $env:GIT_EDITOR = "true"
+        git push origin main
+        
         Write-Host "`n✅ Deploy script finished. Cloudflare will pick up the new commit in a minute or two." -ForegroundColor Green
+        Write-Host "   Live URL: https://ah.saffronbolt.in" -ForegroundColor Yellow
     } else {
         Write-Host "`n⚠️  No changes to commit. Build output is identical to current docs/ folder." -ForegroundColor Yellow
         Write-Host "   Cloudflare is already up to date!" -ForegroundColor Green

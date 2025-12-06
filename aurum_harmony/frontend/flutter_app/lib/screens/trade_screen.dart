@@ -247,7 +247,7 @@ class _TradeScreenState extends State<TradeScreen> {
                                       ),
                                     );
                                   }
-                                : _showIndemnityDialog,
+                                : () => _showIndemnityDialog(),
                             icon: const Icon(Icons.pause),
                             label: const Text('Pause All'),
                           ),
