@@ -6,6 +6,7 @@ import 'screens/reports_screen.dart';
 import 'screens/notifications_screen.dart';
 import 'screens/admin_screen.dart';
 import 'services/auth_service.dart';
+import 'services/theme_service.dart';
 import 'widgets/api_key_dialog.dart';
 
 /// AurumHarmony v1.0 Beta Flutter Frontend
@@ -32,10 +33,12 @@ class _AurumHarmonyAppState extends State<AurumHarmonyApp> {
   int _index = 0;
   bool _isLoggedIn = false;
   bool _checkingAuth = true;
+  late ThemeService _themeService;
 
   @override
   void initState() {
     super.initState();
+    _themeService = ThemeService();
     _checkAuth();
   }
 
@@ -65,29 +68,22 @@ class _AurumHarmonyAppState extends State<AurumHarmonyApp> {
     }
   }
 
+  Future<void> _toggleTheme() async {
+    await _themeService.toggleTheme();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final theme = ThemeData(
-      brightness: Brightness.dark,
-      colorScheme: const ColorScheme.dark(
-        primary: Color(0xfff9a826), // Gold/Saffron
-        secondary: Color(0xff4caf50), // Green
-        surface: Color(0xff11172b),
-      ),
-      scaffoldBackgroundColor: const Color(0xff050816),
-      appBarTheme: const AppBarTheme(
-        backgroundColor: Color(0xff050816),
-        elevation: 0,
-        centerTitle: false,
-      ),
-    );
+    final lightTheme = ThemeService.getLightTheme();
+    final darkTheme = ThemeService.getDarkTheme();
 
     if (_checkingAuth) {
       return MaterialApp(
         debugShowCheckedModeBanner: false,
-        theme: theme,
+        theme: lightTheme,
+        darkTheme: darkTheme,
+        themeMode: _themeService.themeMode,
         home: Scaffold(
-          backgroundColor: const Color(0xff050816),
           body: const Center(child: CircularProgressIndicator()),
         ),
       );
@@ -97,7 +93,9 @@ class _AurumHarmonyAppState extends State<AurumHarmonyApp> {
       return MaterialApp(
         debugShowCheckedModeBanner: false,
         title: 'AurumHarmony v1.0 Beta',
-        theme: theme,
+        theme: lightTheme,
+        darkTheme: darkTheme,
+        themeMode: _themeService.themeMode,
         home: Builder(
           builder: (context) => LoginScreen(
             onLoginSuccess: () {
@@ -113,11 +111,21 @@ class _AurumHarmonyAppState extends State<AurumHarmonyApp> {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'AurumHarmony v1.0 Beta',
-      theme: theme,
+      theme: lightTheme,
+      darkTheme: darkTheme,
+      themeMode: _themeService.themeMode,
       home: Scaffold(
         appBar: AppBar(
           title: const Text('AurumHarmony v1.0 Beta'),
           actions: [
+            // Theme Toggle
+            IconButton(
+              icon: Icon(
+                _themeService.isDarkMode ? Icons.light_mode : Icons.dark_mode,
+              ),
+              tooltip: _themeService.isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode',
+              onPressed: _toggleTheme,
+            ),
             // API Key Management
             IconButton(
               icon: const Icon(Icons.vpn_key),
@@ -131,8 +139,8 @@ class _AurumHarmonyAppState extends State<AurumHarmonyApp> {
                 child: Container(
                   width: 8,
                   height: 8,
-                  decoration: const BoxDecoration(
-                    color: Colors.greenAccent,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.secondary,
                     shape: BoxShape.circle,
                   ),
                 ),
@@ -160,9 +168,9 @@ class _AurumHarmonyAppState extends State<AurumHarmonyApp> {
         ),
         bottomNavigationBar: BottomNavigationBar(
           type: BottomNavigationBarType.fixed,
-          backgroundColor: const Color(0xff050816),
-          selectedItemColor: theme.colorScheme.primary,
-          unselectedItemColor: Colors.grey,
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          selectedItemColor: Theme.of(context).colorScheme.primary,
+          unselectedItemColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
           currentIndex: _index,
           onTap: (i) => setState(() => _index = i),
           items: const [

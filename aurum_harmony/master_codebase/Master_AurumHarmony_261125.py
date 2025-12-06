@@ -28,8 +28,21 @@ from engines.backtesting.Realistic_Tests import run_realistic_tests
 from engines.backtesting.Edge_Tests import run_edge_tests
 from engines.admin.Admin_Panel import app as admin_app
 
+# Import broker blueprints
+try:
+    from aurum_harmony.brokers.kotak_neo import kotak_bp
+    KOTAK_AVAILABLE = True
+except ImportError as e:
+    print(f"⚠️  Kotak Neo blueprint not available: {e}")
+    KOTAK_AVAILABLE = False
+
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
+
+# Register broker blueprints
+if KOTAK_AVAILABLE:
+    app.register_blueprint(kotak_bp)
+    print("✅ Kotak Neo blueprint registered")
 
 # Global instances
 vix_adj = VIXAdjustment()

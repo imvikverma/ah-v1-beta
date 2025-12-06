@@ -14,19 +14,13 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _loginIdController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _apiKeyController = TextEditingController();
-  final _apiSecretController = TextEditingController();
   bool _obscurePassword = true;
-  bool _obscureSecret = true;
   bool _isLoading = false;
-  int _stage = 1; // 1 = identity, 2 = API keys
 
   @override
   void dispose() {
     _loginIdController.dispose();
     _passwordController.dispose();
-    _apiKeyController.dispose();
-    _apiSecretController.dispose();
     super.dispose();
   }
 
@@ -40,25 +34,25 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      // Step 1: Identity (Login ID / Email / Regd Mobile + Password)
-      if (_stage == 1) {
-        // Simulate OAuth / blockchain-based verification (placeholder)
-        await Future.delayed(const Duration(milliseconds: 500));
-        if (mounted) {
-          setState(() {
-            _stage = 2;
-            _isLoading = false;
-          });
+      final loginId = _loginIdController.text.trim();
+      
+      // Determine if loginId is email or phone
+      String? email;
+      String? phone;
+      
+      if (loginId.contains('@')) {
+        email = loginId;
+      } else {
+        phone = loginId.replaceAll(RegExp(r'[^\d+]'), '');
+        if (!phone.startsWith('+')) {
+          phone = '+91$phone'; // Default to India country code if not provided
         }
-        return;
       }
 
-      // Step 2: API Key(s) & Secret(s)
-      // In this historic beta, we store a single key/secret pair.
       await AuthService.login(
-        userId: _loginIdController.text.trim(),
-        apiKey: _apiKeyController.text.trim(),
-        apiSecret: _apiSecretController.text.trim(),
+        email: email,
+        phone: phone,
+        password: _passwordController.text,
       );
 
       if (mounted) {
@@ -68,8 +62,8 @@ class _LoginScreenState extends State<LoginScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Login failed: $e'),
-            backgroundColor: Colors.red,
+            content: SelectableText('Login failed: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
       }
@@ -85,16 +79,22 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              const Color(0xff050816),
-              const Color(0xff11172b),
-            ],
+            colors: isDark
+                ? [
+                    colors.background,
+                    colors.surface,
+                  ]
+                : [
+                    colors.background,
+                    colors.surfaceVariant,
+                  ],
           ),
         ),
         child: SafeArea(
@@ -103,206 +103,143 @@ class _LoginScreenState extends State<LoginScreen> {
               Center(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(24),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxWidth: MediaQuery.of(context).size.width > 600 ? 500 : 400,
-                ),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: MediaQuery.of(context).size.width > 600 ? 500 : 400,
+                    ),
                     child: Form(
                       key: _formKey,
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                      // Logo/Title
-                      Icon(
-                        Icons.account_balance_wallet,
-                        size: 64,
-                        color: colors.primary,
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'AurumHarmony',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 32,
-                          fontWeight: FontWeight.bold,
-                          color: colors.primary,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'v1.0 Beta',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey.shade400,
-                        ),
-                      ),
-                      const SizedBox(height: 48),
-
-                      if (_stage == 1) ...[
-                        // Login ID / Email / Regd Mobile
-                        TextFormField(
-                          controller: _loginIdController,
-                          decoration: InputDecoration(
-                            labelText: 'Login ID / Email / Regd Mobile',
-                            hintText: 'user@domain.com / +91-XXXXXXXXXX',
-                            prefixIcon: const Icon(Icons.person),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            filled: true,
-                            fillColor: Colors.grey.shade900,
+                          // Logo
+                          Image.asset(
+                            'assets/logo/AurumHarmony_logo.png',
+                            height: 180,
+                            fit: BoxFit.contain,
+                            errorBuilder: (context, error, stackTrace) {
+                              // Fallback to icon if logo not found
+                              return Icon(
+                                Icons.account_balance_wallet,
+                                size: 120,
+                                color: colors.primary,
+                              );
+                            },
                           ),
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'Please enter your Login ID / Email / Mobile';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 16),
+                          const SizedBox(height: 24),
+                          Text(
+                            'v1.0 Beta',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: colors.onSurface.withOpacity(0.6),
+                            ),
+                          ),
+                          const SizedBox(height: 48),
 
-                        // Password
-                        TextFormField(
-                          controller: _passwordController,
-                          obscureText: _obscurePassword,
-                          decoration: InputDecoration(
-                            labelText: 'Password',
-                            hintText: 'Enter your password',
-                            prefixIcon: const Icon(Icons.lock),
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                _obscurePassword
-                                    ? Icons.visibility
-                                    : Icons.visibility_off,
+                          // Email / Phone
+                          TextFormField(
+                            controller: _loginIdController,
+                            keyboardType: TextInputType.emailAddress,
+                            decoration: InputDecoration(
+                              labelText: 'Email or Phone',
+                              hintText: 'user@example.com or +91XXXXXXXXXX',
+                              prefixIcon: const Icon(Icons.person),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
                               ),
-                              onPressed: () {
-                                setState(() {
-                                  _obscurePassword = !_obscurePassword;
-                                });
-                              },
+                              filled: true,
+                              fillColor: isDark
+                                  ? colors.surface
+                                  : colors.surfaceVariant.withOpacity(0.5),
                             ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            filled: true,
-                            fillColor: Colors.grey.shade900,
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return 'Please enter your email or phone';
+                              }
+                              return null;
+                            },
                           ),
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'Please enter your password';
-                            }
-                            return null;
-                          },
-                        ),
-                      ] else ...[
-                        // API Key Field (Stage 2)
-                        TextFormField(
-                          controller: _apiKeyController,
-                          decoration: InputDecoration(
-                            labelText: 'API Key',
-                            hintText: 'Enter your broker API key',
-                            prefixIcon: const Icon(Icons.vpn_key),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            filled: true,
-                            fillColor: Colors.grey.shade900,
-                          ),
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'Please enter your API Key';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 16),
+                          const SizedBox(height: 16),
 
-                        // API Secret Field (Stage 2)
-                        TextFormField(
-                          controller: _apiSecretController,
-                          obscureText: _obscureSecret,
-                          decoration: InputDecoration(
-                            labelText: 'API Secret',
-                            hintText: 'Enter your broker API secret',
-                            prefixIcon: const Icon(Icons.lock),
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                _obscureSecret
-                                    ? Icons.visibility
-                                    : Icons.visibility_off,
-                              ),
-                              onPressed: () {
-                                setState(() {
-                                  _obscureSecret = !_obscureSecret;
-                                });
-                              },
-                            ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            filled: true,
-                            fillColor: Colors.grey.shade900,
-                          ),
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'Please enter your API Secret';
-                            }
-                            return null;
-                          },
-                        ),
-                      ],
-
-                      const SizedBox(height: 32),
-
-                      // Login / Continue Button
-                      Center(
-                        child: Builder(
-                          builder: (context) {
-                            final screenWidth = MediaQuery.of(context).size.width;
-                            return SizedBox(
-                              width: screenWidth > 600 ? 300 : double.infinity,
-                              child: ElevatedButton(
-                                onPressed: _isLoading ? null : _handleLogin,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: colors.primary,
-                                  foregroundColor: Colors.black,
-                                  padding: const EdgeInsets.symmetric(vertical: 12),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
+                          // Password
+                          TextFormField(
+                            controller: _passwordController,
+                            obscureText: _obscurePassword,
+                            decoration: InputDecoration(
+                              labelText: 'Password',
+                              hintText: 'Enter your password',
+                              prefixIcon: const Icon(Icons.lock),
+                              suffixIcon: IconButton(
+                                icon: Icon(
+                                  _obscurePassword
+                                      ? Icons.visibility
+                                      : Icons.visibility_off,
                                 ),
-                                child: _isLoading
-                                    ? const SizedBox(
-                                        height: 20,
-                                        width: 20,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          valueColor:
-                                              AlwaysStoppedAnimation<Color>(Colors.black),
-                                        ),
-                                      )
-                                    : Text(
-                                        _stage == 1 ? 'Next' : 'Continue',
-                                        style: const TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w600,
+                                onPressed: () {
+                                  setState(() {
+                                    _obscurePassword = !_obscurePassword;
+                                  });
+                                },
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              filled: true,
+                              fillColor: isDark
+                                  ? colors.surface
+                                  : colors.surfaceVariant.withOpacity(0.5),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return 'Please enter your password';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 32),
+
+                          // Login Button
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: _isLoading ? null : _handleLogin,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: colors.primary,
+                                foregroundColor: colors.onPrimary,
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              child: _isLoading
+                                  ? SizedBox(
+                                      height: 20,
+                                      width: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor: AlwaysStoppedAnimation<Color>(
+                                          colors.onPrimary,
                                         ),
                                       ),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                      const SizedBox(height: 16),
+                                    )
+                                  : const Text(
+                                      'Login',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                            ),
+                          ),
                         ],
                       ),
                     ),
                   ),
                 ),
               ),
-              // Patent text on login screen - responsive, fits in one line
+              // Patent text on login screen
               Positioned(
                 bottom: 0,
                 left: 0,
@@ -319,7 +256,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         maxLines: 1,
                         style: TextStyle(
                           fontSize: screenWidth > 600 ? 11 : 9,
-                          color: Colors.white54,
+                          color: colors.onSurface.withOpacity(0.5),
                         ),
                       ),
                     );
@@ -333,4 +270,3 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 }
-
