@@ -8,11 +8,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Dynamic changelog and README generation system
-- Automated deployment with changelog-based commit messages
+- Light and Dark Mode theme system with theme toggle button
+- Logo integration on login screen (replaces "AurumHarmony" text)
+- Theme-aware color system throughout the app
+- Admin user creation script with hardcoded credentials
+- Comprehensive documentation organization
+- Custom domain setup documentation (ah.saffronbolt.in)
+- Cloudflare Workers migration plan documentation
 
 ### Changed
-- Deploy script now reads from CHANGELOG.md for commit messages
+- Simplified login flow to single stage (email/phone + password only)
+- Updated all UI components to use theme-aware colors
+- Replaced hardcoded colors with ThemeColors utility
+- Deployment script now auto-generates commit messages from CHANGELOG
+- Improved file organization and documentation structure
+
+### Fixed
+- CORS duplicate header issue in Flask backend
+- Flutter compilation errors (CardTheme, const expressions)
+- Backend blueprint registration issues
+- PowerShell script string terminator errors
 
 ## [1.0.0] - 2024-11-29
 

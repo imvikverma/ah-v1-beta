@@ -28,8 +28,35 @@ from engines.backtesting.Realistic_Tests import run_realistic_tests
 from engines.backtesting.Edge_Tests import run_edge_tests
 from engines.admin.Admin_Panel import app as admin_app
 
+# Import auth and broker blueprints
+try:
+    from aurum_harmony.auth.routes import auth_bp
+    from aurum_harmony.brokers.routes import brokers_bp
+    from aurum_harmony.database.db import init_db
+    AUTH_AVAILABLE = True
+except ImportError as e:
+    print(f"⚠ Auth blueprint not available: {e}")
+    AUTH_AVAILABLE = False
+    auth_bp = None
+    brokers_bp = None
+
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
+
+# Initialize database and register blueprints
+if AUTH_AVAILABLE:
+    try:
+        init_db(app)
+        app.register_blueprint(auth_bp)
+        app.register_blueprint(brokers_bp)
+        print("✅ Auth and broker blueprints registered")
+    except Exception as e:
+        print(f"⚠ Error initializing auth: {e}")
+        import traceback
+        traceback.print_exc()
+        AUTH_AVAILABLE = False
+else:
+    print("⚠ Auth and broker blueprints not registered")
 
 # Global instances
 vix_adj = VIXAdjustment()
@@ -110,6 +137,19 @@ def backtest_edge():
     """
     result = run_edge_tests()
     return jsonify(result)
+
+@app.route('/callback')
+def callback():
+    """
+    OAuth callback endpoint for broker integrations (HDFC Sky, etc.)
+    """
+    request_token = request.args.get('request_token')
+    if request_token:
+        return jsonify({
+            'message': 'Callback received',
+            'request_token': request_token
+        }), 200
+    return jsonify({'message': 'Callback endpoint'}), 200
 
 # Background threads
 def daily_fund_cycle():

@@ -1,0 +1,45 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: aurumharmony-ingress
+  namespace: aurumharmony
+  annotations:
+    # AWS ALB Ingress Controller (for AWS Mumbai)
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/load-balancer-type: application
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: '443'
+    alb.ingress.kubernetes.io/certificate-arn: "arn:aws:acm:ap-south-1:YOUR_ACCOUNT:certificate/YOUR_CERT_ID"
+    alb.ingress.kubernetes.io/healthcheck-path: /health
+    alb.ingress.kubernetes.io/healthcheck-interval-seconds: "30"
+    alb.ingress.kubernetes.io/healthcheck-timeout-seconds: "5"
+    alb.ingress.kubernetes.io/healthy-threshold-count: "2"
+    alb.ingress.kubernetes.io/unhealthy-threshold-count: "3"
+    # CORS
+    alb.ingress.kubernetes.io/actions.ssl-redirect: |
+      {"Type": "redirect", "RedirectConfig": {"Protocol": "HTTPS", "Port": "443", "StatusCode": "HTTP_301"}}
+spec:
+  ingressClassName: alb
+  rules:
+  - host: api.aurumharmony.com  # Update with your domain
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: aurumharmony-backend-service
+            port:
+              number: 5000
+  - host: admin.aurumharmony.com  # Admin panel
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: aurumharmony-backend-service
+            port:
+              number: 5001
+

@@ -1,0 +1,34 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: aurumharmony-config
+  namespace: aurumharmony
+data:
+  # Application Settings
+  FLASK_ENV: "production"
+  PYTHONUNBUFFERED: "1"
+  
+  # Database Configuration (will be overridden by Secret for sensitive data)
+  DATABASE_HOST: "postgres-service"
+  DATABASE_PORT: "5432"
+  DATABASE_NAME: "aurumharmony"
+  
+  # Redis Configuration
+  REDIS_HOST: "redis-service"
+  REDIS_PORT: "6379"
+  
+  # Trading Configuration
+  AURUM_TRADING_MODE: "LIVE"
+  AI_CONFIDENCE_THRESHOLD: "0.70"
+  MAX_LEVERAGE: "3"
+  MAX_TRADES_PER_DAY: "180"
+  MAX_EXPOSURE: "5000000"  # ₹50 lakh in paise
+  
+  # Compliance Settings
+  SEBI_MAX_LOTS: "1250"
+  REGULATORY_SCRAPE_TIME: "08:30-09:00"
+  
+  # Logging
+  LOG_LEVEL: "INFO"
+  LOG_FILE: "/app/logs/aurumharmony.log"
+
