@@ -15,7 +15,7 @@ const RESOURCES = {"flutter.js": "4b2350e14c6650ba82871f60906437ea",
 "assets/AssetManifest.bin.json": "15c0f2fe481f22a2b0571f40758df716",
 "assets/assets/logo/aurumharmony_logo.svg": "dc52cc844f641896078f75d7421e9a17",
 "assets/assets/logo/AurumHarmony_logo.png": "0e49a3ab338a6e13b01fd2891467b305",
-"assets/fonts/MaterialIcons-Regular.otf": "6e99c37a97ac67b1167f54fa75436adc",
+"assets/fonts/MaterialIcons-Regular.otf": "e34b566acb9a5394b1773dec1010e787",
 "assets/NOTICES": "ec6d12b3dfdcdebfe244f0823febf90a",
 "assets/FontManifest.json": "7b2a36307916a9721811788013e65289",
 "assets/AssetManifest.bin": "ba600f8a2032c60d2df2312fbe62353d",
@@ -31,9 +31,9 @@ const RESOURCES = {"flutter.js": "4b2350e14c6650ba82871f60906437ea",
 "canvaskit/canvaskit.js.symbols": "efc2cd87d1ff6c586b7d4c7083063a40",
 "canvaskit/skwasm.js.symbols": "96263e00e3c9bd9cd878ead867c04f3c",
 "favicon.png": "5dcef449791fa27946b3d35ad8803796",
-"flutter_bootstrap.js": "6e9e81141ffe69942d7fe8a94e82d93c",
+"flutter_bootstrap.js": "2c8ae09536325a9b0df0e73d234a0cc3",
 "version.json": "a742cecd643c70862af54c499df67187",
-"main.dart.js": "5766938d6253fb04605f734d5ad131d9"};
+"main.dart.js": "38f56435e4336bb9aadd989f3cd43a03"};
 // The application shell files that are downloaded before a service worker can
 // start.
 const CORE = ["main.dart.js",
