@@ -1,85 +1,171 @@
 /**
- * AurumHarmony API Worker
+ * api.ah.saffronbolt.in – AurumHarmony Broker API (HDFC Sky + Kotak Neo)
  * 
- * This is a minimal Worker that handles basic health checks.
- * Full API endpoints should be migrated from Flask to Worker handlers.
- * 
- * For now, this Worker provides:
- * - Health check endpoint
- * - Basic error handling
- * - CORS headers
+ * This Worker handles:
+ * - Health checks
+ * - HDFC Sky OAuth callbacks
+ * - Kotak Neo TOTP callbacks
+ * - API endpoints (returns 501 until migrated from Flask)
  */
 
 export default {
-  async fetch(request: Request, env: any, ctx: ExecutionContext): Promise<Response> {
+  async fetch(request: Request, env: any): Promise<Response> {
     const url = new URL(request.url);
     const path = url.pathname;
+    const method = request.method;
 
     // Handle CORS preflight
-    if (request.method === 'OPTIONS') {
+    if (method === 'OPTIONS') {
       return new Response(null, {
         status: 204,
         headers: {
           'Access-Control-Allow-Origin': '*',
           'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
           'Access-Control-Max-Age': '86400',
         },
       });
     }
 
-    // Health check endpoint
+    // CORS headers for all responses
+    const corsHeaders = {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
+    };
+
+    // Health check
     if (path === '/health' || path === '/') {
-      return new Response(
-        JSON.stringify({
-          status: 'AurumHarmony API v1 – Running',
-          worker: true,
-          timestamp: new Date().toISOString(),
-        }),
-        {
-          status: 200,
-          headers: {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-          },
-        }
-      );
+      return new Response('AurumHarmony API Live', {
+        status: 200,
+        headers: {
+          'Content-Type': 'text/plain',
+          ...corsHeaders,
+        },
+      });
     }
 
-    // API endpoints - TODO: Migrate from Flask
+    // === HDFC SKY OAuth callback ===
+    if (path === '/callback/hdfc') {
+      const code = url.searchParams.get('code');
+      if (!code) {
+        return new Response('Missing code', {
+          status: 400,
+          headers: corsHeaders,
+        });
+      }
+
+      try {
+        const tokenRes = await fetch('https://api.hdfcsec.com/oauth/token', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Basic ${btoa(`${env.HDFC_CLIENT_ID}:${env.HDFC_CLIENT_SECRET}`)}`,
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: `grant_type=authorization_code&code=${code}&redirect_uri=https://api.ah.saffronbolt.in/callback/hdfc`,
+        });
+
+        const data = await tokenRes.json();
+        
+        // Return success page
+        return new Response(
+          '<html><body><h1>HDFC Sky login successful</h1><p>You can close this tab.</p></body></html>',
+          {
+            status: 200,
+            headers: {
+              'Content-Type': 'text/html',
+              ...corsHeaders,
+            },
+          }
+        );
+      } catch (error) {
+        return new Response(`Error: ${error.message}`, {
+          status: 500,
+          headers: corsHeaders,
+        });
+      }
+    }
+
+    // === KOTAK NEO TOTP callback ===
+    if (path === '/callback/kotak' && method === 'POST') {
+      try {
+        const { totp } = await request.json();
+        if (!totp) {
+          return Response.json(
+            { error: 'Missing TOTP' },
+            {
+              status: 400,
+              headers: corsHeaders,
+            }
+          );
+        }
+
+        const sessionRes = await fetch('https://api.kotakneo.com/session', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${env.KOTAK_CONSUMER_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ totp, environment: 'prod' }),
+        });
+
+        const data = await sessionRes.json();
+        return Response.json(
+          { success: true, session: data },
+          {
+            status: 200,
+            headers: corsHeaders,
+          }
+        );
+      } catch (error) {
+        return Response.json(
+          { error: error.message },
+          {
+            status: 500,
+            headers: corsHeaders,
+          }
+        );
+      }
+    }
+
+    // === API Endpoints (Flask routes - need migration) ===
     if (path.startsWith('/api/')) {
-      // For now, return a helpful error message
-      return new Response(
-        JSON.stringify({
+      // Return helpful error message for unmigrated endpoints
+      return Response.json(
+        {
           error: 'API endpoint not yet migrated to Worker',
           message: 'This endpoint needs to be migrated from Flask to Worker handlers',
           path: path,
-          suggestion: 'Use localhost:5000 for development until migration is complete',
-        }),
+          suggestion: 'For development, use localhost:5000 backend. Access app from http://localhost:58643',
+          status: 'not_implemented',
+        },
         {
           status: 501, // Not Implemented
           headers: {
             'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
+            ...corsHeaders,
           },
         }
       );
     }
 
-    // 404 for unknown routes
-    return new Response(
-      JSON.stringify({
-        error: 'Not Found',
-        path: path,
-      }),
-      {
-        status: 404,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        },
-      }
-    );
+    // Placeholder endpoints – ready for future
+    if (path === '/order' && method === 'POST') {
+      return Response.json(
+        { status: 'order endpoint ready' },
+        {
+          headers: corsHeaders,
+        }
+      );
+    }
+
+    // Default response
+    return new Response('AurumHarmony API v1 – Running', {
+      status: 200,
+      headers: {
+        'Content-Type': 'text/plain',
+        ...corsHeaders,
+      },
+    });
   },
 };
-
