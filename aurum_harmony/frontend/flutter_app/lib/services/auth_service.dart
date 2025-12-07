@@ -46,16 +46,20 @@ class AuthService {
       throw Exception('Password is required');
     }
 
+    // Try production API first, fallback to localhost if it fails
+    String? apiUrl = kBackendBaseUrl;
+    Exception? lastError;
+    
     try {
       final response = await http.post(
-        Uri.parse('$kBackendBaseUrl/api/auth/login'),
+        Uri.parse('$apiUrl/api/auth/login'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           if (email != null && email.isNotEmpty) 'email': email.trim(),
           if (phone != null && phone.isNotEmpty) 'phone': phone.trim(),
           'password': password,
         }),
-      );
+      ).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -75,15 +79,80 @@ class AuthService {
         // Store admin status
         final isAdmin = user['is_admin'] == true || user['isAdmin'] == true;
         await prefs.setBool(_keyIsAdmin, isAdmin);
+        return; // Success!
       } else {
         final error = jsonDecode(response.body) as Map<String, dynamic>;
         throw Exception(error['error']?.toString() ?? 'Login failed');
       }
     } catch (e) {
-      if (e is Exception) {
-        rethrow;
+      lastError = e is Exception ? e : Exception('Network error: $e');
+      
+      // If production API failed and we're not already on localhost, try localhost
+      if (apiUrl != kBackendBaseUrlFallback && 
+          (e.toString().contains('NetworkError') || 
+           e.toString().contains('Failed host lookup') ||
+           e.toString().contains('timeout'))) {
+        try {
+          final response = await http.post(
+            Uri.parse('$kBackendBaseUrlFallback/api/auth/login'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              if (email != null && email.isNotEmpty) 'email': email.trim(),
+              if (phone != null && phone.isNotEmpty) 'phone': phone.trim(),
+              'password': password,
+            }),
+          ).timeout(const Duration(seconds: 5));
+
+          if (response.statusCode == 200) {
+            final data = jsonDecode(response.body) as Map<String, dynamic>;
+            final token = data['token'] as String;
+            final user = data['user'] as Map<String, dynamic>;
+
+            // Store token and user info
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setString(_keyToken, token);
+            await prefs.setString(_keyUserId, user['id']?.toString() ?? '');
+            if (user['email'] != null) {
+              await prefs.setString(_keyEmail, user['email'].toString());
+            }
+            if (user['phone'] != null) {
+              await prefs.setString(_keyPhone, user['phone'].toString());
+            }
+            final isAdmin = user['is_admin'] == true || user['isAdmin'] == true;
+            await prefs.setBool(_keyIsAdmin, isAdmin);
+            return; // Success with fallback!
+          } else {
+            final error = jsonDecode(response.body) as Map<String, dynamic>;
+            throw Exception(error['error']?.toString() ?? 'Login failed');
+          }
+        } catch (fallbackError) {
+          // Both production API and localhost fallback failed
+          final isProduction = apiUrl.contains('saffronbolt.in') || apiUrl.contains('pages.dev');
+          if (isProduction) {
+            throw Exception('Cannot connect to Cloudflare Worker API (https://api.ah.saffronbolt.in).\n\nEmergency troubleshooting:\n1. Check if Cloudflare Worker is deployed and running\n2. Verify DNS records for api.ah.saffronbolt.in\n3. For local testing, run backend locally (Option 1 in start-all.ps1) and access app from http://localhost');
+          } else {
+            throw Exception('Cannot connect to backend API. Please ensure the Flask backend is running on localhost:5000.\n\nStart it with: Option 1 in start-all.ps1');
+          }
+        }
       }
-      throw Exception('Login error: $e');
+      
+      // Re-throw if not a network error or fallback already tried
+      final isProductionUrl = apiUrl.contains('saffronbolt.in') || apiUrl.contains('pages.dev');
+      if (isProductionUrl) {
+        throw Exception(
+          'Cannot connect to Cloudflare Worker API.\n\n'
+          'The production API (https://api.ah.saffronbolt.in) is not accessible.\n'
+          'This may be because:\n'
+          '• Cloudflare Worker is not deployed yet\n'
+          '• DNS is not configured\n'
+          '• Network connectivity issues\n\n'
+          'For local testing:\n'
+          '• Run backend: start-all.ps1 → Option 1\n'
+          '• Access app from: http://localhost:58643'
+        );
+      } else {
+        throw lastError ?? Exception('Login error: $e');
+      }
     }
   }
 
@@ -179,6 +248,105 @@ class AuthService {
   static Future<String?> getPhone() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_keyPhone);
+  }
+
+  /// Register a new user
+  static Future<void> register({
+    required String email,
+    String? phone,
+    required String password,
+    required String confirmPassword,
+  }) async {
+    if (email.isEmpty) {
+      throw Exception('Email is required');
+    }
+
+    if (password.isEmpty || password.length < 6) {
+      throw Exception('Password must be at least 6 characters');
+    }
+
+    if (password != confirmPassword) {
+      throw Exception('Passwords do not match');
+    }
+
+    // Try production API first, fallback to localhost if it fails
+    String? apiUrl = kBackendBaseUrl;
+    Exception? lastError;
+    
+    try {
+      final response = await http.post(
+        Uri.parse('$apiUrl/api/auth/register'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': email.trim(),
+          if (phone != null && phone.isNotEmpty) 'phone': phone.trim(),
+          'password': password,
+        }),
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 201) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final user = data['user'] as Map<String, dynamic>;
+        
+        // Auto-login after successful registration (login has its own fallback)
+        await login(
+          email: email,
+          phone: phone,
+          password: password,
+        );
+        return; // Success!
+      } else {
+        final error = jsonDecode(response.body) as Map<String, dynamic>;
+        throw Exception(error['error']?.toString() ?? 'Registration failed');
+      }
+    } catch (e) {
+      lastError = e is Exception ? e : Exception('Network error: $e');
+      
+      // If production API failed and we're not already on localhost, try localhost
+      if (apiUrl != kBackendBaseUrlFallback && 
+          (e.toString().contains('NetworkError') || 
+           e.toString().contains('Failed host lookup') ||
+           e.toString().contains('timeout'))) {
+        try {
+          final response = await http.post(
+            Uri.parse('$kBackendBaseUrlFallback/api/auth/register'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'email': email.trim(),
+              if (phone != null && phone.isNotEmpty) 'phone': phone.trim(),
+              'password': password,
+            }),
+          ).timeout(const Duration(seconds: 5));
+
+          if (response.statusCode == 201) {
+            final data = jsonDecode(response.body) as Map<String, dynamic>;
+            final user = data['user'] as Map<String, dynamic>;
+            
+            // Auto-login after successful registration
+            await login(
+              email: email,
+              phone: phone,
+              password: password,
+            );
+            return; // Success with fallback!
+          } else {
+            final error = jsonDecode(response.body) as Map<String, dynamic>;
+            throw Exception(error['error']?.toString() ?? 'Registration failed');
+          }
+        } catch (fallbackError) {
+          // Both production API and localhost fallback failed
+          final isProduction = apiUrl.contains('saffronbolt.in') || apiUrl.contains('pages.dev');
+          if (isProduction) {
+            throw Exception('Cannot connect to Cloudflare Worker API (https://api.ah.saffronbolt.in).\n\nEmergency troubleshooting:\n1. Check if Cloudflare Worker is deployed and running\n2. Verify DNS records for api.ah.saffronbolt.in\n3. For local testing, run backend locally (Option 1 in start-all.ps1) and access app from http://localhost');
+          } else {
+            throw Exception('Cannot connect to backend API. Please ensure the Flask backend is running on localhost:5000.\n\nStart it with: Option 1 in start-all.ps1');
+          }
+        }
+      }
+      
+      // Re-throw if not a network error or fallback already tried
+      throw lastError ?? Exception('Registration error: $e');
+    }
   }
 
   /// Legacy methods for backward compatibility

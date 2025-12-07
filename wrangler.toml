@@ -1,0 +1,13 @@
+# Cloudflare Worker Configuration for aurum-api
+# This is a minimal Worker that proxies to the Flask backend
+# TODO: Migrate Flask routes to Worker handlers
+
+name = "aurum-api"
+compatibility_date = "2025-12-07"
+main = "worker/src/index.ts"
+
+[env.production]
+routes = [
+  { pattern = "api.ah.saffronbolt.in", zone_name = "saffronbolt.in" }
+]
+

@@ -1,16 +1,23 @@
 import 'dart:html' as html;
 
 /// Backend API base URLs
-/// Automatically detects production vs development environment
+/// Uses Cloudflare Worker API in production, localhost for local development
 String get kBackendBaseUrl {
-  // Check if running on production domain
   final hostname = html.window.location.hostname;
+  
+  // Use production Cloudflare Worker API for production domains
   if (hostname != null && 
       (hostname.contains('saffronbolt.in') || 
        hostname.contains('aurumharmony-v1-beta.pages.dev'))) {
     return 'https://api.ah.saffronbolt.in';
   }
-  // Default to localhost for development
+  
+  // Use localhost for local development
+  return 'http://localhost:5000';
+}
+
+/// Fallback API URL if production API is not available
+String get kBackendBaseUrlFallback {
   return 'http://localhost:5000';
 }
 
