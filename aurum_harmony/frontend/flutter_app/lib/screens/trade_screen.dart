@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../constants.dart';
 import '../services/auth_service.dart';
+import '../services/paper_trading_service.dart';
 
 class TradeScreen extends StatefulWidget {
   const TradeScreen({super.key});
@@ -17,12 +18,22 @@ class _TradeScreenState extends State<TradeScreen> {
   String? _error;
   bool _isAdmin = false;
   bool _indemnityAccepted = false;
+  String? _userId;
+  bool _paperTradingEnabled = true; // Default to paper trading
 
   @override
   void initState() {
     super.initState();
+    _loadUserId();
     _checkPermissions();
     _loadPositions();
+  }
+
+  Future<void> _loadUserId() async {
+    final userId = await AuthService.getUserId();
+    setState(() {
+      _userId = userId;
+    });
   }
 
   Future<void> _checkPermissions() async {
@@ -39,13 +50,37 @@ class _TradeScreenState extends State<TradeScreen> {
       _loading = true;
       _error = null;
     });
-    // TODO: Replace with actual /positions endpoint when available
-    // For now, show placeholder
-    await Future.delayed(const Duration(milliseconds: 500));
-    setState(() {
-      _positions = [];
-      _loading = false;
-    });
+    
+    try {
+      if (_paperTradingEnabled && _userId != null) {
+        // Load from paper trading API
+        final result = await PaperTradingService.getPositions(_userId!);
+        if (result['success'] == true) {
+          final positions = (result['positions'] as List?) ?? [];
+          setState(() {
+            _positions = positions.cast<Map<String, dynamic>>();
+            _loading = false;
+          });
+        } else {
+          setState(() {
+            _positions = [];
+            _loading = false;
+          });
+        }
+      } else {
+        // TODO: Load from live broker API when available
+        await Future.delayed(const Duration(milliseconds: 500));
+        setState(() {
+          _positions = [];
+          _loading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _error = 'Failed to load positions: $e';
+        _loading = false;
+      });
+    }
   }
 
   Future<void> _showIndemnityDialog() async {
@@ -299,6 +334,90 @@ class _TradeScreenState extends State<TradeScreen> {
           ],
           const SizedBox(height: 16),
 
+          // Paper Trading Toggle
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Row(
+                children: [
+                  Icon(
+                    _paperTradingEnabled ? Icons.science : Icons.account_balance_wallet,
+                    color: _paperTradingEnabled ? Colors.orange : Colors.grey,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _paperTradingEnabled ? 'Paper Trading Mode' : 'Live Trading Mode',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        Text(
+                          _paperTradingEnabled
+                              ? 'Simulated trading with virtual funds'
+                              : 'Real money trading (requires broker connection)',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Switch(
+                    value: _paperTradingEnabled,
+                    onChanged: (value) {
+                      setState(() {
+                        _paperTradingEnabled = value;
+                      });
+                      _loadPositions();
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Place Order Button (Paper Trading)
+          if (_paperTradingEnabled)
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Place Order',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () => _showPlaceOrderDialog(),
+                        icon: const Icon(Icons.add_shopping_cart),
+                        label: const Text('New Paper Trade Order'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Theme.of(context).colorScheme.primary,
+                          foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          const SizedBox(height: 16),
+
           // Open Positions Card
           Card(
             child: Padding(
@@ -427,8 +546,14 @@ class _TradeScreenState extends State<TradeScreen> {
   }
 
   Widget _buildPositionTile(Map<String, dynamic> pos) {
-    final pnl = (pos['pnl'] as num?) ?? 0.0;
-    final isProfit = pnl >= 0;
+    final unrealizedPnl = (pos['unrealized_pnl'] as num?)?.toDouble() ?? 0.0;
+    final isProfit = unrealizedPnl >= 0;
+    final symbol = pos['symbol'] as String? ?? 'N/A';
+    final quantity = (pos['quantity'] as num?)?.toDouble() ?? 0.0;
+    final avgPrice = (pos['avg_price'] as num?)?.toDouble() ?? 0.0;
+    final currentPrice = (pos['current_price'] as num?)?.toDouble() ?? 0.0;
+    final side = pos['side'] as String? ?? 'BUY';
+    
     return ListTile(
       leading: CircleAvatar(
         backgroundColor: isProfit
@@ -440,20 +565,235 @@ class _TradeScreenState extends State<TradeScreen> {
         ),
       ),
       title: Text(
-        pos['symbol'] ?? 'N/A',
+        symbol,
         style: const TextStyle(fontWeight: FontWeight.w600),
       ),
       subtitle: Text(
-        '${pos['side'] ?? 'N/A'} • Qty: ${pos['quantity'] ?? 0} • Avg: ₹${pos['avg_price'] ?? '0'}',
+        '$side • Qty: ${quantity.abs().toStringAsFixed(0)} • Avg: ₹${avgPrice.toStringAsFixed(2)}\nCurrent: ₹${currentPrice.toStringAsFixed(2)}',
       ),
-      trailing: Text(
-        '₹${pnl.toStringAsFixed(2)}',
-        style: TextStyle(
-          color: isProfit ? Colors.greenAccent : Colors.redAccent,
-          fontWeight: FontWeight.bold,
+      trailing: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Text(
+            '₹${unrealizedPnl.toStringAsFixed(2)}',
+            style: TextStyle(
+              color: isProfit ? Colors.greenAccent : Colors.redAccent,
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+            ),
+          ),
+          if (_paperTradingEnabled && _userId != null)
+            TextButton(
+              onPressed: () => _closePosition(symbol),
+              child: const Text('Close', style: TextStyle(fontSize: 12)),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showPlaceOrderDialog() async {
+    if (_userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please login first')),
+      );
+      return;
+    }
+
+    final symbolController = TextEditingController();
+    final quantityController = TextEditingController();
+    final priceController = TextEditingController();
+    String selectedSide = 'BUY';
+    String selectedOrderType = 'MARKET';
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Place Paper Trading Order'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: symbolController,
+                  decoration: const InputDecoration(
+                    labelText: 'Symbol',
+                    hintText: 'e.g., NIFTY, RELIANCE',
+                  ),
+                ),
+                const SizedBox(height: 16),
+                DropdownButtonFormField<String>(
+                  value: selectedSide,
+                  decoration: const InputDecoration(labelText: 'Side'),
+                  items: const [
+                    DropdownMenuItem(value: 'BUY', child: Text('BUY')),
+                    DropdownMenuItem(value: 'SELL', child: Text('SELL')),
+                  ],
+                  onChanged: (value) {
+                    setDialogState(() {
+                      selectedSide = value ?? 'BUY';
+                    });
+                  },
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: quantityController,
+                  decoration: const InputDecoration(
+                    labelText: 'Quantity',
+                    hintText: '1',
+                  ),
+                  keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: 16),
+                DropdownButtonFormField<String>(
+                  value: selectedOrderType,
+                  decoration: const InputDecoration(labelText: 'Order Type'),
+                  items: const [
+                    DropdownMenuItem(value: 'MARKET', child: Text('MARKET')),
+                    DropdownMenuItem(value: 'LIMIT', child: Text('LIMIT')),
+                  ],
+                  onChanged: (value) {
+                    setDialogState(() {
+                      selectedOrderType = value ?? 'MARKET';
+                    });
+                  },
+                ),
+                if (selectedOrderType == 'LIMIT') ...[
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: priceController,
+                    decoration: const InputDecoration(
+                      labelText: 'Limit Price',
+                      hintText: '0.00',
+                    ),
+                    keyboardType: TextInputType.number,
+                  ),
+                ],
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Place Order'),
+            ),
+          ],
         ),
       ),
     );
+
+    if (result == true) {
+      try {
+        final quantity = double.tryParse(quantityController.text) ?? 0.0;
+        final limitPrice = selectedOrderType == 'LIMIT'
+            ? double.tryParse(priceController.text)
+            : null;
+
+        if (quantity <= 0) {
+          throw Exception('Quantity must be positive');
+        }
+
+        if (selectedOrderType == 'LIMIT' && (limitPrice == null || limitPrice <= 0)) {
+          throw Exception('Limit price is required for LIMIT orders');
+        }
+
+        setState(() {
+          _loading = true;
+        });
+
+        final orderResult = await PaperTradingService.placeOrder(
+          userId: _userId!,
+          symbol: symbolController.text.trim().toUpperCase(),
+          side: selectedSide,
+          quantity: quantity,
+          orderType: selectedOrderType,
+          limitPrice: limitPrice,
+          reason: 'Manual order from app',
+        );
+
+        if (mounted) {
+          if (orderResult['success'] == true) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Order placed successfully!'),
+                backgroundColor: Colors.green,
+              ),
+            );
+            _loadPositions();
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(orderResult['error']?.toString() ?? 'Order failed'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } finally {
+        if (mounted) {
+          setState(() {
+            _loading = false;
+          });
+        }
+      }
+    }
+  }
+
+  Future<void> _closePosition(String symbol) async {
+    if (_userId == null) return;
+
+    // For paper trading, place a SELL order to close
+    try {
+      // Get position details
+      final positions = await PaperTradingService.getPositions(_userId!);
+      if (positions['success'] == true) {
+        final posList = (positions['positions'] as List?) ?? [];
+        final position = posList.firstWhere(
+          (p) => (p['symbol'] as String?) == symbol,
+          orElse: () => null,
+        );
+
+        if (position != null) {
+          final quantity = (position['quantity'] as num?)?.toDouble() ?? 0.0;
+          if (quantity > 0) {
+            // Close long position
+            await PaperTradingService.placeOrder(
+              userId: _userId!,
+              symbol: symbol,
+              side: 'SELL',
+              quantity: quantity,
+              orderType: 'MARKET',
+              reason: 'Close position',
+            );
+            _loadPositions();
+          }
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error closing position: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 }
 

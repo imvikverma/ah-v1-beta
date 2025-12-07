@@ -1,0 +1,1002 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AurumHarmony - Force Deploy & Hard Refresh</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 800px;
+            width: 100%;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .tabs-section {
+            background: #f0f0f0;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .tab-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            margin-bottom: 10px;
+            background: white;
+            border-radius: 8px;
+            border: 2px solid #e0e0e0;
+        }
+        
+        .tab-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .tab-info {
+            flex: 1;
+        }
+        
+        .tab-label {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 4px;
+        }
+        
+        .tab-url {
+            color: #666;
+            font-size: 12px;
+            font-family: 'Courier New', monospace;
+            word-break: break-all;
+        }
+        
+        .tab-status {
+            margin-left: 10px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .status-active {
+            background: #4caf50;
+            color: white;
+        }
+        
+        .status-inactive {
+            background: #e0e0e0;
+            color: #666;
+        }
+        
+        .status-cross-origin {
+            border: 2px solid #ff9800;
+        }
+        
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        button {
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+            outline: none;
+            user-select: none;
+        }
+        
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            filter: brightness(1.1);
+        }
+        
+        button:active:not(:disabled) {
+            transform: translateY(0px);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            filter: brightness(0.95);
+        }
+        
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+        
+        /* Active state for running buttons */
+        button.active {
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+            transform: translateY(1px);
+        }
+        
+        /* Ripple effect on click */
+        button::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.5);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+        
+        button:active:not(:disabled)::after {
+            width: 300px;
+            height: 300px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-success {
+            background: #4caf50;
+            color: white;
+        }
+        
+        .btn-warning {
+            background: #ff9800;
+            color: white;
+        }
+        
+        .btn-danger {
+            background: #f44336;
+            color: white;
+        }
+        
+        .btn-secondary {
+            background: #e0e0e0;
+            color: #333;
+        }
+        
+        .status {
+            background: #f0f0f0;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .status-item:last-child {
+            border-bottom: none;
+        }
+        
+        .status-label {
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .status-value {
+            color: #666;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .status-value.active {
+            color: #4caf50;
+            font-weight: 600;
+        }
+        
+        .countdown {
+            font-size: 20px;
+            font-weight: bold;
+            text-align: center;
+            color: #667eea;
+            margin: 20px 0;
+        }
+        
+        .info {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+            font-size: 14px;
+            color: #1976d2;
+        }
+        
+        .deploy-section {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        
+        .deploy-section h3 {
+            margin-bottom: 10px;
+            color: #856404;
+        }
+        
+        /* Notification system */
+        .notification-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 10000;
+            max-width: 400px;
+        }
+        
+        .notification {
+            background: white;
+            border-radius: 10px;
+            padding: 15px 20px;
+            margin-bottom: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            animation: slideIn 0.3s ease-out;
+            border-left: 4px solid #2196f3;
+        }
+        
+        .notification.info {
+            border-left-color: #2196f3;
+        }
+        
+        .notification.warning {
+            border-left-color: #ff9800;
+        }
+        
+        .notification.success {
+            border-left-color: #4caf50;
+        }
+        
+        .notification.error {
+            border-left-color: #f44336;
+        }
+        
+        .notification-icon {
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+        
+        .notification-content {
+            flex: 1;
+        }
+        
+        .notification-title {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 4px;
+            font-size: 14px;
+        }
+        
+        .notification-message {
+            color: #666;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+        
+        .notification-close {
+            background: none;
+            border: none;
+            font-size: 18px;
+            color: #999;
+            cursor: pointer;
+            padding: 0;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        
+        .notification-close:hover {
+            color: #333;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+        }
+        
+        .notification.hiding {
+            animation: slideOut 0.3s ease-out forwards;
+        }
+        
+        /* Enhanced cross-origin indicators */
+        .tab-item.cross-origin {
+            background: #fff8e1;
+            border-color: #ff9800;
+        }
+        
+        .tab-item.cross-origin .tab-label::before {
+            content: '🔒 ';
+            margin-right: 4px;
+        }
+        
+        .cross-origin-badge {
+            display: inline-block;
+            background: #ff9800;
+            color: white;
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 10px;
+            margin-left: 8px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <!-- Notification container -->
+    <div class="notification-container" id="notificationContainer"></div>
+    
+    <div class="container">
+        <h1>🚀 AurumHarmony Force Deploy & Hard Refresh</h1>
+        <p class="subtitle">Hard refresh tabs and trigger force deployments to GitHub & Cloudflare</p>
+        
+        <div class="deploy-section">
+            <h3>⚡ Quick Actions</h3>
+            <div class="controls">
+                <button class="btn-success" onclick="forceDeploy()">🚀 Force Deploy</button>
+                <button class="btn-warning" onclick="hardRefreshAll()">🔄 Hard Refresh All Tabs</button>
+                <button class="btn-primary" id="startBtn" onclick="startAutoRefresh()">▶ Start Auto-Refresh</button>
+                <button class="btn-secondary" id="stopBtn" onclick="stopAutoRefresh()" disabled>⏸ Stop</button>
+            </div>
+        </div>
+        
+        <div class="input-group" style="margin-bottom: 20px;">
+            <label for="refreshInterval">Auto-Refresh Interval (seconds):</label>
+            <input type="number" id="refreshInterval" value="30" min="10" max="300" onchange="updateRefreshInterval()">
+            <small style="color: #666; display: block; margin-top: 5px;">Minimum: 10 seconds | Current: <span id="currentInterval">30</span>s</small>
+        </div>
+        
+        <div class="tabs-section">
+            <h3 style="margin-bottom: 15px; color: #333;">Monitored Tabs</h3>
+            <div id="tabsList">
+                <!-- Tabs will be dynamically added here -->
+            </div>
+        </div>
+        
+        <div class="status" id="status">
+            <div class="status-item">
+                <span class="status-label">Status:</span>
+                <span class="status-value" id="statusText">Stopped</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Next Refresh:</span>
+                <span class="status-value" id="nextRefresh">--</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Refresh Count:</span>
+                <span class="status-value" id="refreshCount">0</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Deploy Status:</span>
+                <span class="status-value" id="deployStatus">Ready</span>
+            </div>
+        </div>
+        
+        <div class="countdown" id="countdown" style="display: none;"></div>
+        
+        <div class="info">
+            <strong>💡 How it works:</strong><br>
+            • <strong>Force Deploy:</strong> Shows instructions to run PowerShell script (builds, commits, force pushes to GitHub & Cloudflare)<br>
+            • <strong>Hard Refresh All:</strong> Forces all open tabs to reload with cache bypass (like Ctrl+Shift+R)<br>
+            • <strong>Auto-Refresh:</strong> Automatically opens and hard refreshes all tabs at the configured interval<br>
+            • <strong>Adjust Interval:</strong> Change the refresh interval above (10-300 seconds) before starting<br>
+            • <strong>Workflow:</strong> Click "Force Deploy" → Run PowerShell script → Wait 1-3 min → Click "Hard Refresh All"<br>
+            • <strong>Monitored URLs:</strong> Cloudflare Dashboard, GitHub Repository (ah-v1-beta)<br>
+            <br>
+            <strong>🔒 Cross-Origin Tabs:</strong> Some tabs (Cloudflare Dashboard, GitHub) cannot be auto-refreshed due to browser security. Use the bookmarklet below or press <strong>Ctrl+Shift+R</strong> manually in those tabs.<br>
+            <br>
+            <strong>🔖 Hard Refresh Bookmarklet:</strong><br>
+            <a href="javascript:(function(){location.reload(true);})();" onclick="return false;" draggable="true" 
+               style="display: inline-block; padding: 8px 16px; background: #667eea; color: white; border-radius: 5px; text-decoration: none; margin: 10px 0; font-weight: 600;">
+               🔃 Hard Refresh
+            </a><br>
+            <small style="color: #666;">Drag this link to your bookmarks bar, then click it in any tab to hard refresh (bypasses cache).</small>
+        </div>
+    </div>
+    
+    <script>
+        // Notification system
+        function showNotification(title, message, type = 'info', duration = 5000) {
+            const container = document.getElementById('notificationContainer');
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            
+            const icons = {
+                info: 'ℹ️',
+                warning: '⚠️',
+                success: '✅',
+                error: '❌'
+            };
+            
+            notification.innerHTML = `
+                <div class="notification-icon">${icons[type] || icons.info}</div>
+                <div class="notification-content">
+                    <div class="notification-title">${title}</div>
+                    <div class="notification-message">${message}</div>
+                </div>
+                <button class="notification-close" onclick="closeNotification(this)">×</button>
+            `;
+            
+            container.appendChild(notification);
+            
+            // Auto-close after duration
+            if (duration > 0) {
+                setTimeout(() => {
+                    closeNotification(notification.querySelector('.notification-close'));
+                }, duration);
+            }
+            
+            return notification;
+        }
+        
+        function closeNotification(button) {
+            const notification = button.closest('.notification');
+            if (notification) {
+                notification.classList.add('hiding');
+                setTimeout(() => {
+                    notification.remove();
+                }, 300);
+            }
+        }
+        
+        // Tab configurations
+        const tabs = [
+            {
+                id: 'cloudflare-dashboard',
+                label: 'Cloudflare Dashboard',
+                url: 'https://dash.cloudflare.com/e75d70dfd45bd465d93950e54cd264bd/pages/view/ah-v1-beta',
+                window: null
+            },
+            {
+                id: 'github',
+                label: 'GitHub Repository',
+                url: 'https://github.com/imvikverma/ah-v1-beta',
+                window: null
+            }
+        ];
+        
+        let refreshInterval = null;
+        let countdownInterval = null;
+        let refreshCount = 0;
+        let isRunning = false;
+        let isRefreshing = false; // Prevent concurrent refreshes
+        let refreshIntervalSeconds = 30; // Configurable
+        
+        // Update refresh interval from input
+        function updateRefreshInterval() {
+            const input = document.getElementById('refreshInterval');
+            const newInterval = parseInt(input.value) || 30;
+            if (newInterval < 10) {
+                input.value = 10;
+                refreshIntervalSeconds = 10;
+            } else if (newInterval > 300) {
+                input.value = 300;
+                refreshIntervalSeconds = 300;
+            } else {
+                refreshIntervalSeconds = newInterval;
+            }
+            document.getElementById('currentInterval').textContent = refreshIntervalSeconds;
+            
+            // If running, restart with new interval
+            if (isRunning) {
+                stopAutoRefresh();
+                setTimeout(() => startAutoRefresh(), 500);
+            }
+        }
+        
+        // Initialize tabs list
+        function renderTabs() {
+            const tabsList = document.getElementById('tabsList');
+            tabsList.innerHTML = '';
+            tabs.forEach(tab => {
+                const tabDiv = document.createElement('div');
+                const isOpen = tab.window && !tab.window.closed;
+                const origin = new URL(tab.url).origin;
+                const currentOrigin = window.location.origin;
+                const isCrossOrigin = origin !== currentOrigin && origin !== 'null'; // 'null' for file://
+                
+                // Add cross-origin class to tab item
+                tabDiv.className = 'tab-item' + (isCrossOrigin ? ' cross-origin' : '');
+                
+                let statusText = isOpen ? '✅ Open' : '❌ Closed';
+                let statusClass = isOpen ? 'status-active' : 'status-inactive';
+                
+                if (isOpen && isCrossOrigin) {
+                    statusText += ' 🔒';
+                    statusClass += ' status-cross-origin';
+                }
+                
+                tabDiv.innerHTML = `
+                    <div class="tab-info">
+                        <div class="tab-label">
+                            ${tab.label}
+                            ${isCrossOrigin ? '<span class="cross-origin-badge">CROSS-ORIGIN</span>' : ''}
+                        </div>
+                        <div class="tab-url">${tab.url}</div>
+                        ${isCrossOrigin && isOpen ? '<div style="font-size: 11px; color: #ff9800; margin-top: 4px;">⚠️ Requires manual refresh or Firefox extension</div>' : ''}
+                    </div>
+                    <div class="tab-status ${statusClass}">
+                        ${statusText}
+                    </div>
+                `;
+                tabsList.appendChild(tabDiv);
+            });
+        }
+        
+        function updateStatus(status, nextRefresh = null) {
+            document.getElementById('statusText').textContent = status;
+            document.getElementById('statusText').className = 'status-value ' + (status === 'Running' ? 'active' : '');
+            if (nextRefresh) {
+                document.getElementById('nextRefresh').textContent = nextRefresh;
+            }
+            document.getElementById('refreshCount').textContent = refreshCount;
+        }
+        
+        function updateDeployStatus(status) {
+            document.getElementById('deployStatus').textContent = status;
+        }
+        
+        // Force deploy function - creates trigger file for PowerShell script
+        async function forceDeploy() {
+            // Visual feedback
+            const deployBtn = document.querySelector('button[onclick="forceDeploy()"]');
+            if (deployBtn) {
+                deployBtn.classList.add('active');
+                setTimeout(() => deployBtn.classList.remove('active'), 300);
+            }
+            
+            updateDeployStatus('Triggering deploy...');
+            
+            // Create a trigger file that PowerShell can watch for
+            try {
+                // Try to use File System Access API (modern browsers)
+                if ('showSaveFilePicker' in window) {
+                    // For modern browsers, we'll show instructions
+                    const confirmed = confirm(
+                        'Force Deploy to GitHub & Cloudflare\n\n' +
+                        'This will:\n' +
+                        '1. Build Flutter web app\n' +
+                        '2. Force push to GitHub\n' +
+                        '3. Trigger Cloudflare deployment\n\n' +
+                        'Click OK to see instructions, or Cancel to abort.'
+                    );
+                    
+                    if (confirmed) {
+                        const instructions = 
+                            'Option 1 (Quick):\n' +
+                            '  Run: .\\scripts\\trigger_deploy.ps1\n\n' +
+                            'Option 2 (Menu):\n' +
+                            '  Run: .\\start-all.ps1 → Option 5\n\n' +
+                            'Option 3 (Direct):\n' +
+                            '  Run: .\\scripts\\deploy_cloudflare.ps1 -Force\n\n' +
+                            'After deployment, wait 1-3 minutes for Cloudflare to build,\n' +
+                            'then click "Hard Refresh All Tabs" to see changes.';
+                        
+                        showNotification(
+                            'Force Deploy Instructions',
+                            instructions,
+                            'info',
+                            10000
+                        );
+                        updateDeployStatus('See notification above');
+                    } else {
+                        updateDeployStatus('Cancelled');
+                        return;
+                    }
+                } else {
+                    // Fallback for older browsers
+                    showNotification(
+                        'Force Deploy Instructions',
+                        '1. Open PowerShell\n2. Run: .\\scripts\\trigger_deploy.ps1\n\nOr use: .\\start-all.ps1 → Option 5',
+                        'info',
+                        8000
+                    );
+                    updateDeployStatus('See notification');
+                }
+            } catch (error) {
+                updateDeployStatus('⚠️ See notification');
+                showNotification(
+                    'Force Deploy Instructions',
+                    'Run: .\\scripts\\trigger_deploy.ps1\n\nOr: .\\start-all.ps1 → Option 5',
+                    'info',
+                    8000
+                );
+            }
+            
+            // Hard refresh all tabs after showing instructions
+            setTimeout(() => {
+                hardRefreshAll();
+                updateDeployStatus('Tabs refreshed - deploy manually');
+            }, 2000);
+        }
+        
+        // Check if we can access a window (same origin check)
+        function canAccessWindow(win) {
+            try {
+                // Try to access location - will throw if cross-origin
+                const test = win.location.href;
+                return true;
+            } catch (e) {
+                return false;
+            }
+        }
+        
+        // Hard refresh all open tabs with cache bypass
+        function hardRefreshAll() {
+            // Visual feedback
+            const refreshBtn = document.querySelector('button[onclick="hardRefreshAll()"]');
+            if (refreshBtn) {
+                refreshBtn.classList.add('active');
+                setTimeout(() => refreshBtn.classList.remove('active'), 300);
+            }
+            // Prevent concurrent refreshes
+            if (isRefreshing) {
+                console.log('Refresh already in progress, skipping...');
+                return;
+            }
+            
+            isRefreshing = true;
+            let refreshed = 0;
+            let failed = 0;
+            let crossOrigin = 0;
+            const crossOriginTabs = [];
+            
+            // Track which URLs we've already refreshed to avoid duplicates
+            const refreshedUrls = new Set();
+            
+            tabs.forEach(tab => {
+                // Skip if we've already refreshed this URL
+                if (refreshedUrls.has(tab.url)) {
+                    return;
+                }
+                
+                if (tab.window && !tab.window.closed) {
+                    // Check if we can access this window (same origin)
+                    if (!canAccessWindow(tab.window)) {
+                        crossOrigin++;
+                        crossOriginTabs.push(tab.label);
+                        refreshedUrls.add(tab.url); // Mark as processed
+                        return; // Skip cross-origin tabs
+                    }
+                    
+                    try {
+                        // Mark this URL as refreshed
+                        refreshedUrls.add(tab.url);
+                        
+                        // Get the base URL without query parameters to avoid adding timestamps
+                        const currentUrl = tab.window.location.href;
+                        const baseUrl = currentUrl.split('?')[0].split('#')[0];
+                        
+                        // Method 1: Try force reload with cache bypass (doesn't modify URL)
+                        try {
+                            // Use reload() with forceReload parameter
+                            tab.window.location.reload(true);
+                            refreshed++;
+                        } catch (e1) {
+                            // Method 2: If reload fails, try navigating to base URL (clean, no params)
+                            try {
+                                tab.window.location.href = baseUrl;
+                                refreshed++;
+                            } catch (e2) {
+                                // Method 3: Last resort - use replace (but clean URL first)
+                                try {
+                                    // Remove any existing query params and replace with clean URL
+                                    const cleanUrl = tab.url.split('?')[0].split('#')[0];
+                                    tab.window.location.replace(cleanUrl);
+                                    refreshed++;
+                                } catch (e3) {
+                                    console.error('Cannot refresh tab:', tab.label, e3);
+                                    failed++;
+                                    refreshedUrls.delete(tab.url); // Allow retry
+                                }
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Error refreshing tab:', tab.label, e);
+                        failed++;
+                        refreshedUrls.delete(tab.url); // Allow retry
+                    }
+                }
+            });
+            
+            // Reset refresh lock after a delay
+            setTimeout(() => {
+                isRefreshing = false;
+            }, 3000); // 3 second cooldown
+            
+            // Build status message
+            let statusMsg = '';
+            if (refreshed > 0) {
+                statusMsg = 'Hard refreshed ' + refreshed + ' tab(s)';
+                if (crossOrigin > 0) {
+                    statusMsg += ' (' + crossOrigin + ' cross-origin - use bookmarklet)';
+                }
+                if (failed > 0) {
+                    statusMsg += ' (' + failed + ' failed)';
+                }
+            } else if (crossOrigin > 0) {
+                statusMsg = crossOrigin + ' cross-origin tab(s) - use bookmarklet';
+            } else if (failed > 0) {
+                statusMsg = 'Refresh failed - try manual refresh';
+            } else {
+                statusMsg = 'No tabs open';
+            }
+            
+            updateStatus(statusMsg);
+            
+            if (crossOrigin > 0) {
+                // Show bookmarklet instructions for cross-origin tabs
+                showBookmarkletInstructions(crossOriginTabs);
+            } else if (refreshed === 0 && failed > 0) {
+                alert('Could not refresh tabs. They may be on different origins.\n\nTry manually: Ctrl+Shift+R in each tab\n\nOr use the bookmarklet (see instructions below).');
+            } else if (refreshed === 0 && failed === 0 && crossOrigin === 0) {
+                alert('No tabs are open. Click "Start Auto-Refresh" to open tabs first.');
+            }
+            
+            if (refreshed > 0) {
+                updateDeployStatus('Tabs refreshed');
+            }
+            
+            renderTabs();
+        }
+        
+        // Show bookmarklet instructions (non-intrusive notification)
+        function showBookmarkletInstructions(tabNames) {
+            const bookmarkletCode = `javascript:(function(){location.reload(true);})();`;
+            
+            // Show notification instead of alert
+            showNotification(
+                'Cross-Origin Tabs Detected',
+                `${tabNames.length} tab(s) cannot be auto-refreshed: ${tabNames.join(', ')}. Use the bookmarklet below or install the Firefox extension for automatic refresh.`,
+                'warning',
+                8000
+            );
+            
+            // Also update the info section with bookmarklet
+            updateInfoWithBookmarklet(bookmarkletCode);
+        }
+        
+        // Update info section with bookmarklet
+        function updateInfoWithBookmarklet(bookmarkletCode) {
+            const infoDiv = document.querySelector('.info');
+            if (infoDiv && !infoDiv.querySelector('.bookmarklet-section')) {
+                const bookmarkletSection = document.createElement('div');
+                bookmarkletSection.className = 'bookmarklet-section';
+                bookmarkletSection.style.cssText = 'margin-top: 15px; padding: 15px; background: #fff3cd; border-radius: 5px; border-left: 4px solid #ffc107;';
+                bookmarkletSection.innerHTML = `
+                    <strong>🔖 Hard Refresh Bookmarklet:</strong><br>
+                    <a href="${bookmarkletCode}" onclick="return false;" draggable="true" 
+                       style="display: inline-block; padding: 8px 16px; background: #667eea; color: white; border-radius: 5px; text-decoration: none; margin: 10px 0;">
+                       🔃 Hard Refresh
+                    </a><br>
+                    <small>Drag this link to your bookmarks bar, then click it in any tab to hard refresh.</small>
+                `;
+                infoDiv.appendChild(bookmarkletSection);
+            }
+        }
+        
+        // Open all tabs (only if not already open)
+        function openAllTabs() {
+            let opened = 0;
+            tabs.forEach(tab => {
+                // Check if tab is actually closed (not just refreshing)
+                if (!tab.window || tab.window.closed) {
+                    // Check if we already have this URL open in another tab
+                    const alreadyOpen = tabs.some(t => t !== tab && t.url === tab.url && t.window && !t.window.closed);
+                    if (!alreadyOpen) {
+                        tab.window = window.open(tab.url, '_blank');
+                        opened++;
+                        if (!tab.window) {
+                            alert('Please allow popups for this page to work');
+                            return false;
+                        }
+                    } else {
+                        // Reuse the existing window reference
+                        const existingTab = tabs.find(t => t !== tab && t.url === tab.url && t.window && !t.window.closed);
+                        if (existingTab) {
+                            tab.window = existingTab.window;
+                        }
+                    }
+                }
+            });
+            renderTabs();
+            return true;
+        }
+        
+        // Start auto-refresh
+        function startAutoRefresh() {
+            if (isRunning) {
+                return;
+            }
+            
+            // Visual feedback
+            const startBtn = document.querySelector('button[onclick="startAutoRefresh()"]');
+            if (startBtn) {
+                startBtn.classList.add('active');
+                setTimeout(() => startBtn.classList.remove('active'), 200);
+            }
+            
+            // Open all tabs first
+            if (!openAllTabs()) {
+                return;
+            }
+            
+            refreshCount = 0;
+            isRunning = true;
+            updateStatus('Running');
+            document.getElementById('countdown').style.display = 'block';
+            
+            // Update button states
+            const startButton = document.querySelector('button[onclick="startAutoRefresh()"]');
+            const stopButton = document.querySelector('button[onclick="stopAutoRefresh()"]');
+            if (startButton) startButton.disabled = true;
+            if (stopButton) stopButton.disabled = false;
+            
+            // Clear any existing intervals
+            if (refreshInterval) clearInterval(refreshInterval);
+            if (countdownInterval) clearInterval(countdownInterval);
+            
+            // Start countdown
+            let secondsLeft = refreshIntervalSeconds;
+            updateCountdown(secondsLeft);
+            
+            countdownInterval = setInterval(() => {
+                secondsLeft--;
+                if (secondsLeft <= 0) {
+                    secondsLeft = refreshIntervalSeconds;
+                }
+                updateCountdown(secondsLeft);
+            }, 1000);
+            
+            // Disable interval input while running
+            document.getElementById('refreshInterval').disabled = true;
+            
+            // Start refresh interval
+            refreshInterval = setInterval(() => {
+                // Skip if already refreshing
+                if (isRefreshing) {
+                    console.log('Skipping scheduled refresh - already in progress');
+                    return;
+                }
+                
+                refreshCount++;
+                
+                // Only refresh tabs that are actually open
+                hardRefreshAll();
+                updateStatus('Running');
+                
+                // Reopen closed tabs (but only if they're actually closed, not just refreshing)
+                // Add a small delay to avoid reopening tabs that are just refreshing
+                setTimeout(() => {
+                    tabs.forEach(tab => {
+                        // Only reopen if tab is actually closed (not just refreshing)
+                        if (!tab.window || tab.window.closed) {
+                            // Check if we already have this tab open in another window reference
+                            const alreadyOpen = tabs.some(t => t !== tab && t.url === tab.url && t.window && !t.window.closed);
+                            if (!alreadyOpen) {
+                                tab.window = window.open(tab.url, '_blank');
+                            }
+                        }
+                    });
+                    renderTabs();
+                }, 3000); // Wait 3 seconds after refresh to check if tabs are really closed
+            }, refreshIntervalSeconds * 1000);
+            
+            // Initial refresh (only if not already refreshing) - skip to avoid immediate refresh
+            // User can manually click "Hard Refresh All" if needed
+        }
+        
+        function updateCountdown(seconds) {
+            document.getElementById('countdown').textContent = `Next refresh in: ${seconds}s`;
+        }
+        
+        function stopAutoRefresh() {
+            // Visual feedback
+            const stopBtn = document.querySelector('button[onclick="stopAutoRefresh()"]');
+            if (stopBtn) {
+                stopBtn.classList.add('active');
+                setTimeout(() => stopBtn.classList.remove('active'), 200);
+            }
+            
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+                refreshInterval = null;
+            }
+            if (countdownInterval) {
+                clearInterval(countdownInterval);
+                countdownInterval = null;
+            }
+            isRunning = false;
+            isRefreshing = false; // Reset refresh lock
+            updateStatus('Stopped', '--');
+            document.getElementById('countdown').style.display = 'none';
+            document.getElementById('refreshInterval').disabled = false; // Re-enable input
+            
+            // Update button states
+            const startButton = document.querySelector('button[onclick="startAutoRefresh()"]');
+            const stopButton = document.querySelector('button[onclick="stopAutoRefresh()"]');
+            if (startButton) startButton.disabled = false;
+            if (stopButton) stopButton.disabled = true;
+            
+            renderTabs();
+        }
+        
+        // Initialize
+        renderTabs();
+        
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            stopAutoRefresh();
+        });
+        
+        // Update tab status periodically
+        setInterval(() => {
+            if (isRunning) {
+                renderTabs();
+            }
+        }, 2000);
+    </script>
+</body>
+</html>

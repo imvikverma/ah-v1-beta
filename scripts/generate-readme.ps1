@@ -43,7 +43,7 @@ $readmeContent = @"
 ### Quick Launch
 \`\`\`powershell
 # Use the master launcher (recommended)
-.\zzz-quick-access\start-all.ps1
+.\_local\development\zzz-quick-access\start-all.ps1
 
 # Or start services individually:
 .\scripts\start_backend.ps1      # Flask backend (port 5000)
@@ -145,7 +145,7 @@ See \`docs/setup/\` for detailed configuration guides.
 ### Cloudflare Pages (Automatic)
 \`\`\`powershell
 # Deploy with changelog-based commit message
-.\zzz-quick-access\start-all.ps1
+.\_local\development\zzz-quick-access\start-all.ps1
 # Select option 6: Deploy to Cloudflare Pages
 \`\`\`
 
@@ -180,7 +180,7 @@ python .\scripts\tests\test_hdfc_credentials.py
 python .\config\get_kotak_token.py
 
 # Run diagnostic
-.\zzz-quick-access\diagnose.ps1
+.\_local\development\zzz-quick-access\diagnose.ps1
 \`\`\`
 
 ## 📝 Development
@@ -188,7 +188,7 @@ python .\config\get_kotak_token.py
 ### Adding Changes
 1. Make your code changes
 2. Update changelog: \`.\scripts\update-changelog.ps1\`
-3. Deploy: \`.\zzz-quick-access\start-all.ps1\` → Option 6
+3. Deploy: \`.\start-all.ps1\` → Option 6
 
 ### Code Structure
 - **Backend**: \`aurum_harmony/master_codebase/Master_AurumHarmony_261125.py\`

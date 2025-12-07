@@ -7,7 +7,15 @@ Write-Host ""
 # Check if backend is running
 Write-Host "Backend Status:" -ForegroundColor Yellow
 try {
-    $backendPort = Test-NetConnection -ComputerName localhost -Port 5000 -WarningAction SilentlyContinue -InformationLevel Quiet -ErrorAction SilentlyContinue
+    $tcpClient = New-Object System.Net.Sockets.TcpClient
+    $connect = $tcpClient.BeginConnect("localhost", 5000, $null, $null)
+    $wait = $connect.AsyncWaitHandle.WaitOne(500, $false)
+    $backendPort = $false
+    if ($wait) {
+        $tcpClient.EndConnect($connect)
+        $backendPort = $true
+    }
+    $tcpClient.Close()
     if ($backendPort) {
         Write-Host "  Backend is running on port 5000" -ForegroundColor Green
         try {
@@ -34,7 +42,15 @@ Write-Host ""
 # Check if frontend is running
 Write-Host "Frontend Status:" -ForegroundColor Yellow
 try {
-    $frontendPort = Test-NetConnection -ComputerName localhost -Port 58643 -WarningAction SilentlyContinue -InformationLevel Quiet -ErrorAction SilentlyContinue
+    $tcpClient = New-Object System.Net.Sockets.TcpClient
+    $connect = $tcpClient.BeginConnect("localhost", 58643, $null, $null)
+    $wait = $connect.AsyncWaitHandle.WaitOne(500, $false)
+    $frontendPort = $false
+    if ($wait) {
+        $tcpClient.EndConnect($connect)
+        $frontendPort = $true
+    }
+    $tcpClient.Close()
     if ($frontendPort) {
         Write-Host "  Frontend is running on port 58643" -ForegroundColor Green
     } else {

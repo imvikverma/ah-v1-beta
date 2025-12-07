@@ -4,6 +4,19 @@
 $projectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $projectRoot
 
+# Detect PowerShell executable (prefer pwsh.exe for PowerShell 7+, fallback to powershell.exe)
+function Get-PowerShellExe {
+    # Check if pwsh.exe (PowerShell 7+) is available
+    $pwsh = Get-Command pwsh.exe -ErrorAction SilentlyContinue
+    if ($pwsh) {
+        return "pwsh.exe"
+    }
+    # Fallback to powershell.exe (PowerShell 5.1)
+    return "powershell.exe"
+}
+
+$PowerShellExe = Get-PowerShellExe
+
 function Show-Menu {
     Clear-Host
     Write-Host "========================================" -ForegroundColor Cyan
@@ -15,71 +28,66 @@ function Show-Menu {
     Write-Host "  - https://aurumharmony.saffronbolt.in" -ForegroundColor White
     Write-Host ""
     Write-Host "Select an option:" -ForegroundColor Yellow
-    Write-Host "  1. Start Backend (Flask)" -ForegroundColor Cyan
-    Write-Host "  2. Start Frontend (Flutter Web)" -ForegroundColor Cyan
-    Write-Host "  3. Start Both (Backend + Frontend)" -ForegroundColor Cyan
-    Write-Host "  4. Rebuild Flutter (Clean Build)" -ForegroundColor Magenta
-    Write-Host "  5. Deploy to Cloudflare Pages" -ForegroundColor Magenta
-    Write-Host "  6. View Documentation" -ForegroundColor Gray
-    Write-Host "  7. Exit" -ForegroundColor Gray
+    Write-Host "  1. Auto-Start Everything (Migration + Backend + Frontend)" -ForegroundColor Green
+    Write-Host "  2. Start Backend (Flask)" -ForegroundColor Cyan
+    Write-Host "  3. Start Frontend (Flutter Web)" -ForegroundColor Cyan
+    Write-Host "  4. Start Both (Backend + Frontend)" -ForegroundColor Cyan
+    Write-Host "  5. Deploy to Cloudflare Pages (Build + Push)" -ForegroundColor Magenta
+    Write-Host "  6. Enable Auto-Deploy (Watches for changes)" -ForegroundColor Cyan
+    Write-Host "  7. Send Monthly Birthday/Anniversary Report" -ForegroundColor Cyan
+    Write-Host "  8. View Documentation" -ForegroundColor Gray
+    Write-Host "  9. Exit" -ForegroundColor Gray
     Write-Host ""
 }
 
 function Start-Backend {
-    Write-Host "Starting Flask Backend..." -ForegroundColor Green
+    Write-Host "Starting Flask Backend (Silent Mode)..." -ForegroundColor Green
     Write-Host "Main app: http://localhost:5000" -ForegroundColor Yellow
     Write-Host "Admin panel: http://localhost:5001" -ForegroundColor Yellow
+    Write-Host "Logs: _local\logs\backend.log" -ForegroundColor Gray
     Write-Host ""
     
-    $backendScript = Join-Path $projectRoot "start_backend.ps1"
+    $backendScript = Join-Path $projectRoot "scripts\start_backend_silent.ps1"
     if (Test-Path $backendScript) {
-        Start-Process powershell -ArgumentList "-NoExit", "-File", "`"$backendScript`""
+        # Run in minimized window, hidden from taskbar initially
+        $psi = New-Object System.Diagnostics.ProcessStartInfo
+        $psi.FileName = $PowerShellExe
+        $psi.Arguments = "-NoExit -WindowStyle Minimized -File `"$backendScript`""
+        $psi.WindowStyle = [System.Diagnostics.ProcessWindowStyle]::Minimized
+        $psi.CreateNoWindow = $false
+        [System.Diagnostics.Process]::Start($psi) | Out-Null
     } else {
         Write-Host "Backend script not found!" -ForegroundColor Red
     }
 }
 
 function Start-Frontend {
-    Write-Host "Starting Flutter Web App..." -ForegroundColor Green
+    Write-Host "Starting Flutter Web App (Silent Mode)..." -ForegroundColor Green
+    Write-Host "Frontend: http://localhost:58643" -ForegroundColor Yellow
+    Write-Host "Logs: _local\logs\flutter.log" -ForegroundColor Gray
     Write-Host ""
     
-    $flutterScript = Join-Path $projectRoot "start_flutter.ps1"
+    $flutterScript = Join-Path $projectRoot "scripts\start_flutter_silent.ps1"
     if (Test-Path $flutterScript) {
-        Start-Process powershell -ArgumentList "-NoExit", "-File", "`"$flutterScript`""
+        # Run in minimized window
+        $psi = New-Object System.Diagnostics.ProcessStartInfo
+        $psi.FileName = $PowerShellExe
+        $psi.Arguments = "-NoExit -WindowStyle Minimized -File `"$flutterScript`""
+        $psi.WindowStyle = [System.Diagnostics.ProcessWindowStyle]::Minimized
+        $psi.CreateNoWindow = $false
+        [System.Diagnostics.Process]::Start($psi) | Out-Null
     } else {
         Write-Host "Flutter script not found!" -ForegroundColor Red
     }
 }
 
-function Rebuild-Flutter {
-    Write-Host "Rebuilding Flutter Web App (Clean Build)..." -ForegroundColor Magenta
-    Write-Host ""
-    
-    $flutterDir = Join-Path $projectRoot "aurum_harmony\frontend\flutter_app"
-    if (Test-Path $flutterDir) {
-        Set-Location $flutterDir
-        Write-Host "[1/3] Cleaning Flutter build..." -ForegroundColor Cyan
-        flutter clean
-        
-        Write-Host "`n[2/3] Getting dependencies..." -ForegroundColor Cyan
-        flutter pub get
-        
-        Write-Host "`n[3/3] Building Flutter web..." -ForegroundColor Cyan
-        flutter build web --release
-        
-        Write-Host "`n✅ Build complete!" -ForegroundColor Green
-        Write-Host "Build output: $flutterDir\build\web" -ForegroundColor Gray
-        
-        Set-Location $projectRoot
-    } else {
-        Write-Host "Flutter app directory not found!" -ForegroundColor Red
-    }
-}
-
-function Deploy-Cloudflare {
+function Invoke-CloudflareDeploy {
     Write-Host "Deploying to Cloudflare Pages..." -ForegroundColor Magenta
     Write-Host "This will build Flutter web and push to GitHub." -ForegroundColor Yellow
     Write-Host "Commit message will be auto-generated from CHANGELOG.md" -ForegroundColor Gray
+    Write-Host ""
+    Write-Host "💡 Tip: After deployment, use the auto-refresh tool:" -ForegroundColor Cyan
+    Write-Host "   Open: scripts\firefox_auto_refresh.html" -ForegroundColor Gray
     Write-Host ""
     
     $deployScript = Join-Path $projectRoot "scripts\deploy_cloudflare.ps1"
@@ -143,17 +151,55 @@ function Deploy-Cloudflare {
     }
 }
 
+function Start-AutoDeploy {
+    Write-Host "Starting Auto-Deploy Watcher..." -ForegroundColor Cyan
+    Write-Host "This will watch for changes and auto-deploy to GitHub & Cloudflare" -ForegroundColor Yellow
+    Write-Host "Logs: _local\logs\auto_deploy.log" -ForegroundColor Gray
+    Write-Host ""
+    
+    $autoDeployScript = Join-Path $projectRoot "scripts\auto_deploy.ps1"
+    if (Test-Path $autoDeployScript) {
+        # Run in hidden window (completely silent)
+        $psi = New-Object System.Diagnostics.ProcessStartInfo
+        $psi.FileName = $PowerShellExe
+        $psi.Arguments = "-WindowStyle Hidden -File `"$autoDeployScript`""
+        $psi.WindowStyle = [System.Diagnostics.ProcessWindowStyle]::Hidden
+        $psi.CreateNoWindow = $true
+        [System.Diagnostics.Process]::Start($psi) | Out-Null
+        
+        Write-Host "✅ Auto-deploy watcher started in background" -ForegroundColor Green
+        Write-Host "   It will check for changes every 30 seconds" -ForegroundColor Gray
+        Write-Host "   To stop: Find 'powershell' process running auto_deploy.ps1" -ForegroundColor Gray
+    } else {
+        Write-Host "Auto-deploy script not found!" -ForegroundColor Red
+    }
+}
+
+function Send-MonthlyReport {
+    Write-Host "Sending Monthly Birthday & Anniversary Report..." -ForegroundColor Cyan
+    Write-Host "Recipient: vikrm@saffronbolt.in" -ForegroundColor Yellow
+    Write-Host ""
+    
+    $schedulerScript = Join-Path $projectRoot "aurum_harmony\admin\scheduler.py"
+    if (Test-Path $schedulerScript) {
+        Write-Host "Running scheduler script..." -ForegroundColor Green
+        python $schedulerScript
+    } else {
+        Write-Host "Scheduler script not found at: $schedulerScript" -ForegroundColor Red
+    }
+}
+
 function Show-Documentation {
     Write-Host "Documentation:" -ForegroundColor Cyan
     Write-Host ""
-    Write-Host "  - Setup: documentation\setup\" -ForegroundColor White
-    Write-Host "  - Deployment: documentation\deployment\" -ForegroundColor White
-    Write-Host "  - Reference: documentation\reference\" -ForegroundColor White
-    Write-Host "  - Status: documentation\status\" -ForegroundColor White
+    Write-Host "  - Setup: _local\documentation\project-documentation\setup\" -ForegroundColor White
+    Write-Host "  - Deployment: _local\documentation\project-documentation\deployment\" -ForegroundColor White
+    Write-Host "  - Reference: _local\documentation\project-documentation\reference\" -ForegroundColor White
+    Write-Host "  - Status: _local\documentation\project-documentation\status\" -ForegroundColor White
     Write-Host ""
     Write-Host "Opening documentation folder..." -ForegroundColor Yellow
     
-    $docPath = Join-Path $projectRoot "documentation"
+    $docPath = Join-Path $projectRoot "_local\documentation\project-documentation"
     if (Test-Path $docPath) {
         Start-Process explorer.exe -ArgumentList $docPath
     } else {
@@ -161,54 +207,155 @@ function Show-Documentation {
     }
 }
 
+function Start-Automated {
+    Write-Host "Starting automated system..." -ForegroundColor Green
+    Write-Host "This will:" -ForegroundColor Yellow
+    Write-Host "  1. Run database migration" -ForegroundColor Gray
+    Write-Host "  2. Start backend in silent mode" -ForegroundColor Gray
+    Write-Host "  3. Start frontend in silent mode" -ForegroundColor Gray
+    Write-Host "  4. Verify services are running" -ForegroundColor Gray
+    Write-Host "  5. Optionally start auto-deploy" -ForegroundColor Gray
+    Write-Host ""
+    
+    try {
+        # Ensure we're in project root
+        Set-Location $projectRoot
+        $autoStartScript = Join-Path $projectRoot "scripts\auto_start.ps1"
+        if (Test-Path $autoStartScript) {
+            & $autoStartScript
+        } else {
+            Write-Host "Auto-start script not found!" -ForegroundColor Red
+        }
+    } finally {
+        # Always ensure we're in project root
+        Set-Location $projectRoot
+    }
+}
+
 # Main menu loop
 do {
+    # Force return to project root before showing menu
+    # This ensures we're always in the right directory
+    $currentPath = (Get-Location).Path
+    if ($currentPath -ne $projectRoot) {
+        Set-Location $projectRoot
+    }
+    # Use Push/Pop as additional safety
+    Push-Location $projectRoot
+    Pop-Location
+    
     Show-Menu
-    $choice = Read-Host "Enter your choice (1-7)"
+    $choice = Read-Host "Enter your choice (1-9)"
     
     switch ($choice) {
         "1" {
-            Start-Backend
+            Push-Location $projectRoot
+            try {
+                Start-Automated
+            } finally {
+                Pop-Location
+                Set-Location $projectRoot
+            }
             Write-Host "`nPress any key to return to menu..."
-            Read-Host
+            $null = Read-Host
+            Set-Location $projectRoot
         }
         "2" {
-            Start-Frontend
+            Push-Location $projectRoot
+            try {
+                Start-Backend
+            } finally {
+                Pop-Location
+                Set-Location $projectRoot
+            }
             Write-Host "`nPress any key to return to menu..."
-            Read-Host
+            $null = Read-Host
+            Set-Location $projectRoot
         }
         "3" {
-            Write-Host "`nStarting both services..." -ForegroundColor Green
-            Start-Backend
-            Start-Sleep -Seconds 2
-            Start-Frontend
-            Write-Host "`n✅ Both services started!" -ForegroundColor Green
-            Write-Host "   - Flask Backend: http://localhost:5000" -ForegroundColor Yellow
-            Write-Host "   - Flutter: Check the Flutter window for URL" -ForegroundColor Yellow
+            Push-Location $projectRoot
+            try {
+                Start-Frontend
+            } finally {
+                Pop-Location
+                Set-Location $projectRoot
+            }
             Write-Host "`nPress any key to return to menu..."
-            Read-Host
+            $null = Read-Host
+            Set-Location $projectRoot
         }
         "4" {
-            Rebuild-Flutter
+            Push-Location $projectRoot
+            try {
+                Write-Host "`nStarting both services..." -ForegroundColor Green
+                Start-Backend
+                Start-Sleep -Seconds 2
+                Start-Frontend
+            } finally {
+                Pop-Location
+                Set-Location $projectRoot
+            }
+            Write-Host "`n✅ Both services started!" -ForegroundColor Green
+            Write-Host "   - Flask Backend: http://localhost:5000" -ForegroundColor Yellow
+            Write-Host "   - Flutter: http://localhost:58643" -ForegroundColor Yellow
             Write-Host "`nPress any key to return to menu..."
-            Read-Host
+            $null = Read-Host
+            Set-Location $projectRoot
         }
         "5" {
-            Publish-Cloudflare
+            Push-Location $projectRoot
+            try {
+                Invoke-CloudflareDeploy
+            } finally {
+                Pop-Location
+                Set-Location $projectRoot
+            }
             Write-Host "`nPress any key to return to menu..."
-            Read-Host
+            $null = Read-Host
+            Set-Location $projectRoot
         }
         "6" {
-            Show-Documentation
+            Push-Location $projectRoot
+            try {
+                Start-AutoDeploy
+            } finally {
+                Pop-Location
+                Set-Location $projectRoot
+            }
             Write-Host "`nPress any key to return to menu..."
-            Read-Host
+            $null = Read-Host
+            Set-Location $projectRoot
         }
         "7" {
+            Push-Location $projectRoot
+            try {
+                Send-MonthlyReport
+            } finally {
+                Pop-Location
+                Set-Location $projectRoot
+            }
+            Write-Host "`nPress any key to return to menu..."
+            $null = Read-Host
+            Set-Location $projectRoot
+        }
+        "8" {
+            Push-Location $projectRoot
+            try {
+                Show-Documentation
+            } finally {
+                Pop-Location
+                Set-Location $projectRoot
+            }
+            Write-Host "`nPress any key to return to menu..."
+            $null = Read-Host
+            Set-Location $projectRoot
+        }
+        "9" {
             Write-Host "`nExiting..." -ForegroundColor Yellow
             exit 0
         }
         default {
-            Write-Host "`nInvalid choice. Please select 1-7." -ForegroundColor Red
+            Write-Host "`nInvalid choice. Please select 1-9." -ForegroundColor Red
             Start-Sleep -Seconds 1
         }
     }

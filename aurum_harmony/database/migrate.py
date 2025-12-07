@@ -130,6 +130,90 @@ def cleanup_expired_sessions():
         print("✅ No expired sessions to clean")
 
 
+def migrate_user_fields():
+    """Add new user fields if they don't exist."""
+    print("Checking for new user fields...")
+    
+    from sqlalchemy import inspect, Column, Float, Date, Text, Integer
+    from sqlalchemy.schema import CreateColumn
+    
+    inspector = inspect(db.engine)
+    columns = [col['name'] for col in inspector.get_columns('users')]
+    
+    new_fields_added = False
+    
+    # Check and add date_of_birth
+    if 'date_of_birth' not in columns:
+        print("  - Adding date_of_birth column...")
+        try:
+            db.session.execute(db.text('ALTER TABLE users ADD COLUMN date_of_birth DATE'))
+            db.session.commit()
+            new_fields_added = True
+            print("    ✅ date_of_birth added")
+        except Exception as e:
+            db.session.rollback()
+            print(f"    ⚠️  Could not add date_of_birth: {e}")
+    
+    # Check and add anniversary
+    if 'anniversary' not in columns:
+        print("  - Adding anniversary column...")
+        try:
+            db.session.execute(db.text('ALTER TABLE users ADD COLUMN anniversary DATE'))
+            db.session.commit()
+            new_fields_added = True
+            print("    ✅ anniversary added")
+        except Exception as e:
+            db.session.rollback()
+            print(f"    ⚠️  Could not add anniversary: {e}")
+    
+    # Check and add initial_capital
+    if 'initial_capital' not in columns:
+        print("  - Adding initial_capital column...")
+        try:
+            db.session.execute(db.text('ALTER TABLE users ADD COLUMN initial_capital FLOAT DEFAULT 10000.0 NOT NULL'))
+            db.session.commit()
+            # Update existing users with default value
+            db.session.execute(db.text('UPDATE users SET initial_capital = 10000.0 WHERE initial_capital IS NULL'))
+            db.session.commit()
+            new_fields_added = True
+            print("    ✅ initial_capital added")
+        except Exception as e:
+            db.session.rollback()
+            print(f"    ⚠️  Could not add initial_capital: {e}")
+    
+    # Check and add max_trades_per_index
+    if 'max_trades_per_index' not in columns:
+        print("  - Adding max_trades_per_index column...")
+        try:
+            db.session.execute(db.text('ALTER TABLE users ADD COLUMN max_trades_per_index TEXT'))
+            db.session.commit()
+            new_fields_added = True
+            print("    ✅ max_trades_per_index added")
+        except Exception as e:
+            db.session.rollback()
+            print(f"    ⚠️  Could not add max_trades_per_index: {e}")
+    
+    # Check and add max_accounts_allowed
+    if 'max_accounts_allowed' not in columns:
+        print("  - Adding max_accounts_allowed column...")
+        try:
+            db.session.execute(db.text('ALTER TABLE users ADD COLUMN max_accounts_allowed INTEGER DEFAULT 1 NOT NULL'))
+            db.session.commit()
+            # Update existing users with default value
+            db.session.execute(db.text('UPDATE users SET max_accounts_allowed = 1 WHERE max_accounts_allowed IS NULL'))
+            db.session.commit()
+            new_fields_added = True
+            print("    ✅ max_accounts_allowed added")
+        except Exception as e:
+            db.session.rollback()
+            print(f"    ⚠️  Could not add max_accounts_allowed: {e}")
+    
+    if new_fields_added:
+        print("✅ New user fields migrated")
+    else:
+        print("✅ All user fields already exist")
+
+
 def main():
     """Run all migrations."""
     print("=" * 60)
@@ -147,8 +231,11 @@ def main():
         # Use app context for all database operations
         with app.app_context():
         
-            # Run migrations
-            migrate_existing_users()
+            # Run migrations in order: schema changes first, then data migrations
+            migrate_user_fields()  # Add new columns first
+            print()
+            
+            migrate_existing_users()  # Then migrate existing data
             print()
             
             migrate_broker_credentials()

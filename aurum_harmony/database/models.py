@@ -2,10 +2,11 @@
 Database models for AurumHarmony.
 """
 
-from datetime import datetime
+from datetime import datetime, date
 from .db import db
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Text
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Text, Float, Date, JSON
 from sqlalchemy.orm import relationship
+import json
 
 class User(db.Model):
     """
@@ -20,6 +21,14 @@ class User(db.Model):
     user_code = Column(String(50), unique=True, nullable=False, index=True)
     is_admin = Column(Boolean, default=False, nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
+    
+    # Additional user profile fields
+    date_of_birth = Column(Date, nullable=True)  # Used for birthday fee waivers
+    anniversary = Column(Date, nullable=True)  # Used for anniversary fee discounts
+    initial_capital = Column(Float, default=10000.0, nullable=False)
+    max_trades_per_index = Column(Text, nullable=True)  # JSON string: {"NIFTY50": 50, "BANKNIFTY": 30}
+    max_accounts_allowed = Column(Integer, default=1, nullable=False)
+    
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     
@@ -29,6 +38,14 @@ class User(db.Model):
     
     def to_dict(self, include_sensitive=False):
         """Convert user to dictionary, optionally including sensitive data."""
+        # Parse max_trades_per_index JSON if it exists
+        max_trades = {}
+        if self.max_trades_per_index:
+            try:
+                max_trades = json.loads(self.max_trades_per_index)
+            except (json.JSONDecodeError, TypeError):
+                max_trades = {}
+        
         data = {
             'id': self.id,
             'email': self.email,
@@ -36,6 +53,11 @@ class User(db.Model):
             'user_code': self.user_code,
             'is_admin': self.is_admin,
             'is_active': self.is_active,
+            'date_of_birth': self.date_of_birth.isoformat() if self.date_of_birth else None,
+            'anniversary': self.anniversary.isoformat() if self.anniversary else None,
+            'initial_capital': self.initial_capital,
+            'max_trades_per_index': max_trades,
+            'max_accounts_allowed': self.max_accounts_allowed,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
         }

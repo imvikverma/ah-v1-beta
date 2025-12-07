@@ -32,15 +32,20 @@ from engines.admin.Admin_Panel import app as admin_app
 try:
     from aurum_harmony.auth.routes import auth_bp
     from aurum_harmony.brokers import brokers_bp
+    from aurum_harmony.paper_trading import paper_bp
+    from aurum_harmony.admin import admin_bp, admin_db_bp
     from aurum_harmony.database.db import init_db
     AUTH_AVAILABLE = True
 except ImportError as e:
-    print(f"⚠ Auth blueprint not available: {e}")
+    print(f"WARNING: Auth blueprint not available: {e}")
     import traceback
     traceback.print_exc()
     AUTH_AVAILABLE = False
     auth_bp = None
     brokers_bp = None
+    paper_bp = None
+    admin_bp = None
+    admin_db_bp = None
 
 app = Flask(__name__)
 # Configure CORS to handle OPTIONS requests properly
@@ -59,14 +64,28 @@ if AUTH_AVAILABLE:
         init_db(app)
         app.register_blueprint(auth_bp)
         app.register_blueprint(brokers_bp)
-        print("✅ Auth and broker blueprints registered")
+        if paper_bp:
+            app.register_blueprint(paper_bp)
+        if admin_bp:
+            app.register_blueprint(admin_bp)
+        if admin_db_bp:
+            app.register_blueprint(admin_db_bp)
+        print("SUCCESS: Auth, broker, paper trading, admin, and database admin blueprints registered")
     except Exception as e:
-        print(f"⚠ Error initializing auth: {e}")
+        print(f"WARNING: Error initializing auth: {e}")
         import traceback
         traceback.print_exc()
         AUTH_AVAILABLE = False
 else:
-    print("⚠ Auth and broker blueprints not registered")
+    print("WARNING: Auth and broker blueprints not registered")
+    # Register paper trading even if auth fails (it's independent)
+    try:
+        from aurum_harmony.paper_trading import paper_bp
+        if paper_bp:
+            app.register_blueprint(paper_bp)
+            print("Paper trading blueprint registered")
+    except Exception as e:
+        print(f"WARNING: Paper trading blueprint not available: {e}")
 
 # Global instances
 vix_adj = VIXAdjustment()
@@ -180,5 +199,21 @@ threading.Thread(target=daily_fund_cycle, daemon=True).start()
 
 if __name__ == "__main__":
     # Run main app + admin panel
-    threading.Thread(target=lambda: app.run(host='0.0.0.0', port=5000), daemon=True).start()
-    admin_app.run(host='0.0.0.0', port=5001)
+    print("Starting AurumHarmony Backend...")
+    print("Main app: http://localhost:5000")
+    print("Admin panel: http://localhost:5001")
+    print("Press Ctrl+C to stop")
+    print("")
+    
+    # Run main app in background thread
+    threading.Thread(target=lambda: app.run(host='0.0.0.0', port=5000, debug=False), daemon=True).start()
+    
+    # Give main app time to start
+    import time
+    time.sleep(2)
+    
+    # Run admin panel (this will block, keeping the process alive)
+    try:
+        admin_app.run(host='0.0.0.0', port=5001, debug=False)
+    except KeyboardInterrupt:
+        print("\nShutting down...")

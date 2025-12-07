@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../services/theme_service.dart';
+import 'signup_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   final VoidCallback? onLoginSuccess;
@@ -101,25 +102,32 @@ class _LoginScreenState extends State<LoginScreen> {
         child: SafeArea(
           child: Stack(
             children: [
-              // Theme Toggle Button (top right)
+              // Theme Toggle Button (top right) - Mobile-friendly
               Positioned(
-                top: 16,
-                right: 16,
+                top: 8,
+                right: 8,
                 child: ListenableBuilder(
                   listenable: ThemeService.instance,
                   builder: (context, _) {
                     final themeService = ThemeService.instance;
                     final isDark = themeService.isDarkMode;
                     
-                    return IconButton(
-                      icon: Icon(
-                        isDark ? Icons.light_mode : Icons.dark_mode,
-                        color: Theme.of(context).colorScheme.onSurface,
+                    return Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () {
+                          themeService.toggleTheme();
+                        },
+                        borderRadius: BorderRadius.circular(24),
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          child: Icon(
+                            isDark ? Icons.light_mode : Icons.dark_mode,
+                            color: Theme.of(context).colorScheme.onSurface,
+                            size: 24,
+                          ),
+                        ),
                       ),
-                      onPressed: () {
-                        themeService.toggleTheme();
-                      },
-                      tooltip: isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode',
                     );
                   },
                 ),
@@ -250,6 +258,31 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                       const SizedBox(height: 16),
+
+                      // Sign Up Link
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            "Don't have an account? ",
+                            style: TextStyle(
+                              color: colors.onSurface.withOpacity(0.7),
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (context) => SignUpScreen(
+                                    onSignUpSuccess: widget.onLoginSuccess,
+                                  ),
+                                ),
+                              );
+                            },
+                            child: const Text('Sign Up'),
+                          ),
+                        ],
+                      ),
                         ],
                       ),
                     ),

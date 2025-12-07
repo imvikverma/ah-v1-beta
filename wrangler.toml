@@ -1,10 +1,27 @@
 # Cloudflare Worker Configuration for aurum-api
-# This is a minimal Worker that proxies to the Flask backend
-# TODO: Migrate Flask routes to Worker handlers
+# Handles API endpoints, webhooks, and broker callbacks
 
 name = "aurum-api"
 compatibility_date = "2025-12-07"
 main = "worker/src/index.ts"
+
+# D1 Database binding
+# Create database with: wrangler d1 create aurum-harmony-db
+# Then update database_id below
+[[d1_databases]]
+binding = "DB"
+database_name = "aurum-harmony-db"
+database_id = ""  # Will be set after creating database
+
+# Environment variables (set via Cloudflare Dashboard or wrangler secret put)
+# Required:
+#   CLOUDFLARE_DEPLOY_HOOK - Cloudflare Pages build hook URL (for GitHub webhook)
+#   JWT_SECRET - Secret key for JWT token generation (use: openssl rand -hex 32)
+# Optional:
+#   GITHUB_WEBHOOK_SECRET - GitHub webhook secret for signature verification
+#   HDFC_CLIENT_ID - HDFC Sky OAuth client ID
+#   HDFC_CLIENT_SECRET - HDFC Sky OAuth client secret
+#   KOTAK_CONSUMER_KEY - Kotak Neo consumer key
 
 [env.production]
 routes = [

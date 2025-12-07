@@ -80,6 +80,9 @@ class AuthService {
         final isAdmin = user['is_admin'] == true || user['isAdmin'] == true;
         await prefs.setBool(_keyIsAdmin, isAdmin);
         return; // Success!
+      } else if (response.statusCode == 501) {
+        // Worker returns 501 for unmigrated endpoints - trigger fallback to localhost
+        throw Exception('ENDPOINT_NOT_MIGRATED');
       } else {
         final error = jsonDecode(response.body) as Map<String, dynamic>;
         throw Exception(error['error']?.toString() ?? 'Login failed');
@@ -87,11 +90,18 @@ class AuthService {
     } catch (e) {
       lastError = e is Exception ? e : Exception('Network error: $e');
       
+      // Check if this is a 501 response or network error that should trigger fallback
+      final errorString = e.toString();
+      final isNetworkError = errorString.contains('NetworkError') || 
+                            errorString.contains('Failed host lookup') ||
+                            errorString.contains('timeout') ||
+                            errorString.contains('SocketException') ||
+                            errorString.contains('Connection refused') ||
+                            errorString.contains('Connection closed') ||
+                            errorString.contains('ENDPOINT_NOT_MIGRATED');
+      
       // If production API failed and we're not already on localhost, try localhost
-      if (apiUrl != kBackendBaseUrlFallback && 
-          (e.toString().contains('NetworkError') || 
-           e.toString().contains('Failed host lookup') ||
-           e.toString().contains('timeout'))) {
+      if (apiUrl != kBackendBaseUrlFallback && isNetworkError) {
         try {
           final response = await http.post(
             Uri.parse('$kBackendBaseUrlFallback/api/auth/login'),
@@ -120,7 +130,8 @@ class AuthService {
             }
             final isAdmin = user['is_admin'] == true || user['isAdmin'] == true;
             await prefs.setBool(_keyIsAdmin, isAdmin);
-            return; // Success with fallback!
+            // Success with fallback - login worked, no error message needed
+            return;
           } else {
             final error = jsonDecode(response.body) as Map<String, dynamic>;
             throw Exception(error['error']?.toString() ?? 'Login failed');
@@ -139,17 +150,30 @@ class AuthService {
       // Re-throw if not a network error or fallback already tried
       final isProductionUrl = apiUrl.contains('saffronbolt.in') || apiUrl.contains('pages.dev');
       if (isProductionUrl) {
-        throw Exception(
-          'Cannot connect to Cloudflare Worker API.\n\n'
-          'The production API (https://api.ah.saffronbolt.in) is not accessible.\n'
-          'This may be because:\n'
-          '• Cloudflare Worker is not deployed yet\n'
-          '• DNS is not configured\n'
-          '• Network connectivity issues\n\n'
-          'For local testing:\n'
-          '• Run backend: start-all.ps1 → Option 1\n'
-          '• Access app from: http://localhost:58643'
-        );
+        // Check if it's a 501 (endpoint not migrated) vs actual connection failure
+        if (e.toString().contains('ENDPOINT_NOT_MIGRATED') || 
+            (lastError?.toString().contains('501') ?? false)) {
+          throw Exception(
+            'Cloudflare Worker API endpoint not yet migrated.\n\n'
+            'The login endpoint (/api/auth/login) is not yet implemented in the Worker.\n'
+            'Falling back to localhost backend...\n\n'
+            'To use the Worker:\n'
+            '• Migrate the auth endpoints to the Worker\n'
+            '• Or use localhost backend: start-all.ps1 → Option 1'
+          );
+        } else {
+          throw Exception(
+            'Cannot connect to Cloudflare Worker API.\n\n'
+            'The production API (https://api.ah.saffronbolt.in) is not accessible.\n'
+            'This may be because:\n'
+            '• Cloudflare Worker is not deployed yet\n'
+            '• DNS is not configured\n'
+            '• Network connectivity issues\n\n'
+            'For local testing:\n'
+            '• Run backend: start-all.ps1 → Option 1\n'
+            '• Access app from: http://localhost:58643'
+          );
+        }
       } else {
         throw lastError ?? Exception('Login error: $e');
       }
@@ -295,6 +319,9 @@ class AuthService {
           password: password,
         );
         return; // Success!
+      } else if (response.statusCode == 501) {
+        // Worker returns 501 for unmigrated endpoints - trigger fallback
+        throw Exception('ENDPOINT_NOT_MIGRATED');
       } else {
         final error = jsonDecode(response.body) as Map<String, dynamic>;
         throw Exception(error['error']?.toString() ?? 'Registration failed');
@@ -302,11 +329,15 @@ class AuthService {
     } catch (e) {
       lastError = e is Exception ? e : Exception('Network error: $e');
       
-      // If production API failed and we're not already on localhost, try localhost
-      if (apiUrl != kBackendBaseUrlFallback && 
+      // If production API failed (network error, 501, or timeout) and we're not already on localhost, try localhost
+      final shouldFallbackReg = apiUrl != kBackendBaseUrlFallback && 
           (e.toString().contains('NetworkError') || 
            e.toString().contains('Failed host lookup') ||
-           e.toString().contains('timeout'))) {
+           e.toString().contains('timeout') ||
+           e.toString().contains('ENDPOINT_NOT_MIGRATED') ||
+           e.toString().contains('SocketException'));
+      
+      if (shouldFallbackReg) {
         try {
           final response = await http.post(
             Uri.parse('$kBackendBaseUrlFallback/api/auth/register'),

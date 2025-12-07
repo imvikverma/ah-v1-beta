@@ -4,7 +4,19 @@
 cd 'D:\Projects\AI Projects\Testbed\Downloads Repo\AurumHarmonyTest'
 
 Write-Host 'Checking if backend is running on port 5000...' -ForegroundColor Cyan
-$backendCheck = Test-NetConnection -ComputerName localhost -Port 5000 -InformationLevel Quiet -WarningAction SilentlyContinue
+try {
+    $tcpClient = New-Object System.Net.Sockets.TcpClient
+    $connect = $tcpClient.BeginConnect("localhost", 5000, $null, $null)
+    $wait = $connect.AsyncWaitHandle.WaitOne(500, $false)
+    $backendCheck = $false
+    if ($wait) {
+        $tcpClient.EndConnect($connect)
+        $backendCheck = $true
+    }
+    $tcpClient.Close()
+} catch {
+    $backendCheck = $false
+}
 
 if (-not $backendCheck) {
     Write-Host 'WARNING: Backend does not appear to be running on port 5000' -ForegroundColor Yellow

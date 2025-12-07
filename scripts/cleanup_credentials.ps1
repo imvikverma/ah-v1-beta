@@ -1,13 +1,13 @@
 # Credential Cleanup Script
-# Removes "Other_Files/API Keys.txt" from ALL git history
+# Removes "_local/documentation/other-files/API Keys.txt" from ALL git history
 
 Write-Host "=== Credential Cleanup Script ===" -ForegroundColor Yellow
-Write-Host "This will remove 'Other_Files/API Keys.txt' from ALL git history" -ForegroundColor Red
+Write-Host "This will remove '_local/documentation/other-files/API Keys.txt' from ALL git history" -ForegroundColor Red
 Write-Host ""
 
 # Check if file exists in history
 Write-Host "[1/4] Checking git history for leaked file..." -ForegroundColor Cyan
-$history = git log --all --full-history --oneline -- "Other_Files/API Keys.txt" 2>&1
+$history = git log --all --full-history --oneline -- "_local/documentation/other-files/API Keys.txt" 2>&1
 
 if ($LASTEXITCODE -eq 0 -and $history) {
     Write-Host "⚠️  File found in git history!" -ForegroundColor Red
@@ -41,7 +41,7 @@ if ($LASTEXITCODE -eq 0 -and $history) {
     }
     
     # Remove file from all history
-    git filter-repo --path "Other_Files/API Keys.txt" --invert-paths --force
+    git filter-repo --path "_local/documentation/other-files/API Keys.txt" --invert-paths --force
     
     if ($LASTEXITCODE -eq 0) {
         Write-Host "✅ File removed from git history!" -ForegroundColor Green
@@ -55,7 +55,7 @@ if ($LASTEXITCODE -eq 0 -and $history) {
 
 Write-Host ""
 Write-Host "[3/4] Verifying cleanup..." -ForegroundColor Cyan
-$verify = git log --all --full-history --oneline -- "Other_Files/API Keys.txt" 2>&1
+$verify = git log --all --full-history --oneline -- "_local/documentation/other-files/API Keys.txt" 2>&1
 if (-not $verify -or $verify -match "fatal:") {
     Write-Host "✅ Verification passed - file no longer in history" -ForegroundColor Green
 } else {

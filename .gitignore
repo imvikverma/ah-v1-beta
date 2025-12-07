@@ -3,6 +3,8 @@
 .env
 Other_Files/API Keys.txt
 Other_Files/api_mangal_keshav.json
+_local/documentation/other-files/API Keys.txt
+_local/documentation/other-files/api_mangal_keshav.json
 
 # Python
 .venv/
@@ -25,3 +27,43 @@ aurum_harmony/frontend/flutter_app/ios/Pods/
 *.iml
 .DS_Store
 .cursor/
+
+# Local-only files (not for production/GitHub)
+_local/
+logs/
+.snapshots/
+Old_Files/
+Code_Files/
+Design/
+Other_Files/
+zzz-quick-access/
+documentation/
+
+# Instructional/documentation files (moved to _local)
+# Development/Setup documentation (keep local only)
+WORKER_*.md
+QUICK_START*.md
+WHY_*.md
+TESTING_*.md
+STATUS_*.md
+CLOUDFLARE_*.md
+requirements.md
+tatus
+
+# Keep only production-essential .md files in Git:
+# - README.md (root)
+# - CHANGELOG.md
+# - SECURITY.md
+# - FILE_STRUCTURE.md (optional, but useful for repo structure)
+# - rules.md (optional, but useful for repo)
+# - Code documentation within packages (aurum_harmony/docs/*, etc.)
+# - Script README files (scripts/*/README.md)
+
+# Node modules (local development)
+node_modules/
+package-lock.json
+
+# Database files (local)
+*.db
+*.sqlite
+*.sqlite3

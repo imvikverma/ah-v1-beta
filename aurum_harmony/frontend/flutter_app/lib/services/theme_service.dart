@@ -158,9 +158,10 @@ class ThemeService extends ChangeNotifier {
       ),
       cardTheme: CardThemeData(
         color: const Color(0xff11172b),
-        elevation: 4,
+        elevation: 8,
+        shadowColor: const Color(0xfff9a826).withOpacity(0.2),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(16),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(

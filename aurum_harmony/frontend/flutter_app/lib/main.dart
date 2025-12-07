@@ -7,6 +7,7 @@ import 'screens/notifications_screen.dart';
 import 'screens/admin_screen.dart';
 import 'services/auth_service.dart';
 import 'services/theme_service.dart';
+import 'config/white_label_config.dart';
 import 'widgets/api_key_dialog.dart';
 
 /// AurumHarmony v1.0 Beta Flutter Frontend
@@ -19,6 +20,10 @@ import 'widgets/api_key_dialog.dart';
 /// - Admin: User management (admin-only)
 
 void main() {
+  // Initialize white label configuration
+  // In production, this could be loaded from API or local storage
+  WhiteLabelService.setConfig(WhiteLabelConfig.defaultConfig());
+  
   runApp(const AurumHarmonyApp());
 }
 
@@ -102,7 +107,7 @@ class _AurumHarmonyAppState extends State<AurumHarmonyApp> {
     if (!_isLoggedIn) {
       return MaterialApp(
         debugShowCheckedModeBanner: false,
-        title: 'AurumHarmony v1.0 Beta',
+        title: '${WhiteLabelService.config.appName} v1.0 Beta',
         theme: lightTheme,
         darkTheme: darkTheme,
         themeMode: _themeService.themeMode,
@@ -120,7 +125,7 @@ class _AurumHarmonyAppState extends State<AurumHarmonyApp> {
 
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'AurumHarmony v1.0 Beta',
+      title: '${WhiteLabelService.config.appName} v1.0 Beta',
       theme: lightTheme,
       darkTheme: darkTheme,
       themeMode: _themeService.themeMode,
@@ -132,7 +137,7 @@ class _AurumHarmonyAppState extends State<AurumHarmonyApp> {
             fit: BoxFit.contain,
             errorBuilder: (context, error, stackTrace) {
               // Fallback to text if logo not found
-              return const Text('AurumHarmony v1.0 Beta');
+              return Text('${WhiteLabelService.config.appName} v1.0 Beta');
             },
           ),
           actions: [
