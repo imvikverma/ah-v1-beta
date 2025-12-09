@@ -67,3 +67,12 @@ package-lock.json
 *.db
 *.sqlite
 *.sqlite3
+
+# Hyperledger Fabric - CRITICAL: Never commit private keys!
+fabric/crypto-config/
+**/priv_sk
+**/*_sk
+**/*.key
+fabric/**/keystore/
+fabric/**/ca/
+fabric/**/tlsca/
