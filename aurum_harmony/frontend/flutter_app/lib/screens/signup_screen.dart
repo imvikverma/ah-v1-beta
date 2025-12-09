@@ -58,6 +58,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
           SnackBar(
             content: SelectableText('Sign up failed: $e'),
             backgroundColor: Theme.of(context).colorScheme.error,
+            duration: const Duration(seconds: 30), // Extended duration for copying
+            action: SnackBarAction(
+              label: 'Dismiss',
+              textColor: Colors.white,
+              onPressed: () {
+                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              },
+            ),
           ),
         );
       }

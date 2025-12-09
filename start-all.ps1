@@ -382,7 +382,7 @@ do {
         }
         default {
             Write-Host "`nInvalid choice. Please select 1-6." -ForegroundColor Red
-            Start-Sleep -Seconds 1
+rror            Start-Sleep -Seconds 1
         }
     }
 } while ($true)

@@ -208,8 +208,16 @@ class _TradeScreenState extends State<TradeScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: $e'),
+            content: SelectableText('Error: $e'),
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 30), // Extended duration for copying
+            action: SnackBarAction(
+              label: 'Dismiss',
+              textColor: Colors.white,
+              onPressed: () {
+                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              },
+            ),
           ),
         );
       }
@@ -729,8 +737,16 @@ class _TradeScreenState extends State<TradeScreen> {
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(orderResult['error']?.toString() ?? 'Order failed'),
+                content: SelectableText(orderResult['error']?.toString() ?? 'Order failed'),
                 backgroundColor: Colors.red,
+                duration: const Duration(seconds: 30), // Extended duration for copying
+                action: SnackBarAction(
+                  label: 'Dismiss',
+                  textColor: Colors.white,
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                  },
+                ),
               ),
             );
           }
@@ -739,8 +755,16 @@ class _TradeScreenState extends State<TradeScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Error: $e'),
+              content: SelectableText('Error: $e'),
               backgroundColor: Colors.red,
+              duration: const Duration(seconds: 30), // Extended duration for copying
+              action: SnackBarAction(
+                label: 'Dismiss',
+                textColor: Colors.white,
+                onPressed: () {
+                  ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                },
+              ),
             ),
           );
         }

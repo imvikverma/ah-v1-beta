@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../constants.dart';
+import '../services/auth_service.dart';
 
 class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key});
@@ -29,8 +30,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
       _error = null;
     });
     try {
+      final token = await AuthService.getToken();
       final resp = await http.get(
         Uri.parse('$kBackendBaseUrl/report/user/$_selectedUserId'),
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
       );
       if (resp.statusCode == 200) {
         final data = jsonDecode(resp.body) as Map<String, dynamic>;
@@ -58,10 +64,17 @@ class _ReportsScreenState extends State<ReportsScreen> {
       _loading = true;
     });
     try {
+      final token = await AuthService.getToken();
       final endpoint = type == 'realistic'
           ? '/backtest/realistic'
           : '/backtest/edge';
-      final resp = await http.get(Uri.parse('$kBackendBaseUrl$endpoint'));
+      final resp = await http.get(
+        Uri.parse('$kBackendBaseUrl$endpoint'),
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+      );
       if (resp.statusCode == 200) {
         final data = jsonDecode(resp.body) as Map<String, dynamic>;
         setState(() {

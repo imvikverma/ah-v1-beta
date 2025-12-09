@@ -511,6 +511,547 @@ const routes: Route[] = [
     },
   },
 
+  // Admin endpoints - Get users list
+  {
+    method: 'GET',
+    path: '/api/admin/users',
+    handler: async (request, env: Env) => {
+      const authHeader = request.headers.get('Authorization');
+      if (!authHeader) {
+        return Response.json(
+          { error: 'Authorization required' },
+          { status: 401, headers: corsHeaders }
+        );
+      }
+
+      if (!env.DB) {
+        return Response.json(
+          { error: 'Database not configured' },
+          { status: 503, headers: corsHeaders }
+        );
+      }
+
+      const token = authHeader.replace('Bearer ', '').trim();
+      const jwtSecret = env.JWT_SECRET || 'default-secret-change-in-production';
+      const tokenData = await verifySessionToken(token, jwtSecret);
+
+      // Get user from session
+      const session = await env.DB.prepare(
+        "SELECT * FROM sessions WHERE session_token = ? AND expires_at > ?"
+      ).bind(token, new Date().toISOString()).first() as any;
+
+      if (!session) {
+        return Response.json(
+          { error: 'Invalid or expired token' },
+          { status: 401, headers: corsHeaders }
+        );
+      }
+
+      // Check if user is admin
+      const user = await env.DB.prepare(
+        "SELECT is_admin FROM users WHERE id = ?"
+      ).bind(session.user_id).first() as any;
+
+      if (!user || !user.is_admin) {
+        return Response.json(
+          { error: 'Admin access required' },
+          { status: 403, headers: corsHeaders }
+        );
+      }
+
+      // Get all users
+      const users = await env.DB.prepare(
+        "SELECT id, email, phone, user_code, is_admin, is_active, initial_capital, max_trades_per_index, max_accounts_allowed, created_at, updated_at FROM users ORDER BY created_at DESC"
+      ).all() as any;
+
+      return Response.json(
+        {
+          success: true,
+          users: users.results || [],
+        },
+        { status: 200, headers: corsHeaders }
+      );
+    },
+  },
+
+  // Admin endpoints - Get database tables
+  {
+    method: 'GET',
+    path: '/api/admin/db/tables',
+    handler: async (request, env: Env) => {
+      const authHeader = request.headers.get('Authorization');
+      if (!authHeader) {
+        return Response.json(
+          { error: 'Authorization required' },
+          { status: 401, headers: corsHeaders }
+        );
+      }
+
+      if (!env.DB) {
+        return Response.json(
+          { error: 'Database not configured' },
+          { status: 503, headers: corsHeaders }
+        );
+      }
+
+      const token = authHeader.replace('Bearer ', '').trim();
+      const session = await env.DB.prepare(
+        "SELECT * FROM sessions WHERE session_token = ? AND expires_at > ?"
+      ).bind(token, new Date().toISOString()).first() as any;
+
+      if (!session) {
+        return Response.json(
+          { error: 'Invalid or expired token' },
+          { status: 401, headers: corsHeaders }
+        );
+      }
+
+      // Check if user is admin
+      const user = await env.DB.prepare(
+        "SELECT is_admin FROM users WHERE id = ?"
+      ).bind(session.user_id).first() as any;
+
+      if (!user || !user.is_admin) {
+        return Response.json(
+          { error: 'Admin access required' },
+          { status: 403, headers: corsHeaders }
+        );
+      }
+
+      // Get list of tables from D1
+      // D1 doesn't have a direct way to list tables, so we'll return known tables
+      const knownTables = ['users', 'sessions', 'broker_credentials'];
+
+      return Response.json(
+        {
+          success: true,
+          tables: knownTables,
+        },
+        { status: 200, headers: corsHeaders }
+      );
+    },
+  },
+
+  // Admin endpoints - Get table data
+  {
+    method: 'GET',
+    path: new RegExp('^/api/admin/db/tables/([^/]+)$'),
+    handler: async (request, env: Env, url) => {
+      const authHeader = request.headers.get('Authorization');
+      if (!authHeader) {
+        return Response.json(
+          { error: 'Authorization required' },
+          { status: 401, headers: corsHeaders }
+        );
+      }
+
+      if (!env.DB) {
+        return Response.json(
+          { error: 'Database not configured' },
+          { status: 503, headers: corsHeaders }
+        );
+      }
+
+      const token = authHeader.replace('Bearer ', '').trim();
+      const session = await env.DB.prepare(
+        "SELECT * FROM sessions WHERE session_token = ? AND expires_at > ?"
+      ).bind(token, new Date().toISOString()).first() as any;
+
+      if (!session) {
+        return Response.json(
+          { error: 'Invalid or expired token' },
+          { status: 401, headers: corsHeaders }
+        );
+      }
+
+      // Check if user is admin
+      const user = await env.DB.prepare(
+        "SELECT is_admin FROM users WHERE id = ?"
+      ).bind(session.user_id).first() as any;
+
+      if (!user || !user.is_admin) {
+        return Response.json(
+          { error: 'Admin access required' },
+          { status: 403, headers: corsHeaders }
+        );
+      }
+
+      // Extract table name from URL
+      const pathMatch = url.pathname.match(/^\/api\/admin\/db\/tables\/([^/]+)$/);
+      const tableName = pathMatch ? pathMatch[1] : null;
+
+      if (!tableName) {
+        return Response.json(
+          { error: 'Table name required' },
+          { status: 400, headers: corsHeaders }
+        );
+      }
+
+      // Validate table name (prevent SQL injection)
+      const validTables = ['users', 'sessions', 'broker_credentials'];
+      if (!validTables.includes(tableName)) {
+        return Response.json(
+          { error: 'Invalid table name' },
+          { status: 400, headers: corsHeaders }
+        );
+      }
+
+      // Get pagination params
+      const page = parseInt(url.searchParams.get('page') || '1');
+      const perPage = parseInt(url.searchParams.get('per_page') || '50');
+      const offset = (page - 1) * perPage;
+
+      // Get table data
+      const data = await env.DB.prepare(
+        `SELECT * FROM ${tableName} LIMIT ? OFFSET ?`
+      ).bind(perPage, offset).all() as any;
+
+      // Get total count
+      const countResult = await env.DB.prepare(
+        `SELECT COUNT(*) as total FROM ${tableName}`
+      ).first() as any;
+
+      return Response.json(
+        {
+          success: true,
+          data: data.results || [],
+          pagination: {
+            page,
+            per_page: perPage,
+            total: countResult?.total || 0,
+            total_pages: Math.ceil((countResult?.total || 0) / perPage),
+          },
+        },
+        { status: 200, headers: corsHeaders }
+      );
+    },
+  },
+
+  // Admin endpoints - Get table columns
+  {
+    method: 'GET',
+    path: new RegExp('^/api/admin/db/tables/([^/]+)/columns$'),
+    handler: async (request, env: Env, url) => {
+      const authHeader = request.headers.get('Authorization');
+      if (!authHeader) {
+        return Response.json(
+          { error: 'Authorization required' },
+          { status: 401, headers: corsHeaders }
+        );
+      }
+
+      if (!env.DB) {
+        return Response.json(
+          { error: 'Database not configured' },
+          { status: 503, headers: corsHeaders }
+        );
+      }
+
+      const token = authHeader.replace('Bearer ', '').trim();
+      const session = await env.DB.prepare(
+        "SELECT * FROM sessions WHERE session_token = ? AND expires_at > ?"
+      ).bind(token, new Date().toISOString()).first() as any;
+
+      if (!session) {
+        return Response.json(
+          { error: 'Invalid or expired token' },
+          { status: 401, headers: corsHeaders }
+        );
+      }
+
+      // Check if user is admin
+      const user = await env.DB.prepare(
+        "SELECT is_admin FROM users WHERE id = ?"
+      ).bind(session.user_id).first() as any;
+
+      if (!user || !user.is_admin) {
+        return Response.json(
+          { error: 'Admin access required' },
+          { status: 403, headers: corsHeaders }
+        );
+      }
+
+      // Extract table name from URL
+      const pathMatch = url.pathname.match(/^\/api\/admin\/db\/tables\/([^/]+)\/columns$/);
+      const tableName = pathMatch ? pathMatch[1] : null;
+
+      if (!tableName) {
+        return Response.json(
+          { error: 'Table name required' },
+          { status: 400, headers: corsHeaders }
+        );
+      }
+
+      // Validate table name
+      const validTables = ['users', 'sessions', 'broker_credentials'];
+      if (!validTables.includes(tableName)) {
+        return Response.json(
+          { error: 'Invalid table name' },
+          { status: 400, headers: corsHeaders }
+        );
+      }
+
+      // Get one row to determine columns
+      const sample = await env.DB.prepare(
+        `SELECT * FROM ${tableName} LIMIT 1`
+      ).first() as any;
+
+      // Extract column names from sample row
+      const columns = sample ? Object.keys(sample).map((name: string) => ({
+        name,
+        type: 'TEXT', // D1 doesn't expose column types easily, defaulting to TEXT
+      })) : [];
+
+      return Response.json(
+        {
+          success: true,
+          columns,
+        },
+        { status: 200, headers: corsHeaders }
+      );
+    },
+  },
+
+  // Admin endpoints - Get database stats
+  {
+    method: 'GET',
+    path: '/api/admin/db/stats',
+    handler: async (request, env: Env) => {
+      const authHeader = request.headers.get('Authorization');
+      if (!authHeader) {
+        return Response.json(
+          { error: 'Authorization required' },
+          { status: 401, headers: corsHeaders }
+        );
+      }
+
+      if (!env.DB) {
+        return Response.json(
+          { error: 'Database not configured' },
+          { status: 503, headers: corsHeaders }
+        );
+      }
+
+      const token = authHeader.replace('Bearer ', '').trim();
+      const session = await env.DB.prepare(
+        "SELECT * FROM sessions WHERE session_token = ? AND expires_at > ?"
+      ).bind(token, new Date().toISOString()).first() as any;
+
+      if (!session) {
+        return Response.json(
+          { error: 'Invalid or expired token' },
+          { status: 401, headers: corsHeaders }
+        );
+      }
+
+      // Check if user is admin
+      const user = await env.DB.prepare(
+        "SELECT is_admin FROM users WHERE id = ?"
+      ).bind(session.user_id).first() as any;
+
+      if (!user || !user.is_admin) {
+        return Response.json(
+          { error: 'Admin access required' },
+          { status: 403, headers: corsHeaders }
+        );
+      }
+
+      // Get stats
+      const usersCount = await env.DB.prepare("SELECT COUNT(*) as count FROM users").first() as any;
+      const activeUsersCount = await env.DB.prepare("SELECT COUNT(*) as count FROM users WHERE is_active = 1").first() as any;
+      const adminUsersCount = await env.DB.prepare("SELECT COUNT(*) as count FROM users WHERE is_admin = 1").first() as any;
+
+      return Response.json(
+        {
+          success: true,
+          stats: {
+            users: usersCount?.count || 0,
+            active_users: activeUsersCount?.count || 0,
+            admin_users: adminUsersCount?.count || 0,
+            database_size_mb: 0.08, // Approximate from earlier migration
+          },
+        },
+        { status: 200, headers: corsHeaders }
+      );
+    },
+  },
+
+  // Reports endpoints - Get user trade history and performance
+  {
+    method: 'GET',
+    path: new RegExp('^/report/user/([^/]+)$'),
+    handler: async (request, env: Env, url) => {
+      const authHeader = request.headers.get('Authorization');
+      if (!authHeader) {
+        return Response.json(
+          { error: 'Authorization required' },
+          { status: 401, headers: corsHeaders }
+        );
+      }
+
+      if (!env.DB) {
+        return Response.json(
+          { error: 'Database not configured' },
+          { status: 503, headers: corsHeaders }
+        );
+      }
+
+      const token = authHeader.replace('Bearer ', '').trim();
+      const session = await env.DB.prepare(
+        "SELECT * FROM sessions WHERE session_token = ? AND expires_at > ?"
+      ).bind(token, new Date().toISOString()).first() as any;
+
+      if (!session) {
+        return Response.json(
+          { error: 'Invalid or expired token' },
+          { status: 401, headers: corsHeaders }
+        );
+      }
+
+      // Extract user ID from URL
+      const pathMatch = url.pathname.match(/^\/report\/user\/([^/]+)$/);
+      const userId = pathMatch ? pathMatch[1] : null;
+
+      if (!userId) {
+        return Response.json(
+          { error: 'User ID required' },
+          { status: 400, headers: corsHeaders }
+        );
+      }
+
+      // Get user info
+      const user = await env.DB.prepare(
+        "SELECT id, email, phone, user_code, initial_capital FROM users WHERE user_code = ? OR id = ?"
+      ).bind(userId, userId).first() as any;
+
+      if (!user) {
+        return Response.json(
+          { error: 'User not found' },
+          { status: 404, headers: corsHeaders }
+        );
+      }
+
+      // For now, return mock data structure
+      // TODO: Query actual trade history from database when trade tracking is implemented
+      return Response.json(
+        {
+          user_id: user.user_code || user.id,
+          total_trades: 0,
+          capital: user.initial_capital || 10000,
+          pnl: 0,
+          win_rate: 0,
+          avg_trade: 0,
+          message: 'Trade history tracking coming soon',
+        },
+        { status: 200, headers: corsHeaders }
+      );
+    },
+  },
+
+  // Backtest endpoints - Realistic test
+  {
+    method: 'GET',
+    path: '/backtest/realistic',
+    handler: async (request, env: Env) => {
+      const authHeader = request.headers.get('Authorization');
+      if (!authHeader) {
+        return Response.json(
+          { error: 'Authorization required' },
+          { status: 401, headers: corsHeaders }
+        );
+      }
+
+      if (!env.DB) {
+        return Response.json(
+          { error: 'Database not configured' },
+          { status: 503, headers: corsHeaders }
+        );
+      }
+
+      const token = authHeader.replace('Bearer ', '').trim();
+      const session = await env.DB.prepare(
+        "SELECT * FROM sessions WHERE session_token = ? AND expires_at > ?"
+      ).bind(token, new Date().toISOString()).first() as any;
+
+      if (!session) {
+        return Response.json(
+          { error: 'Invalid or expired token' },
+          { status: 401, headers: corsHeaders }
+        );
+      }
+
+      // Return mock backtest result
+      // TODO: Implement actual backtesting logic
+      return Response.json(
+        {
+          success: true,
+          type: 'realistic',
+          result: {
+            total_trades: 100,
+            win_rate: 65.5,
+            total_pnl: 12500,
+            max_drawdown: -2500,
+            sharpe_ratio: 1.8,
+            message: 'Backtesting engine coming in v1.1',
+          },
+        },
+        { status: 200, headers: corsHeaders }
+      );
+    },
+  },
+
+  // Backtest endpoints - Edge case test
+  {
+    method: 'GET',
+    path: '/backtest/edge',
+    handler: async (request, env: Env) => {
+      const authHeader = request.headers.get('Authorization');
+      if (!authHeader) {
+        return Response.json(
+          { error: 'Authorization required' },
+          { status: 401, headers: corsHeaders }
+        );
+      }
+
+      if (!env.DB) {
+        return Response.json(
+          { error: 'Database not configured' },
+          { status: 503, headers: corsHeaders }
+        );
+      }
+
+      const token = authHeader.replace('Bearer ', '').trim();
+      const session = await env.DB.prepare(
+        "SELECT * FROM sessions WHERE session_token = ? AND expires_at > ?"
+      ).bind(token, new Date().toISOString()).first() as any;
+
+      if (!session) {
+        return Response.json(
+          { error: 'Invalid or expired token' },
+          { status: 401, headers: corsHeaders }
+        );
+      }
+
+      // Return mock backtest result
+      // TODO: Implement actual backtesting logic
+      return Response.json(
+        {
+          success: true,
+          type: 'edge',
+          result: {
+            total_trades: 50,
+            win_rate: 45.0,
+            total_pnl: -5000,
+            max_drawdown: -8000,
+            sharpe_ratio: 0.5,
+            message: 'Backtesting engine coming in v1.1',
+          },
+        },
+        { status: 200, headers: corsHeaders }
+      );
+    },
+  },
+
   // HDFC Sky OAuth callback
   {
     method: 'GET',
@@ -740,6 +1281,7 @@ function matchRoute(path: string, routePath: string | RegExp): boolean {
   if (typeof routePath === 'string') {
     return path === routePath;
   }
+  // For RegExp, test the path
   return routePath.test(path);
 }
 
