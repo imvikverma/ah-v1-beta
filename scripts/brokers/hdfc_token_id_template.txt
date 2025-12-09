@@ -1,37 +1,15 @@
-# HDFC Sky Credentials Template
+# HDFC Sky Token ID Template
 # 
 # INSTRUCTIONS:
-# Since the URL doesn't contain api_key and token_id, extract them from browser:
-#
-# METHOD 1: Browser Console (Easiest) - Based on React Code
-# 1. Open Developer Tools (F12) → Console tab
-# 2. Run these exact commands:
-#    localStorage.getItem('api_key')
-#    localStorage.getItem('token_id')
-#    localStorage.getItem('accessToken')
-# 3. Copy the values and paste them below
-#
-# METHOD 2: Application Tab
-# 1. Open Developer Tools (F12) → Application tab
-# 2. Check Local Storage → https://developer.hdfcsky.com
-# 3. Look for api_key and token_id keys
-#
-# METHOD 3: Network Tab
-# 1. Open Developer Tools (F12) → Network tab
-# 2. Refresh page, check any API call's URL or headers
-# 3. Look for ?api_key=...&token_id=... in request URL
-#
-# Once you have the values, paste them below:
+# 1. After logging in to HDFC Sky developer portal, check the URL
+# 2. The URL should look like:
+#    https://developer.hdfcsky.com/oapi/v1/dashboard/apps?api_key=...&token_id=...
+# 3. Copy the ENTIRE URL and paste it below
+# 4. Save this file
+# 5. Run: .\scripts\brokers\import_hdfc_token_id.ps1
 #
 # IMPORTANT: This file will be deleted after importing for security
 
-# Option 1: Paste the COMPLETE URL here (if it has ?api_key=...&token_id=...)
-URL=
-
-# Option 2: Or paste the values directly here (from localStorage):
-API_KEY=
-TOKEN_ID=
-
-# Optional: JWT token (from localStorage.accessToken) - for Authorization header
-ACCESS_TOKEN=
+# Paste the COMPLETE URL here (with ?api_key=...&token_id=...)
+URL=https://developer.hdfcsky.com/oapi/v1/dashboard/apps?api_key=3347f702031d45539a95e94a0f46d2f2&token_id=5ca3e34af252476b8e0b32254c657311
 

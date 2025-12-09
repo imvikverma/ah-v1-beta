@@ -110,68 +110,98 @@ try {
         }
     }
 
-    Write-Host "`n[4/6] Committing changes..." -ForegroundColor Cyan
+    Write-Host "`n[4/6] Pulling latest changes from GitHub (before committing)..." -ForegroundColor Cyan
+    $env:GIT_EDITOR = "true"
+    
+    # First, ensure we have latest changes before committing
+    # This reduces conflicts later
+    $pullOutput = git pull origin main --rebase --autostash 2>&1 | Out-String
+    
+    if ($LASTEXITCODE -ne 0 -and $pullOutput -match "CONFLICT") {
+        Write-Host "   ⚠️  Conflicts detected during pull. Resolving..." -ForegroundColor Yellow
+        
+        # Check what's conflicted
+        $conflictStatus = git status --short 2>&1 | Out-String
+        
+        if ($conflictStatus -match "docs/") {
+            Write-Host "   Resolving docs/ conflicts (using local version)..." -ForegroundColor Gray
+            git checkout --ours docs/ 2>&1 | Out-Null
+            git add docs/ 2>&1 | Out-Null
+        }
+        
+        # Resolve any other conflicts
+        git add -A 2>&1 | Out-Null
+        git rebase --continue --no-edit 2>&1 | Out-Null
+        
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "   ⚠️  Could not auto-resolve. Aborting rebase..." -ForegroundColor Yellow
+            git rebase --abort 2>&1 | Out-Null
+            # Try regular pull instead
+            git pull origin main --no-edit 2>&1 | Out-Null
+            if ($LASTEXITCODE -eq 0) {
+                Write-Host "   ✅ Pulled with merge" -ForegroundColor Green
+            }
+        } else {
+            Write-Host "   ✅ Rebase completed" -ForegroundColor Green
+        }
+    } else {
+        Write-Host "   ✅ Pulled latest changes" -ForegroundColor Green
+    }
+    
+    Write-Host "`n[5/6] Committing changes..." -ForegroundColor Cyan
     
     # Ensure we're in the git repo root
     if (-not (Test-Path ".git")) {
         throw "Not in a git repository. Current directory: $(Get-Location)"
     }
     
-    # Add files
+    # Add files (including any changes from pull)
     git add docs README.md CHANGELOG.md 2>&1 | Out-Null
     
     # Check if there are changes to commit
     $stagedFiles = git diff --staged --name-only
-    if ($stagedFiles) {
-        Write-Host "   Staged files:" -ForegroundColor Gray
-        $stagedFiles | ForEach-Object { Write-Host "     $_" -ForegroundColor Gray }
+    $modifiedFiles = git diff --name-only
+    $untrackedFiles = git ls-files --others --exclude-standard
+    
+    if ($stagedFiles -or $modifiedFiles -or $untrackedFiles) {
+        # Add all changes
+        git add -A 2>&1 | Out-Null
+        $stagedFiles = git diff --staged --name-only
         
-        $env:GIT_EDITOR = "true"
-        git commit -m "$CommitMessage"
-        
-        Write-Host "`n[5/6] Pulling latest changes from GitHub..." -ForegroundColor Cyan
-        $env:GIT_EDITOR = "true"
-        $pullOutput = git pull origin main --no-edit 2>&1 | Out-String
-        
-        # Check if there are merge conflicts
-        if ($pullOutput -match "CONFLICT" -or $LASTEXITCODE -ne 0) {
-            Write-Host "   ⚠️  Merge conflicts detected in docs/ folder" -ForegroundColor Yellow
-            Write-Host "   Resolving by using our freshly built version..." -ForegroundColor Yellow
+        if ($stagedFiles) {
+            Write-Host "   Staged files:" -ForegroundColor Gray
+            $stagedFiles | ForEach-Object { Write-Host "     $_" -ForegroundColor Gray }
             
-            # Since docs/ is generated content, we'll use our version (the one we just built)
-            # Check git status to see what's conflicted
-            $conflictStatus = git status --short 2>&1 | Out-String
+            $env:GIT_EDITOR = "true"
+            $commitOutput = git commit -m "$CommitMessage" 2>&1 | Out-String
             
-            if ($conflictStatus -match "docs/") {
-                # Use our version for all docs/ conflicts (we just built it fresh)
-                Write-Host "   Accepting our version for docs/ files (freshly built)..." -ForegroundColor Gray
-                git checkout --ours docs/ 2>&1 | Out-Null
-                git add docs/ 2>&1 | Out-Null
-                
-                # Complete the merge
-                $env:GIT_EDITOR = "true"
-                git commit -m "Merge: Resolved conflicts in docs/ using freshly built version" --no-edit 2>&1 | Out-Null
-                
-                Write-Host "   ✅ Conflicts resolved" -ForegroundColor Green
+            if ($LASTEXITCODE -eq 0) {
+                Write-Host "   ✅ Committed successfully" -ForegroundColor Green
             } else {
-                # For non-docs conflicts, try to resolve automatically
-                Write-Host "   Attempting to resolve other conflicts..." -ForegroundColor Gray
-                git add -A 2>&1 | Out-Null
-                $env:GIT_EDITOR = "true"
-                git commit -m "Merge: Auto-resolved conflicts" --no-edit 2>&1 | Out-Null
+                Write-Host "   ⚠️  Commit may have failed: $commitOutput" -ForegroundColor Yellow
             }
         } else {
-            Write-Host "   ✅ Pulled latest changes" -ForegroundColor Green
+            Write-Host "   ℹ️  No changes to commit (already up to date)" -ForegroundColor Gray
         }
+    } else {
+        Write-Host "   ℹ️  No changes detected" -ForegroundColor Gray
+    }
         
-        Write-Host "`n[6/6] Pushing to GitHub (this triggers Cloudflare)..." -ForegroundColor Cyan
-        $env:GIT_EDITOR = "true"
-        
+    Write-Host "`n[6/6] Pushing to GitHub (this triggers Cloudflare)..." -ForegroundColor Cyan
+    $env:GIT_EDITOR = "true"
+    
+    # Check if we're ahead of remote
+    $statusOutput = git status -sb 2>&1 | Out-String
+    $isAhead = $statusOutput -match "ahead"
+    
+    if (-not $isAhead -and -not $stagedFiles) {
+        Write-Host "   ℹ️  No commits to push (already up to date)" -ForegroundColor Gray
+    } else {
         if ($Force) {
             Write-Host "   ⚠️  Force push enabled" -ForegroundColor Yellow
-            $pushOutput = git push origin main --force 2>&1
+            $pushOutput = git push origin main --force 2>&1 | Out-String
         } else {
-            $pushOutput = git push origin main 2>&1
+            $pushOutput = git push origin main 2>&1 | Out-String
         }
         
         if ($LASTEXITCODE -eq 0) {
@@ -180,27 +210,28 @@ try {
             Write-Host "   ✅ Push successful!" -ForegroundColor Green
             Write-Host "   Commit hash: $commitHash" -ForegroundColor Gray
         } else {
-            if ($pushOutput -match "rejected.*fetch first" -or $pushOutput -match "Updates were rejected") {
-                Write-Host "   ⚠️  Still have conflicts. Trying one more time with rebase..." -ForegroundColor Yellow
+            if ($pushOutput -match "rejected.*fetch first" -or $pushOutput -match "Updates were rejected" -or $pushOutput -match "non-fast-forward") {
+                Write-Host "   ⚠️  Remote has new changes. Pulling and retrying..." -ForegroundColor Yellow
                 
-                # Abort current merge if any
-                git merge --abort 2>&1 | Out-Null
+                # Pull with rebase
+                git pull origin main --rebase --autostash 2>&1 | Out-Null
                 
-                # Try rebase instead
-                git pull origin main --rebase --no-edit 2>&1 | Out-Null
-                
-                # If rebase has conflicts in docs/, use ours
+                # Resolve docs/ conflicts if any
                 if ($LASTEXITCODE -ne 0) {
-                    git checkout --ours docs/ 2>&1 | Out-Null
-                    git add docs/ 2>&1 | Out-Null
+                    $conflictStatus = git status --short 2>&1 | Out-String
+                    if ($conflictStatus -match "docs/") {
+                        git checkout --ours docs/ 2>&1 | Out-Null
+                        git add docs/ 2>&1 | Out-Null
+                    }
+                    git add -A 2>&1 | Out-Null
                     git rebase --continue --no-edit 2>&1 | Out-Null
                 }
                 
                 # Try push again
                 if ($Force) {
-                    git push origin main --force 2>&1 | Out-Null
+                    $pushOutput = git push origin main --force 2>&1 | Out-String
                 } else {
-                    git push origin main 2>&1 | Out-Null
+                    $pushOutput = git push origin main 2>&1 | Out-String
                 }
                 
                 if ($LASTEXITCODE -eq 0) {
@@ -209,9 +240,10 @@ try {
                     Write-Host "   Commit hash: $commitHash" -ForegroundColor Gray
                 } else {
                     Write-Host "   ❌ Push failed after rebase" -ForegroundColor Red
+                    Write-Host "   Error: $pushOutput" -ForegroundColor Gray
                     Write-Host "   💡 Manual fix needed. Run these commands:" -ForegroundColor Cyan
                     Write-Host "      git pull origin main --rebase" -ForegroundColor Gray
-                    Write-Host "      git checkout --ours docs/" -ForegroundColor Gray
+                    Write-Host "      git checkout --ours docs/  # if conflicts in docs/" -ForegroundColor Gray
                     Write-Host "      git add docs/ && git rebase --continue" -ForegroundColor Gray
                     Write-Host "      git push origin main" -ForegroundColor Gray
                     throw "Git push failed after rebase"
@@ -221,7 +253,10 @@ try {
                 throw "Git push failed: $pushOutput"
             }
         }
-        
+    }
+    
+    # Success message (only if we got here without errors)
+    if ($stagedFiles -or $isAhead) {
         Write-Host "`n✅ Deploy script finished. Cloudflare will pick up the new commit in 1-3 minutes." -ForegroundColor Green
         Write-Host "   Live URL: https://ah.saffronbolt.in" -ForegroundColor Yellow
         Write-Host "   Preview URL: https://aurumharmony-v1-beta.pages.dev" -ForegroundColor Yellow

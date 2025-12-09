@@ -90,6 +90,9 @@ class AuthService {
         } else {
           throw Exception('ENDPOINT_NOT_MIGRATED');
         }
+      } else if (response.statusCode == 503) {
+        // Worker returns 503 for database not configured or service unavailable - trigger fallback
+        throw Exception('SERVICE_UNAVAILABLE');
       } else {
         final error = jsonDecode(response.body) as Map<String, dynamic>;
         throw Exception(error['error']?.toString() ?? 'Login failed');
@@ -97,19 +100,31 @@ class AuthService {
     } catch (e) {
       lastError = e is Exception ? e : Exception('Network error: $e');
       
-      // Check if this is a 501 response or network error that should trigger fallback
-      final errorString = e.toString();
-      final isNetworkError = errorString.contains('NetworkError') || 
-                            errorString.contains('Failed host lookup') ||
+      // Check if this is a 501/503 response or network error that should trigger fallback
+      final errorString = e.toString().toLowerCase();
+      final isNetworkError = errorString.contains('networkerror') || 
+                            errorString.contains('failed host lookup') ||
                             errorString.contains('timeout') ||
-                            errorString.contains('SocketException') ||
-                            errorString.contains('Connection refused') ||
-                            errorString.contains('Connection closed') ||
-                            errorString.contains('ENDPOINT_NOT_MIGRATED') ||
-                            errorString.contains('BCRYPT_FALLBACK');
+                            errorString.contains('socketexception') ||
+                            errorString.contains('connection refused') ||
+                            errorString.contains('connection closed') ||
+                            errorString.contains('connection reset') ||
+                            errorString.contains('connection timed out') ||
+                            errorString.contains('endpoint_not_migrated') ||
+                            errorString.contains('bcrypt_fallback') ||
+                            errorString.contains('service_unavailable') ||
+                            errorString.contains('cannot connect') ||
+                            errorString.contains('connection failed') ||
+                            errorString.contains('network is unreachable') ||
+                            errorString.contains('no internet connection') ||
+                            errorString.contains('handshake exception') ||
+                            errorString.contains('certificate') ||
+                            errorString.contains('ssl') ||
+                            errorString.contains('tls');
       
-      // If production API failed and we're not already on localhost, try localhost
-      if (apiUrl != kBackendBaseUrlFallback && isNetworkError) {
+      // If production API failed and we're not already on localhost, ALWAYS try localhost fallback
+      // This ensures we try Flask backend even if error detection isn't perfect
+      if (apiUrl != kBackendBaseUrlFallback) {
         try {
           final response = await http.post(
             Uri.parse('$kBackendBaseUrlFallback/api/auth/login'),
@@ -148,42 +163,42 @@ class AuthService {
           // Both production API and localhost fallback failed
           final isProduction = apiUrl.contains('saffronbolt.in') || apiUrl.contains('pages.dev');
           if (isProduction) {
-            throw Exception('Cannot connect to Cloudflare Worker API (https://api.ah.saffronbolt.in).\n\nEmergency troubleshooting:\n1. Check if Cloudflare Worker is deployed and running\n2. Verify DNS records for api.ah.saffronbolt.in\n3. For local testing, run backend locally (Option 1 in start-all.ps1) and access app from http://localhost');
+            throw Exception('Cannot connect to Cloudflare Worker API (https://api.ah.saffronbolt.in).\n\nTried fallback to localhost:5000 but backend is not running.\n\nTo fix:\n1. Start Flask backend: .\start-all.ps1 → Option 1\n2. Or access app from: http://localhost:58643 (if running locally)');
           } else {
-            throw Exception('Cannot connect to backend API. Please ensure the Flask backend is running on localhost:5000.\n\nStart it with: Option 1 in start-all.ps1');
+            throw Exception('Cannot connect to backend API. Please ensure the Flask backend is running on localhost:5000.\n\nStart it with: .\start-all.ps1 → Option 1');
           }
         }
-      }
-      
-      // Re-throw if not a network error or fallback already tried
-      final isProductionUrl = apiUrl.contains('saffronbolt.in') || apiUrl.contains('pages.dev');
-      if (isProductionUrl) {
-        // Check if it's a 501 (endpoint not migrated) vs actual connection failure
-        if (e.toString().contains('ENDPOINT_NOT_MIGRATED') || 
-            (lastError?.toString().contains('501') ?? false)) {
-          throw Exception(
-            'Cloudflare Worker API endpoint not yet migrated.\n\n'
-            'The login endpoint (/api/auth/login) is not yet implemented in the Worker.\n'
-            'Falling back to localhost backend...\n\n'
-            'To use the Worker:\n'
-            '• Migrate the auth endpoints to the Worker\n'
-            '• Or use localhost backend: start-all.ps1 → Option 1'
-          );
-        } else {
-          throw Exception(
-            'Cannot connect to Cloudflare Worker API.\n\n'
-            'The production API (https://api.ah.saffronbolt.in) is not accessible.\n'
-            'This may be because:\n'
-            '• Cloudflare Worker is not deployed yet\n'
-            '• DNS is not configured\n'
-            '• Network connectivity issues\n\n'
-            'For local testing:\n'
-            '• Run backend: start-all.ps1 → Option 1\n'
-            '• Access app from: http://localhost:58643'
-          );
-        }
       } else {
-        throw lastError ?? Exception('Login error: $e');
+        // Already tried fallback or already on localhost - re-throw the original error
+        final isProductionUrl = apiUrl.contains('saffronbolt.in') || apiUrl.contains('pages.dev');
+        if (isProductionUrl) {
+          // Check if it's a 501 (endpoint not migrated) vs actual connection failure
+          if (e.toString().contains('ENDPOINT_NOT_MIGRATED') || 
+              (lastError?.toString().contains('501') ?? false)) {
+            throw Exception(
+              'Cloudflare Worker API endpoint not yet migrated.\n\n'
+              'The login endpoint (/api/auth/login) is not yet implemented in the Worker.\n'
+              'Falling back to localhost backend...\n\n'
+              'To use the Worker:\n'
+              '• Migrate the auth endpoints to the Worker\n'
+              '• Or use localhost backend: .\start-all.ps1 → Option 1'
+            );
+          } else {
+            throw Exception(
+              'Cannot connect to Cloudflare Worker API.\n\n'
+              'The production API (https://api.ah.saffronbolt.in) is not accessible.\n'
+              'This may be because:\n'
+              '• Cloudflare Worker is not deployed yet\n'
+              '• DNS is not configured\n'
+              '• Network connectivity issues\n\n'
+              'For local testing:\n'
+              '• Run backend: .\start-all.ps1 → Option 1\n'
+              '• Access app from: http://localhost:58643'
+            );
+          }
+        } else {
+          throw lastError ?? Exception('Login error: $e');
+        }
       }
     }
   }

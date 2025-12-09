@@ -28,16 +28,12 @@ function Show-Menu {
     Write-Host "  - https://aurumharmony.saffronbolt.in" -ForegroundColor White
     Write-Host ""
     Write-Host "Select an option:" -ForegroundColor Yellow
-    Write-Host "  1. Auto-Start Everything (Migration + Backend + Frontend)" -ForegroundColor Green
-    Write-Host "  2. Start Backend (Flask)" -ForegroundColor Cyan
-    Write-Host "  3. Start Frontend (Flutter Web)" -ForegroundColor Cyan
-    Write-Host "  4. Start Both (Backend + Frontend)" -ForegroundColor Cyan
-    Write-Host "  5. Deploy to Cloudflare Pages (Build + Push)" -ForegroundColor Magenta
-    Write-Host "  6. Deploy Cloudflare Worker (API - aurum-api)" -ForegroundColor Magenta
-    Write-Host "  7. Watch & Auto-Deploy (Watches file changes, auto-deploys)" -ForegroundColor Cyan
-    Write-Host "  8. Send Monthly Birthday/Anniversary Report" -ForegroundColor Cyan
-    Write-Host "  9. View Documentation" -ForegroundColor Gray
-    Write-Host "  10. Exit" -ForegroundColor Gray
+    Write-Host "  1. Run Backend (Flask)" -ForegroundColor Cyan
+    Write-Host "  2. Run Frontend (Flutter Web)" -ForegroundColor Cyan
+    Write-Host "  3. Run Both (Backend + Frontend - Silent)" -ForegroundColor Cyan
+    Write-Host "  4. Run ALL Other Processes (Push, Deploy, D1, API Worker)" -ForegroundColor Magenta
+    Write-Host "  5. Check and Fix Login Issues" -ForegroundColor Yellow
+    Write-Host "  6. Exit" -ForegroundColor Gray
     Write-Host ""
 }
 
@@ -196,17 +192,67 @@ function Start-AutoDeploy {
     }
 }
 
-function Send-MonthlyReport {
-    Write-Host "Sending Monthly Birthday & Anniversary Report..." -ForegroundColor Cyan
-    Write-Host "Recipient: vikrm@saffronbolt.in" -ForegroundColor Yellow
+function Check-LoginIssues {
+    Write-Host "Checking and fixing login issues..." -ForegroundColor Yellow
     Write-Host ""
     
-    $schedulerScript = Join-Path $projectRoot "aurum_harmony\admin\scheduler.py"
-    if (Test-Path $schedulerScript) {
-        Write-Host "Running scheduler script..." -ForegroundColor Green
-        python $schedulerScript
+    $checkScript = Join-Path $projectRoot "scripts\check_login_issues.ps1"
+    if (Test-Path $checkScript) {
+        Set-Location $projectRoot
+        & $checkScript
     } else {
-        Write-Host "Scheduler script not found at: $schedulerScript" -ForegroundColor Red
+        Write-Host "❌ Login check script not found at: $checkScript" -ForegroundColor Red
+    }
+}
+
+function Run-AllOtherProcesses {
+    Write-Host "=== All Other Processes Menu ===" -ForegroundColor Magenta
+    Write-Host ""
+    Write-Host "Select what to run:" -ForegroundColor Yellow
+    Write-Host "  1. Deploy to Cloudflare Pages (Build + Push)" -ForegroundColor Cyan
+    Write-Host "  2. Deploy Cloudflare Worker (API - aurum-api)" -ForegroundColor Cyan
+    Write-Host "  3. Setup D1 Database (Create & Migrate)" -ForegroundColor Cyan
+    Write-Host "  4. Watch & Auto-Deploy (Watches file changes, auto-deploys)" -ForegroundColor Cyan
+    Write-Host "  5. Run All (Deploy Pages + Worker + Setup D1)" -ForegroundColor Green
+    Write-Host "  6. Back to Main Menu" -ForegroundColor Gray
+    Write-Host ""
+    
+    $subChoice = Read-Host "Enter your choice (1-6)"
+    
+    switch ($subChoice) {
+        "1" {
+            Set-Location $projectRoot
+            Invoke-CloudflareDeploy
+        }
+        "2" {
+            Set-Location $projectRoot
+            Deploy-Worker
+        }
+        "3" {
+            Set-Location $projectRoot
+            Setup-D1Database
+        }
+        "4" {
+            Set-Location $projectRoot
+            Start-AutoDeploy
+        }
+        "5" {
+            Set-Location $projectRoot
+            Write-Host "`nRunning all deployment processes..." -ForegroundColor Green
+            Write-Host "[1/3] Setting up D1 Database..." -ForegroundColor Yellow
+            Setup-D1Database
+            Write-Host "`n[2/3] Deploying Worker..." -ForegroundColor Yellow
+            Deploy-Worker
+            Write-Host "`n[3/3] Deploying to Cloudflare Pages..." -ForegroundColor Yellow
+            Invoke-CloudflareDeploy
+            Write-Host "`n✅ All processes completed!" -ForegroundColor Green
+        }
+        "6" {
+            return
+        }
+        default {
+            Write-Host "Invalid choice" -ForegroundColor Red
+        }
     }
 }
 
@@ -221,6 +267,29 @@ function Deploy-Worker {
         & $workerScript
     } else {
         Write-Host "❌ Worker deploy script not found at: $workerScript" -ForegroundColor Red
+    }
+}
+
+function Setup-D1Database {
+    Write-Host "Setting up D1 Database for Cloudflare Worker..." -ForegroundColor Magenta
+    Write-Host "This will:" -ForegroundColor Yellow
+    Write-Host "  • Check/Create D1 database" -ForegroundColor Gray
+    Write-Host "  • Update wrangler.toml with database ID" -ForegroundColor Gray
+    Write-Host "  • Migrate schema" -ForegroundColor Gray
+    Write-Host "  • Optionally sync data from SQLite" -ForegroundColor Gray
+    Write-Host ""
+    
+    $setupScript = Join-Path $projectRoot "scripts\setup_d1_complete.ps1"
+    if (Test-Path $setupScript) {
+        Set-Location $projectRoot
+        & $setupScript
+    } else {
+        Write-Host "❌ D1 setup script not found at: $setupScript" -ForegroundColor Red
+        Write-Host "   Falling back to legacy script..." -ForegroundColor Yellow
+        $legacyScript = Join-Path $projectRoot "scripts\setup_d1_database.ps1"
+        if (Test-Path $legacyScript) {
+            & $legacyScript
+        }
     }
 }
 
@@ -267,76 +336,52 @@ do {
     Set-Location $projectRoot -ErrorAction SilentlyContinue
     
     Show-Menu
-    $choice = Read-Host "Enter your choice (1-10)"
+    $choice = Read-Host "Enter your choice (1-6)"
     
     switch ($choice) {
         "1" {
             Set-Location $projectRoot
-            Start-Automated
+            Start-Backend
             Write-Host "`nPress any key to return to menu..."
             $null = Read-Host
         }
         "2" {
             Set-Location $projectRoot
-            Start-Backend
+            Start-Frontend
             Write-Host "`nPress any key to return to menu..."
             $null = Read-Host
         }
         "3" {
             Set-Location $projectRoot
+            Write-Host "`nStarting both services silently..." -ForegroundColor Green
+            Start-Backend
+            Start-Sleep -Seconds 2
             Start-Frontend
+            Write-Host "`n✅ Both services started in silent mode!" -ForegroundColor Green
+            Write-Host "   - Flask Backend: http://localhost:5000" -ForegroundColor Yellow
+            Write-Host "   - Flutter: http://localhost:58643" -ForegroundColor Yellow
+            Write-Host "   - Check logs: _local\logs\" -ForegroundColor Gray
             Write-Host "`nPress any key to return to menu..."
             $null = Read-Host
         }
         "4" {
             Set-Location $projectRoot
-            Write-Host "`nStarting both services..." -ForegroundColor Green
-            Start-Backend
-            Start-Sleep -Seconds 2
-            Start-Frontend
-            Write-Host "`n✅ Both services started!" -ForegroundColor Green
-            Write-Host "   - Flask Backend: http://localhost:5000" -ForegroundColor Yellow
-            Write-Host "   - Flutter: http://localhost:58643" -ForegroundColor Yellow
+            Run-AllOtherProcesses
             Write-Host "`nPress any key to return to menu..."
             $null = Read-Host
         }
         "5" {
             Set-Location $projectRoot
-            Invoke-CloudflareDeploy
+            Check-LoginIssues
             Write-Host "`nPress any key to return to menu..."
             $null = Read-Host
         }
         "6" {
-            Set-Location $projectRoot
-            Deploy-Worker
-            Write-Host "`nPress any key to return to menu..."
-            $null = Read-Host
-        }
-        "7" {
-            Set-Location $projectRoot
-            Start-AutoDeploy
-            Write-Host "`n💡 Tip: The watcher runs in background. Check logs if needed." -ForegroundColor Cyan
-            Write-Host "`nPress any key to return to menu..."
-            $null = Read-Host
-        }
-        "8" {
-            Set-Location $projectRoot
-            Send-MonthlyReport
-            Write-Host "`nPress any key to return to menu..."
-            $null = Read-Host
-        }
-        "9" {
-            Set-Location $projectRoot
-            Show-Documentation
-            Write-Host "`nPress any key to return to menu..."
-            $null = Read-Host
-        }
-        "10" {
             Write-Host "`nExiting..." -ForegroundColor Yellow
             exit 0
         }
         default {
-            Write-Host "`nInvalid choice. Please select 1-10." -ForegroundColor Red
+            Write-Host "`nInvalid choice. Please select 1-6." -ForegroundColor Red
             Start-Sleep -Seconds 1
         }
     }

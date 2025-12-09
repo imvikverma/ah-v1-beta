@@ -11,7 +11,7 @@ main = "worker/src/index.ts"
 [[d1_databases]]
 binding = "DB"
 database_name = "aurum-harmony-db"
-database_id = ""  # Will be set after creating database
+database_id = "6d765373-aaa7-4443-9038-3eeda1297312"  # Will be set after creating database
 
 # Environment variables (set via Cloudflare Dashboard or wrangler secret put)
 # Required:
