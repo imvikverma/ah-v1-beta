@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Auto-Deploy System**
+  - File watcher script (`watch_and_deploy.ps1`) that monitors Flutter frontend files
+  - Auto-deploys to GitHub & Cloudflare when files are saved in Cursor
+  - Minimum 2-minute interval between deployments to prevent spam
+  - Automatic README.md regeneration on every deploy
+  - Quick deploy trigger script (`trigger_deploy.ps1`)
+- **HDFC Sky Integration**
+  - Complete API integration with all endpoints (positions, holdings, orders, trades, quotes, funds, historical data)
+  - Paper trading adapter with live market data (`HDFCSkyPaperAdapter`)
+  - Live trading adapter (`HDFCSkyBrokerAdapter`)
+  - Factory integration for easy broker switching
 - **Hyperledger Fabric Blockchain Integration**
   - Complete Fabric network setup with Docker Compose
   - Crypto material generation scripts (`crypto-config.yaml`, `configtx.yaml`)
@@ -24,6 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Comprehensive documentation organization
 - Custom domain setup documentation (ah.saffronbolt.in)
 - Cloudflare Workers migration plan documentation
+- Firefox auto-refresh tool for development workflow
 
 ### Changed
 - `FabricClient.invoke()` and `FabricClient.query()` now make HTTP POST requests to gateway service
@@ -32,11 +44,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Replaced hardcoded colors with ThemeColors utility
 - Deployment script now auto-generates commit messages from CHANGELOG
 - Improved file organization and documentation structure
+- **README.md auto-generation**: Now updates automatically with latest stats, version, and features
+- **Deployment workflow**: File watcher automatically regenerates README before deploying
+- **Menu system**: Simplified and fixed erratic behavior in `start-all.ps1`
+- **Flutter startup**: Improved error handling, process cleanup, and port conflict resolution
 
 ### Removed
 - Ngrok integration and all related scripts/documentation (no longer needed)
 
 ### Fixed
+- **Auto-deploy system**: Fixed git change detection logic, now properly detects uncommitted and untracked files
+- **Menu behavior**: Fixed erratic menu in `start-all.ps1` caused by excessive directory changes
+- **Flutter startup**: Fixed build directory lock issues, added process cleanup, automatic port conflict resolution
+- **Firefox refresh script**: Improved cross-origin tab handling, better cache-busting, clearer error messages
 - CORS duplicate header issue in Flask backend
 - Flutter compilation errors (CardTheme, const expressions)
 - Backend blueprint registration issues
