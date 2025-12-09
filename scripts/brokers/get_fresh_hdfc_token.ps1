@@ -23,12 +23,12 @@ Write-Host "API Key: $($apiKey.Substring(0, [Math]::Min(20, $apiKey.Length)))...
 Write-Host ""
 
 # ============================================================================
-# CONFIGURATION: Update this when your ngrok URL changes
+# CONFIGURATION: Cloudflare Pages Callback URL
 # ============================================================================
-$NGROK_URL = "top-manatee-busy.ngrok-free.app"  # Update this when ngrok restarts
+$CALLBACK_BASE_URL = "https://aurumharmony-v1-beta.pages.dev"
 
 # Construct OAuth URL
-$redirectUri = "https://$NGROK_URL/callback"
+$redirectUri = "$CALLBACK_BASE_URL/callback/hdfc"
 $oauthUrl = "https://developer.hdfcsky.com/oauth/authorize?api_key=$apiKey&redirect_uri=$redirectUri"
 
 Write-Host "Step 1: Open this URL in your browser:" -ForegroundColor Yellow

@@ -69,17 +69,28 @@ const routes: Route[] = [
     path: '/api/auth/login',
     handler: async (request, env: Env) => {
       try {
-        const body = await request.json();
+        // Parse request body
+        let body;
+        try {
+          body = await request.json();
+        } catch (e) {
+          return Response.json(
+            { error: 'Invalid JSON in request body' },
+            { status: 400, headers: corsHeaders }
+          );
+        }
+
         const { email, phone, password } = body;
 
-        if (!password) {
+        // Validate input
+        if (!password || password.trim() === '') {
           return Response.json(
             { error: 'Password is required' },
             { status: 400, headers: corsHeaders }
           );
         }
 
-        if (!email && !phone) {
+        if ((!email || email.trim() === '') && (!phone || phone.trim() === '')) {
           return Response.json(
             { error: 'Email or phone is required' },
             { status: 400, headers: corsHeaders }
@@ -88,27 +99,59 @@ const routes: Route[] = [
 
         // Check if database is available
         if (!env.DB) {
+          console.error('Database not configured - D1 binding missing');
           return Response.json(
-            { error: 'Database not configured', message: 'D1 database binding not found' },
+            { 
+              error: 'Database not configured', 
+              message: 'D1 database binding not found',
+              suggestion: 'Please configure D1 database in wrangler.toml and deploy the worker'
+            },
             { status: 503, headers: corsHeaders }
           );
         }
 
+        // Normalize email/phone
+        const normalizedEmail = email ? email.trim().toLowerCase() : null;
+        const normalizedPhone = phone ? phone.trim() : null;
+
         // Query user from database
         let user;
-        if (email) {
-          const result = await env.DB.prepare(
-            "SELECT * FROM users WHERE email = ? AND is_active = 1"
-          ).bind(email).first();
-          user = result as any;
-        } else {
-          const result = await env.DB.prepare(
-            "SELECT * FROM users WHERE phone = ? AND is_active = 1"
-          ).bind(phone).first();
-          user = result as any;
+        try {
+          if (normalizedEmail) {
+            const result = await env.DB.prepare(
+              "SELECT * FROM users WHERE LOWER(email) = ? AND is_active = 1"
+            ).bind(normalizedEmail).first();
+            user = result as any;
+          } else if (normalizedPhone) {
+            const result = await env.DB.prepare(
+              "SELECT * FROM users WHERE phone = ? AND is_active = 1"
+            ).bind(normalizedPhone).first();
+            user = result as any;
+          }
+        } catch (dbError: any) {
+          console.error('Database query error:', dbError);
+          // Check if it's a schema issue
+          if (dbError.message && dbError.message.includes('no such table')) {
+            return Response.json(
+              { 
+                error: 'Database schema not migrated',
+                message: 'Users table does not exist',
+                suggestion: 'Run: wrangler d1 execute aurum-harmony-db --file=worker/schema.sql'
+              },
+              { status: 503, headers: corsHeaders }
+            );
+          }
+          return Response.json(
+            { 
+              error: 'Database error',
+              message: dbError.message || 'Failed to query database'
+            },
+            { status: 500, headers: corsHeaders }
+          );
         }
 
         if (!user) {
+          // Don't reveal if user exists or not (security best practice)
           return Response.json(
             { error: 'Invalid credentials' },
             { status: 401, headers: corsHeaders }
@@ -116,7 +159,45 @@ const routes: Route[] = [
         }
 
         // Verify password
-        const isValid = await verifyPassword(password, user.password_hash);
+        if (!user.password_hash) {
+          console.error('User found but password_hash is missing');
+          return Response.json(
+            { error: 'Invalid credentials' },
+            { status: 401, headers: corsHeaders }
+          );
+        }
+
+        // Check if password is bcrypt hashed (from Flask backend)
+        const isBcryptHash = user.password_hash.startsWith('$2a$') || 
+                            user.password_hash.startsWith('$2b$') || 
+                            user.password_hash.startsWith('$2y$');
+        
+        if (isBcryptHash) {
+          // bcrypt verification not available in Workers
+          // Return 501 to trigger fallback to Flask backend
+          console.warn('bcrypt hash detected - Worker cannot verify. Use Flask backend.');
+          return Response.json(
+            {
+              error: 'Password verification requires Flask backend',
+              message: 'Worker cannot verify bcrypt hashes. Please use localhost backend for login.',
+              fallback: 'http://localhost:5000/api/auth/login',
+              status: 'bcrypt_not_supported'
+            },
+            { status: 501, headers: corsHeaders }
+          );
+        }
+
+        let isValid;
+        try {
+          isValid = await verifyPassword(password, user.password_hash);
+        } catch (verifyError: any) {
+          console.error('Password verification error:', verifyError);
+          return Response.json(
+            { error: 'Internal server error', details: 'Password verification failed' },
+            { status: 500, headers: corsHeaders }
+          );
+        }
+
         if (!isValid) {
           return Response.json(
             { error: 'Invalid credentials' },
@@ -126,15 +207,41 @@ const routes: Route[] = [
 
         // Generate session token
         const jwtSecret = env.JWT_SECRET || 'default-secret-change-in-production';
-        const sessionToken = await generateSessionToken(user.id, jwtSecret);
+        let sessionToken;
+        try {
+          sessionToken = await generateSessionToken(user.id, jwtSecret);
+        } catch (tokenError: any) {
+          console.error('Token generation error:', tokenError);
+          return Response.json(
+            { error: 'Internal server error', details: 'Failed to generate session token' },
+            { status: 500, headers: corsHeaders }
+          );
+        }
         
         // Store session in database
         const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(); // 7 days
         const now = new Date().toISOString();
         
-        await env.DB.prepare(
-          "INSERT INTO sessions (user_id, session_token, expires_at, created_at, last_accessed) VALUES (?, ?, ?, ?, ?)"
-        ).bind(user.id, sessionToken, expiresAt, now, now).run();
+        try {
+          await env.DB.prepare(
+            "INSERT INTO sessions (user_id, session_token, expires_at, created_at, last_accessed) VALUES (?, ?, ?, ?, ?)"
+          ).bind(user.id, sessionToken, expiresAt, now, now).run();
+        } catch (sessionError: any) {
+          console.error('Session creation error:', sessionError);
+          // Check if it's a schema issue
+          if (sessionError.message && sessionError.message.includes('no such table')) {
+            return Response.json(
+              { 
+                error: 'Database schema not migrated',
+                message: 'Sessions table does not exist',
+                suggestion: 'Run: wrangler d1 execute aurum-harmony-db --file=worker/schema.sql'
+              },
+              { status: 503, headers: corsHeaders }
+            );
+          }
+          // Log but don't fail - session creation is nice to have but not critical
+          console.warn('Failed to create session, but login succeeded');
+        }
 
         return Response.json(
           {
@@ -152,7 +259,11 @@ const routes: Route[] = [
       } catch (error: any) {
         console.error('Login error:', error);
         return Response.json(
-          { error: 'Internal server error', details: error.message },
+          { 
+            error: 'Internal server error', 
+            details: error.message,
+            type: error.name || 'UnknownError'
+          },
           { status: 500, headers: corsHeaders }
         );
       }
@@ -405,42 +516,49 @@ const routes: Route[] = [
     method: 'GET',
     path: '/callback/hdfc',
     handler: async (request, env, url) => {
-      const code = url.searchParams.get('code');
-      if (!code) {
-        return new Response('Missing code', {
-          status: 400,
-          headers: corsHeaders,
-        });
-      }
-
-      try {
-        const tokenRes = await fetch('https://api.hdfcsec.com/oauth/token', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Basic ${btoa(`${env.HDFC_CLIENT_ID}:${env.HDFC_CLIENT_SECRET}`)}`,
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-          body: `grant_type=authorization_code&code=${code}&redirect_uri=https://api.ah.saffronbolt.in/callback/hdfc`,
-        });
-
-        const data = await tokenRes.json();
-        
+      const requestToken = url.searchParams.get('request_token');
+      if (!requestToken) {
         return new Response(
-          '<html><body><h1>HDFC Sky login successful</h1><p>You can close this tab.</p></body></html>',
+          '<html><body><h1>HDFC Sky OAuth Callback</h1><p>Missing request_token in callback URL.</p><p>Please check the URL and try again.</p></body></html>',
           {
-            status: 200,
+            status: 400,
             headers: {
               'Content-Type': 'text/html',
               ...corsHeaders,
             },
           }
         );
-      } catch (error: any) {
-        return new Response(`Error: ${error.message}`, {
-          status: 500,
-          headers: corsHeaders,
-        });
       }
+
+      // Return success page with request_token for user to copy
+      // The user needs to exchange this request_token for access_token using the API client
+      return new Response(
+        `<html>
+          <body style="font-family: Arial, sans-serif; padding: 20px; text-align: center;">
+            <h1>✅ HDFC Sky OAuth Successful!</h1>
+            <p>Your request_token has been received.</p>
+            <div style="background: #f5f5f5; padding: 15px; margin: 20px 0; border-radius: 5px; word-break: break-all;">
+              <strong>Request Token:</strong><br>
+              <code style="font-size: 12px;">${requestToken}</code>
+            </div>
+            <p><strong>Next Steps:</strong></p>
+            <ol style="text-align: left; max-width: 600px; margin: 0 auto;">
+              <li>Copy the request_token above</li>
+              <li>Run: <code>python scripts/brokers/test_hdfc_connection.py</code></li>
+              <li>Paste the request_token when prompted</li>
+              <li>The script will exchange it for an access_token</li>
+            </ol>
+            <p style="margin-top: 30px; color: #666;">You can close this tab.</p>
+          </body>
+        </html>`,
+        {
+          status: 200,
+          headers: {
+            'Content-Type': 'text/html',
+            ...corsHeaders,
+          },
+        }
+      );
     },
   },
 

@@ -21,6 +21,16 @@ export async function hashPassword(password: string): Promise<string> {
 }
 
 export async function verifyPassword(password: string, hash: string): Promise<boolean> {
+  // Check if this is a bcrypt hash (starts with $2a$, $2b$, or $2y$)
+  // Flask backend uses bcrypt, but Cloudflare Workers don't support bcrypt natively
+  if (hash.startsWith('$2a$') || hash.startsWith('$2b$') || hash.startsWith('$2y$')) {
+    // This is a bcrypt hash from Flask backend
+    // Workers cannot verify bcrypt - need to use Flask backend for login
+    console.warn('bcrypt hash detected - Worker cannot verify bcrypt hashes. Use Flask backend for login.');
+    return false;
+  }
+  
+  // Handle SHA-256 hashes (format: salt:hash)
   const [salt, storedHash] = hash.split(':');
   if (!salt || !storedHash) {
     return false;

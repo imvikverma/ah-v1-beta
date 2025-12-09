@@ -31,7 +31,7 @@ from engines.admin.Admin_Panel import app as admin_app
 # Import auth and broker blueprints
 try:
     from aurum_harmony.auth.routes import auth_bp
-    from aurum_harmony.brokers import brokers_bp
+    from aurum_harmony.brokers import brokers_bp, kotak_bp, hdfc_bp
     from aurum_harmony.paper_trading import paper_bp
     from aurum_harmony.admin import admin_bp, admin_db_bp
     from aurum_harmony.database.db import init_db
@@ -43,6 +43,8 @@ except ImportError as e:
     AUTH_AVAILABLE = False
     auth_bp = None
     brokers_bp = None
+    kotak_bp = None
+    hdfc_bp = None
     paper_bp = None
     admin_bp = None
     admin_db_bp = None
@@ -64,6 +66,10 @@ if AUTH_AVAILABLE:
         init_db(app)
         app.register_blueprint(auth_bp)
         app.register_blueprint(brokers_bp)
+        if kotak_bp:
+            app.register_blueprint(kotak_bp)
+        if hdfc_bp:
+            app.register_blueprint(hdfc_bp)
         if paper_bp:
             app.register_blueprint(paper_bp)
         if admin_bp:
@@ -71,6 +77,10 @@ if AUTH_AVAILABLE:
         if admin_db_bp:
             app.register_blueprint(admin_db_bp)
         print("SUCCESS: Auth, broker, paper trading, admin, and database admin blueprints registered")
+        if kotak_bp:
+            print("  - Kotak Neo broker routes registered")
+        if hdfc_bp:
+            print("  - HDFC Sky broker routes registered")
     except Exception as e:
         print(f"WARNING: Error initializing auth: {e}")
         import traceback
@@ -87,10 +97,16 @@ else:
     except Exception as e:
         print(f"WARNING: Paper trading blueprint not available: {e}")
 
-# Global instances
+# Global instances (legacy - kept for backward compatibility)
 vix_adj = VIXAdjustment()
 ai_engine = PredictiveAIEngine()
 risk_engine = risk_engine
+
+# New integrated system (preferred)
+try:
+    from aurum_harmony.app.system_integration import aurum_system
+except ImportError:
+    aurum_system = None
 
 @app.route('/health')
 def health():
@@ -180,22 +196,19 @@ def callback():
         }), 200
     return jsonify({'message': 'Callback endpoint'}), 200
 
-# Background threads
-def daily_fund_cycle():
-    while True:
-        now = datetime.now().strftime("%H:%M")
-        if now == "09:15":
-            # Push funds for all active users
-            pass
-        elif now == "15:25":
-            # Pull funds for all active users
-            pass
-        time.sleep(60)
-
-# Start background services
-threading.Thread(target=daily_fund_cycle, daemon=True).start()
-# regulatory_workflow.start_all()  # Uncomment when live
-# realtime_fetcher.start_all()
+# Initialize complete AurumHarmony system
+try:
+    from aurum_harmony.app.system_integration import aurum_system
+    print("✅ AurumHarmony System initialized")
+    
+    # Start all background services
+    aurum_system.start_all_services()
+    print("✅ All background services started")
+except Exception as e:
+    print(f"WARNING: Error initializing AurumHarmony system: {e}")
+    import traceback
+    traceback.print_exc()
+    aurum_system = None
 
 if __name__ == "__main__":
     # Run main app + admin panel

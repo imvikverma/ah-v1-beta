@@ -113,12 +113,60 @@ try {
         exit 1
     }
     
+    # Check for existing Flutter processes and kill them
+    Write-Log "Checking for existing Flutter processes..." "INFO"
+    $flutterProcesses = Get-Process -Name "flutter" -ErrorAction SilentlyContinue
+    if ($flutterProcesses) {
+        Write-Log "Found $($flutterProcesses.Count) existing Flutter process(es). Stopping them..." "INFO"
+        $flutterProcesses | Stop-Process -Force -ErrorAction SilentlyContinue
+        Start-Sleep -Seconds 2
+    }
+    
+    # Clean build directory to avoid lock issues (but don't fail if locked)
+    Write-Log "Cleaning Flutter build directory..." "INFO"
+    $buildPath = Join-Path $flutterAppPath "build"
+    if (Test-Path $buildPath) {
+        try {
+            # Try to remove build directory (ignore errors if locked)
+            Remove-Item -Path $buildPath -Recurse -Force -ErrorAction SilentlyContinue
+            Start-Sleep -Seconds 1
+            Write-Log "Build directory cleaned" "INFO"
+        } catch {
+            Write-Log "Build directory may be locked (safe to ignore): $_" "WARNING"
+            # Don't fail - Flutter will handle locked files
+        }
+    }
+    
+    # Note: We don't try to clean .dart_tool or ephemeral directories here
+    # Flutter clean will handle them, and deletion errors are safe to ignore
+    
+    # Check if port is already in use
+    $webPort = 58643
+    $portInUse = Get-NetTCPConnection -LocalPort $webPort -ErrorAction SilentlyContinue
+    if ($portInUse) {
+        Write-Log "Port $webPort is already in use. Attempting to use a different port..." "WARNING"
+        # Try alternative ports
+        $altPorts = @(58644, 58645, 58646)
+        foreach ($altPort in $altPorts) {
+            $altPortInUse = Get-NetTCPConnection -LocalPort $altPort -ErrorAction SilentlyContinue
+            if (-not $altPortInUse) {
+                $webPort = $altPort
+                Write-Log "Using port $webPort instead..." "INFO"
+                break
+            }
+        }
+        if ($webPort -eq 58643) {
+            Show-CriticalError "All common ports (58643-58646) are in use. Please free a port or stop other Flutter instances."
+            exit 1
+        }
+    }
+    
     # Start Flutter web
-    Write-Log "Starting Flutter web server on port 58643..." "INFO"
-    Write-Log "Frontend will be available at: http://localhost:58643" "INFO"
+    Write-Log "Starting Flutter web server on port $webPort..." "INFO"
+    Write-Log "Frontend will be available at: http://localhost:$webPort" "INFO"
     
     # Run Flutter (output to log, errors to console)
-    & $flutterCmd run -d web-server --web-port=58643 2>&1 | ForEach-Object {
+    & $flutterCmd run -d web-server --web-port=$webPort 2>&1 | ForEach-Object {
         $line = $_
         Write-Log $line "INFO"
         # Check for critical errors

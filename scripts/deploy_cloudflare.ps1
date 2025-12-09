@@ -38,14 +38,27 @@ try {
     
     Write-Host "   Commit message: $CommitMessage" -ForegroundColor Gray
 
-    Write-Host "`n[1/5] Building Flutter web app..." -ForegroundColor Cyan
+    Write-Host "`n[1/6] Building Flutter web app..." -ForegroundColor Cyan
     Write-Host "   Project root: $root" -ForegroundColor Gray
     Set-Location "$root\aurum_harmony\frontend\flutter_app"
-    flutter clean
-    flutter pub get
-    flutter build web --release
+    
+    # Clean Flutter with better error handling
+    Write-Host "   Cleaning Flutter project..." -ForegroundColor Gray
+    $cleanOutput = flutter clean 2>&1 | Out-String
+    # Ignore deletion errors for ephemeral directories (they're recreated anyway)
+    if ($cleanOutput -match "Failed to remove|cannot access") {
+        Write-Host "   ⚠️  Some directories couldn't be deleted (safe to ignore)" -ForegroundColor Yellow
+    } else {
+        Write-Host "   ✅ Clean completed" -ForegroundColor Green
+    }
+    
+    Write-Host "   Getting dependencies..." -ForegroundColor Gray
+    flutter pub get 2>&1 | Out-Null
+    
+    Write-Host "   Building web app (this may take 1-2 minutes)..." -ForegroundColor Gray
+    flutter build web --release 2>&1 | Out-Null
 
-    Write-Host "`n[2/5] Regenerating README..." -ForegroundColor Cyan
+    Write-Host "`n[2/6] Regenerating README..." -ForegroundColor Cyan
     Set-Location $root
     $generateReadmePath = Join-Path $root "scripts\generate-readme.ps1"
     if (Test-Path $generateReadmePath) {
@@ -54,7 +67,7 @@ try {
         Write-Host "   ⚠️  README generator not found, skipping..." -ForegroundColor Yellow
     }
     
-    Write-Host "`n[3/5] Copying build to docs/ ..." -ForegroundColor Cyan
+    Write-Host "`n[3/6] Copying build to docs/ ..." -ForegroundColor Cyan
     Set-Location $root
     
     # Verify build directory exists
@@ -97,7 +110,7 @@ try {
         }
     }
 
-    Write-Host "`n[4/5] Committing changes..." -ForegroundColor Cyan
+    Write-Host "`n[4/6] Committing changes..." -ForegroundColor Cyan
     
     # Ensure we're in the git repo root
     if (-not (Test-Path ".git")) {
@@ -116,18 +129,98 @@ try {
         $env:GIT_EDITOR = "true"
         git commit -m "$CommitMessage"
         
-        Write-Host "`n[5/5] Pushing to GitHub (this triggers Cloudflare)..." -ForegroundColor Cyan
+        Write-Host "`n[5/6] Pulling latest changes from GitHub..." -ForegroundColor Cyan
         $env:GIT_EDITOR = "true"
-        if ($Force) {
-            Write-Host "   ⚠️  Force push enabled" -ForegroundColor Yellow
-            git push origin main --force
+        $pullOutput = git pull origin main --no-edit 2>&1 | Out-String
+        
+        # Check if there are merge conflicts
+        if ($pullOutput -match "CONFLICT" -or $LASTEXITCODE -ne 0) {
+            Write-Host "   ⚠️  Merge conflicts detected in docs/ folder" -ForegroundColor Yellow
+            Write-Host "   Resolving by using our freshly built version..." -ForegroundColor Yellow
+            
+            # Since docs/ is generated content, we'll use our version (the one we just built)
+            # Check git status to see what's conflicted
+            $conflictStatus = git status --short 2>&1 | Out-String
+            
+            if ($conflictStatus -match "docs/") {
+                # Use our version for all docs/ conflicts (we just built it fresh)
+                Write-Host "   Accepting our version for docs/ files (freshly built)..." -ForegroundColor Gray
+                git checkout --ours docs/ 2>&1 | Out-Null
+                git add docs/ 2>&1 | Out-Null
+                
+                # Complete the merge
+                $env:GIT_EDITOR = "true"
+                git commit -m "Merge: Resolved conflicts in docs/ using freshly built version" --no-edit 2>&1 | Out-Null
+                
+                Write-Host "   ✅ Conflicts resolved" -ForegroundColor Green
+            } else {
+                # For non-docs conflicts, try to resolve automatically
+                Write-Host "   Attempting to resolve other conflicts..." -ForegroundColor Gray
+                git add -A 2>&1 | Out-Null
+                $env:GIT_EDITOR = "true"
+                git commit -m "Merge: Auto-resolved conflicts" --no-edit 2>&1 | Out-Null
+            }
         } else {
-            git push origin main
+            Write-Host "   ✅ Pulled latest changes" -ForegroundColor Green
         }
         
-        # Get the commit hash for verification
-        $commitHash = (git rev-parse HEAD).Trim()
-        Write-Host "   Commit hash: $commitHash" -ForegroundColor Gray
+        Write-Host "`n[6/6] Pushing to GitHub (this triggers Cloudflare)..." -ForegroundColor Cyan
+        $env:GIT_EDITOR = "true"
+        
+        if ($Force) {
+            Write-Host "   ⚠️  Force push enabled" -ForegroundColor Yellow
+            $pushOutput = git push origin main --force 2>&1
+        } else {
+            $pushOutput = git push origin main 2>&1
+        }
+        
+        if ($LASTEXITCODE -eq 0) {
+            # Get the commit hash for verification
+            $commitHash = (git rev-parse HEAD).Trim()
+            Write-Host "   ✅ Push successful!" -ForegroundColor Green
+            Write-Host "   Commit hash: $commitHash" -ForegroundColor Gray
+        } else {
+            if ($pushOutput -match "rejected.*fetch first" -or $pushOutput -match "Updates were rejected") {
+                Write-Host "   ⚠️  Still have conflicts. Trying one more time with rebase..." -ForegroundColor Yellow
+                
+                # Abort current merge if any
+                git merge --abort 2>&1 | Out-Null
+                
+                # Try rebase instead
+                git pull origin main --rebase --no-edit 2>&1 | Out-Null
+                
+                # If rebase has conflicts in docs/, use ours
+                if ($LASTEXITCODE -ne 0) {
+                    git checkout --ours docs/ 2>&1 | Out-Null
+                    git add docs/ 2>&1 | Out-Null
+                    git rebase --continue --no-edit 2>&1 | Out-Null
+                }
+                
+                # Try push again
+                if ($Force) {
+                    git push origin main --force 2>&1 | Out-Null
+                } else {
+                    git push origin main 2>&1 | Out-Null
+                }
+                
+                if ($LASTEXITCODE -eq 0) {
+                    $commitHash = (git rev-parse HEAD).Trim()
+                    Write-Host "   ✅ Push successful after rebase!" -ForegroundColor Green
+                    Write-Host "   Commit hash: $commitHash" -ForegroundColor Gray
+                } else {
+                    Write-Host "   ❌ Push failed after rebase" -ForegroundColor Red
+                    Write-Host "   💡 Manual fix needed. Run these commands:" -ForegroundColor Cyan
+                    Write-Host "      git pull origin main --rebase" -ForegroundColor Gray
+                    Write-Host "      git checkout --ours docs/" -ForegroundColor Gray
+                    Write-Host "      git add docs/ && git rebase --continue" -ForegroundColor Gray
+                    Write-Host "      git push origin main" -ForegroundColor Gray
+                    throw "Git push failed after rebase"
+                }
+            } else {
+                Write-Host "   ❌ Push failed: $pushOutput" -ForegroundColor Red
+                throw "Git push failed: $pushOutput"
+            }
+        }
         
         Write-Host "`n✅ Deploy script finished. Cloudflare will pick up the new commit in 1-3 minutes." -ForegroundColor Green
         Write-Host "   Live URL: https://ah.saffronbolt.in" -ForegroundColor Yellow

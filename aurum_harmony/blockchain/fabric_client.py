@@ -62,7 +62,7 @@ class FabricClient:
     ) -> Dict[str, Any]:
         """
         Invoke a state‑changing chaincode function.
-        For now this is a stub that logs and returns a dummy response.
+        Makes HTTP POST request to Fabric gateway.
         """
         if not self.config.gateway_url:
             logger.info(
@@ -73,19 +73,43 @@ class FabricClient:
             )
             return {"status": "NOOP", "message": "Fabric gateway not configured"}
 
-        # TODO: Implement real HTTP/gRPC call to gateway service.
-        logger.info(
-            "Would invoke Fabric gateway at %s: function=%s args=%s",
-            self.config.gateway_url,
-            function,
-            args,
-        )
-        return {"status": "OK", "message": "Stubbed Fabric invoke"}
+        # Make HTTP request to gateway
+        try:
+            import requests
+            gateway_url = f"{self.config.gateway_url.rstrip('/')}/invoke"
+            payload = {
+                "function": function,
+                "args": args
+            }
+            
+            logger.info(
+                "Invoking Fabric gateway at %s: function=%s",
+                gateway_url,
+                function,
+            )
+            
+            response = requests.post(
+                gateway_url,
+                json=payload,
+                timeout=30
+            )
+            response.raise_for_status()
+            result = response.json()
+            
+            logger.info("Fabric invoke successful: %s", result.get("status"))
+            return result
+            
+        except ImportError:
+            logger.warning("requests library not installed. Install with: pip install requests")
+            return {"status": "ERROR", "message": "requests library required"}
+        except Exception as e:
+            logger.error("Fabric invoke failed: %s", str(e))
+            return {"status": "ERROR", "message": str(e)}
 
     def query(self, function: str, args: Dict[str, Any]) -> Dict[str, Any]:
         """
         Query chaincode (read‑only).
-        Stubbed the same way as invoke.
+        Makes HTTP POST request to Fabric gateway.
         """
         if not self.config.gateway_url:
             logger.info(
@@ -96,14 +120,38 @@ class FabricClient:
             )
             return {"status": "NOOP", "result": []}
 
-        # TODO: Implement real HTTP/gRPC call to gateway service.
-        logger.info(
-            "Would query Fabric gateway at %s: function=%s args=%s",
-            self.config.gateway_url,
-            function,
-            args,
-        )
-        return {"status": "OK", "result": []}
+        # Make HTTP request to gateway
+        try:
+            import requests
+            gateway_url = f"{self.config.gateway_url.rstrip('/')}/query"
+            payload = {
+                "function": function,
+                "args": args
+            }
+            
+            logger.info(
+                "Querying Fabric gateway at %s: function=%s",
+                gateway_url,
+                function,
+            )
+            
+            response = requests.post(
+                gateway_url,
+                json=payload,
+                timeout=30
+            )
+            response.raise_for_status()
+            result = response.json()
+            
+            logger.info("Fabric query successful")
+            return result
+            
+        except ImportError:
+            logger.warning("requests library not installed. Install with: pip install requests")
+            return {"status": "ERROR", "result": [], "message": "requests library required"}
+        except Exception as e:
+            logger.error("Fabric query failed: %s", str(e))
+            return {"status": "ERROR", "result": [], "message": str(e)}
 
 
 __all__ = ["FabricConfig", "FabricClient", "load_fabric_config"]

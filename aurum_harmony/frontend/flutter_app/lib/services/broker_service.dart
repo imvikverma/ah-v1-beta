@@ -115,6 +115,82 @@ class BrokerService {
     }
   }
 
+  /// Kotak Neo TOTP Login (Step 1)
+  static Future<bool> loginKotakTOTP({
+    required String userId,
+    required String totp,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$kBackendBaseUrl/api/brokers/kotak/login/totp'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: json.encode({
+          'user_id': userId,
+          'totp': totp,
+        }),
+      ).timeout(timeout);
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return data['success'] == true;
+      } else {
+        return false;
+      }
+    } catch (e) {
+      throw Exception('TOTP login error: $e');
+    }
+  }
+
+  /// Kotak Neo MPIN Validation (Step 2)
+  static Future<bool> validateKotakMPIN({
+    required String userId,
+    required String mpin,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$kBackendBaseUrl/api/brokers/kotak/login/mpin'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: json.encode({
+          'user_id': userId,
+          'mpin': mpin,
+        }),
+      ).timeout(timeout);
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return data['success'] == true;
+      } else {
+        return false;
+      }
+    } catch (e) {
+      throw Exception('MPIN validation error: $e');
+    }
+  }
+
+  /// Check if Kotak Neo is authenticated (has stored tokens)
+  static Future<bool> isKotakAuthenticated(String userId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$kBackendBaseUrl/api/brokers/kotak/status?user_id=$userId'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      ).timeout(timeout);
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return data['authenticated'] == true;
+      }
+      return false;
+    } catch (e) {
+      return false;
+    }
+  }
+
   /// Get authentication token from AuthService
   static Future<String> _getAuthToken() async {
     final token = await AuthService.getToken();

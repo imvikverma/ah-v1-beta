@@ -37,10 +37,20 @@ function Write-Log {
 function Test-GitChanges {
     # Check if there are uncommitted changes or unpushed commits
     Set-Location $projectRoot
-    $uncommitted = git diff --quiet
-    $unpushed = git log origin/main..HEAD --oneline
     
-    if (-not $uncommitted -or $unpushed) {
+    # Check for uncommitted changes (including untracked files in docs/)
+    $uncommitted = git diff --quiet 2>&1
+    $uncommittedExitCode = $LASTEXITCODE
+    $untracked = git ls-files --others --exclude-standard | Where-Object { $_ -like "docs/*" -or $_ -like "README.md" -or $_ -like "CHANGELOG.md" }
+    
+    # Check for unpushed commits
+    $unpushed = git log origin/main..HEAD --oneline 2>&1
+    
+    # Return true if there are changes to commit or unpushed commits
+    $hasUncommitted = ($uncommittedExitCode -ne 0) -or ($untracked.Count -gt 0)
+    $hasUnpushed = ($unpushed -and $unpushed.Count -gt 0)
+    
+    if ($hasUncommitted -or $hasUnpushed) {
         return $true
     }
     return $false
@@ -53,7 +63,12 @@ function Invoke-AutoDeploy {
         Set-Location $projectRoot
         
         # Check if we're on main branch
-        $currentBranch = git rev-parse --abbrev-ref HEAD
+        $currentBranch = git rev-parse --abbrev-ref HEAD 2>&1
+        if ($LASTEXITCODE -ne 0) {
+            Write-Log "Git error: $currentBranch" "ERROR"
+            return $false
+        }
+        
         if ($currentBranch -ne "main") {
             Write-Log "Not on main branch (current: $currentBranch). Skipping auto-deploy." "WARN"
             return $false
@@ -65,6 +80,7 @@ function Invoke-AutoDeploy {
             if (-not $hasChanges) {
                 return $false  # No changes, skip deploy
             }
+            Write-Log "Changes detected, proceeding with deploy..." "INFO"
         }
         
         Write-Log "Starting auto-deploy..." "INFO"
@@ -72,10 +88,12 @@ function Invoke-AutoDeploy {
         # Run deploy script
         $deployScript = Join-Path $projectRoot "scripts\deploy_cloudflare.ps1"
         if (Test-Path $deployScript) {
-            $deployOutput = & $deployScript -CommitMessage "Auto-deploy: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" 2>&1
+            # Capture both stdout and stderr
+            $deployOutput = & $deployScript -CommitMessage "Auto-deploy: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" 2>&1 | Out-String
             
             if ($LASTEXITCODE -eq 0) {
                 Write-Log "Auto-deploy completed successfully" "INFO"
+                Write-Log "Deploy output: $deployOutput" "INFO"
                 return $true
             } else {
                 Write-Log "Auto-deploy failed with exit code $LASTEXITCODE" "ERROR"
@@ -88,6 +106,7 @@ function Invoke-AutoDeploy {
         }
     } catch {
         Write-Log "Error during auto-deploy: $_" "ERROR"
+        Write-Log "Stack trace: $($_.ScriptStackTrace)" "ERROR"
         return $false
     }
 }

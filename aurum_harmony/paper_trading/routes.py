@@ -1,12 +1,15 @@
 """
 Paper Trading API Routes
+
 Provides endpoints for simulated trading without real broker connections.
+Enhanced with comprehensive error handling, validation, and logging.
 """
 
 from flask import Blueprint, request, jsonify
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 import sys
 import os
+import logging
 
 # Add project root to path
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
@@ -18,8 +21,12 @@ from aurum_harmony.engines.trade_execution.trade_execution import (
     Order,
     OrderSide,
     OrderType,
-    Position
+    Position,
+    OrderStatus,
 )
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 paper_bp = Blueprint('paper', __name__, url_prefix='/api/paper')
 
@@ -27,38 +34,58 @@ paper_bp = Blueprint('paper', __name__, url_prefix='/api/paper')
 _user_adapters: Dict[str, PaperBrokerAdapter] = {}
 
 
-def get_user_adapter(user_id: str) -> PaperBrokerAdapter:
-    """Get or create paper trading adapter for a user."""
+def get_user_adapter(user_id: str, initial_balance: float = 100000.0) -> PaperBrokerAdapter:
+    """
+    Get or create paper trading adapter for a user.
+    
+    Args:
+        user_id: User identifier
+        initial_balance: Initial balance for new adapters
+        
+    Returns:
+        PaperBrokerAdapter instance
+    """
+    if not user_id:
+        raise ValueError("user_id is required")
+    
     if user_id not in _user_adapters:
-        _user_adapters[user_id] = PaperBrokerAdapter(initial_balance=100000.0)
+        _user_adapters[user_id] = PaperBrokerAdapter(initial_balance=initial_balance)
+        logger.info(f"Created paper trading adapter for user {user_id} with balance ₹{initial_balance:,.2f}")
+    
     return _user_adapters[user_id]
 
 
 @paper_bp.route('/balance', methods=['GET', 'OPTIONS'])
 def get_balance():
-    """Get paper trading account balance."""
+    """Get paper trading account balance with comprehensive statistics."""
     if request.method == 'OPTIONS':
         return '', 200
     
-    user_id = request.args.get('user_id') or request.headers.get('X-User-ID')
-    if not user_id:
-        return jsonify({'error': 'user_id required'}), 400
-    
     try:
+        user_id = request.args.get('user_id') or request.headers.get('X-User-ID')
+        if not user_id:
+            return jsonify({'error': 'user_id required'}), 400
+        
         adapter = get_user_adapter(user_id)
         balance = adapter.get_balance()
         portfolio_value = adapter.get_portfolio_value()
         pnl = adapter.get_pnl()
+        stats = adapter.get_statistics()
         
         return jsonify({
             'success': True,
             'balance': balance,
             'portfolio_value': portfolio_value,
             'pnl': pnl,
+            'statistics': stats,
             'currency': 'INR'
         }), 200
+    except ValueError as e:
+        logger.warning(f"Validation error in get_balance: {e}")
+        return jsonify({'error': str(e)}), 400
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Error getting balance: {e}", exc_info=True)
+        return jsonify({'error': 'Internal server error'}), 500
 
 
 @paper_bp.route('/positions', methods=['GET', 'OPTIONS'])
@@ -174,33 +201,47 @@ def get_order_history():
 
 @paper_bp.route('/orders', methods=['POST', 'OPTIONS'])
 def place_order():
-    """Place a paper trading order."""
+    """Place a paper trading order with comprehensive validation."""
     if request.method == 'OPTIONS':
         return '', 200
     
-    user_id = request.json.get('user_id') or request.headers.get('X-User-ID')
-    if not user_id:
-        return jsonify({'error': 'user_id required'}), 400
-    
-    data = request.get_json() or {}
-    
     try:
+        user_id = request.json.get('user_id') if request.is_json else None
+        user_id = user_id or request.headers.get('X-User-ID')
+        if not user_id:
+            return jsonify({'error': 'user_id required'}), 400
+        
+        data = request.get_json() or {}
+        
         # Validate required fields
         symbol = data.get('symbol')
-        side_str = data.get('side', 'BUY').upper()
-        quantity = float(data.get('quantity', 0))
-        
         if not symbol:
             return jsonify({'error': 'symbol required'}), 400
-        if quantity <= 0:
-            return jsonify({'error': 'quantity must be positive'}), 400
+        symbol = symbol.strip().upper()
+        
+        side_str = data.get('side', 'BUY').upper().strip()
         if side_str not in ['BUY', 'SELL']:
             return jsonify({'error': 'side must be BUY or SELL'}), 400
         
+        try:
+            quantity = float(data.get('quantity', 0))
+            if quantity <= 0:
+                return jsonify({'error': 'quantity must be positive'}), 400
+        except (ValueError, TypeError):
+            return jsonify({'error': 'quantity must be a valid number'}), 400
+        
         side = OrderSide.BUY if side_str == 'BUY' else OrderSide.SELL
-        order_type_str = data.get('order_type', 'MARKET').upper()
+        order_type_str = data.get('order_type', 'MARKET').upper().strip()
         order_type = OrderType.MARKET if order_type_str == 'MARKET' else OrderType.LIMIT
-        limit_price = data.get('limit_price')
+        
+        limit_price = None
+        if order_type == OrderType.LIMIT:
+            try:
+                limit_price = float(data.get('limit_price', 0))
+                if limit_price <= 0:
+                    return jsonify({'error': 'limit_price must be positive for LIMIT orders'}), 400
+            except (ValueError, TypeError):
+                return jsonify({'error': 'limit_price must be a valid number for LIMIT orders'}), 400
         
         # Create order
         order = Order(
@@ -208,7 +249,7 @@ def place_order():
             side=side,
             quantity=quantity,
             order_type=order_type,
-            limit_price=float(limit_price) if limit_price else None,
+            limit_price=limit_price,
             metadata={'reason': data.get('reason', 'Manual order')}
         )
         
@@ -216,9 +257,14 @@ def place_order():
         adapter = get_user_adapter(user_id)
         result = adapter.place_order(order)
         
+        logger.info(
+            f"Order placed: {user_id}, {symbol} {side.value} {quantity} "
+            f"- Status: {result.status.value}"
+        )
+        
         return jsonify({
-            'success': result.status.value != 'REJECTED',
-            'order': {
+            'success': result.status == OrderStatus.FILLED,
+            'order': result.to_dict() if hasattr(result, 'to_dict') else {
                 'broker_order_id': result.broker_order_id,
                 'client_order_id': result.client_order_id,
                 'symbol': result.symbol,
@@ -231,10 +277,14 @@ def place_order():
                 'filled_at': result.metadata.get('filled_at'),
                 'metadata': result.metadata
             }
-        }), 200 if result.status.value != 'REJECTED' else 400
+        }), 200 if result.status == OrderStatus.FILLED else 400
         
+    except ValueError as e:
+        logger.warning(f"Validation error in place_order: {e}")
+        return jsonify({'error': str(e)}), 400
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Error placing order: {e}", exc_info=True)
+        return jsonify({'error': 'Internal server error'}), 500
 
 
 @paper_bp.route('/orders/<order_id>/cancel', methods=['POST', 'OPTIONS'])

@@ -81,8 +81,15 @@ class AuthService {
         await prefs.setBool(_keyIsAdmin, isAdmin);
         return; // Success!
       } else if (response.statusCode == 501) {
-        // Worker returns 501 for unmigrated endpoints - trigger fallback to localhost
-        throw Exception('ENDPOINT_NOT_MIGRATED');
+        // Worker returns 501 for bcrypt hashes or unmigrated endpoints - trigger fallback
+        final errorData = jsonDecode(response.body) as Map<String, dynamic>;
+        final status = errorData['status']?.toString() ?? '';
+        if (status == 'bcrypt_not_supported') {
+          // bcrypt hash detected - automatically fallback to Flask
+          throw Exception('BCRYPT_FALLBACK');
+        } else {
+          throw Exception('ENDPOINT_NOT_MIGRATED');
+        }
       } else {
         final error = jsonDecode(response.body) as Map<String, dynamic>;
         throw Exception(error['error']?.toString() ?? 'Login failed');
@@ -98,7 +105,8 @@ class AuthService {
                             errorString.contains('SocketException') ||
                             errorString.contains('Connection refused') ||
                             errorString.contains('Connection closed') ||
-                            errorString.contains('ENDPOINT_NOT_MIGRATED');
+                            errorString.contains('ENDPOINT_NOT_MIGRATED') ||
+                            errorString.contains('BCRYPT_FALLBACK');
       
       // If production API failed and we're not already on localhost, try localhost
       if (apiUrl != kBackendBaseUrlFallback && isNetworkError) {

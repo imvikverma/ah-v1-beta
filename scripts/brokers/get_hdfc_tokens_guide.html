@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HDFC Sky Token Extraction Guide</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .step {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .step-number {
+            background: #4CAF50;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        .code {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            overflow-x: auto;
+            margin: 10px 0;
+        }
+        .button {
+            background: #2196F3;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        .button:hover {
+            background: #1976D2;
+        }
+        .warning {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .success {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        h1 {
+            color: #333;
+        }
+        h2 {
+            color: #555;
+            margin-top: 30px;
+        }
+        .screenshot-placeholder {
+            background: #e0e0e0;
+            padding: 40px;
+            text-align: center;
+            border-radius: 5px;
+            margin: 15px 0;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔑 HDFC Sky Token Extraction Guide</h1>
+    <p>Follow these steps to extract your <code>accessToken</code> and <code>token_id</code> from the browser.</p>
+
+    <div class="step">
+        <h2><span class="step-number">1</span> Log in to HDFC Sky</h2>
+        <p>Open your browser and go to: <strong>https://developer.hdfcsky.com</strong></p>
+        <p>Log in with your credentials (Client ID/Email/Mobile → OTP → PIN)</p>
+        <div class="success">
+            ✅ Make sure you're fully logged in and can see the dashboard
+        </div>
+    </div>
+
+    <div class="step">
+        <h2><span class="step-number">2</span> Open Developer Tools</h2>
+        <p><strong>Easiest method:</strong> Press <kbd>F12</kbd> on your keyboard</p>
+        <p><strong>Alternative:</strong> Press <kbd>Ctrl + Shift + I</kbd> (Windows) or <kbd>Cmd + Option + I</kbd> (Mac)</p>
+        <div class="warning">
+            ⚠️ If F12 doesn't work, try right-clicking on the page → "Inspect" or "Inspect Element"
+        </div>
+    </div>
+
+    <div class="step">
+        <h2><span class="step-number">3</span> Go to Console Tab</h2>
+        <p>In the Developer Tools window, click on the <strong>"Console"</strong> tab at the top</p>
+        <div class="screenshot-placeholder">
+            [You should see tabs: Elements | Console | Sources | Network | Application]
+            <br>Click on "Console"
+        </div>
+    </div>
+
+    <div class="step">
+        <h2><span class="step-number">4</span> Run the Command</h2>
+        <p>In the Console, you'll see a prompt that looks like: <code>></code></p>
+        <p>Copy and paste this command (click the button below to copy):</p>
+        <div class="code" id="command">Object.keys(localStorage).forEach(k => console.log(k, localStorage.getItem(k)))</div>
+        <button class="button" onclick="copyCommand()">📋 Copy Command</button>
+        <p>Then press <kbd>Enter</kbd></p>
+    </div>
+
+    <div class="step">
+        <h2><span class="step-number">5</span> Find Your Tokens</h2>
+        <p>You'll see output like this:</p>
+        <div class="code">
+accessToken eyJhbGciOiJIUzI1NiJ9.eyJkZXZpY...
+token_id 7249eb031dce4a6bb2237912d6cb3bb5bd8e1c7d613b4507bf043110421e2ef9
+api_key 3347f702031d45539a95e94a0f46d2f2
+clientId S2239332
+...
+        </div>
+        <p><strong>Look for these keys:</strong></p>
+        <ul>
+            <li><code>accessToken</code> or <code>access_token</code> → This is your JWT token (starts with <code>eyJ...</code>)</li>
+            <li><code>token_id</code> → This is your token ID (long hexadecimal string)</li>
+        </ul>
+        <div class="warning">
+            ⚠️ Copy the <strong>entire value</strong> (the long string after the key name)
+        </div>
+    </div>
+
+    <div class="step">
+        <h2><span class="step-number">6</span> Alternative: Application Tab</h2>
+        <p>If the Console method doesn't work, try this:</p>
+        <ol>
+            <li>In Developer Tools, click the <strong>"Application"</strong> tab (Chrome/Edge) or <strong>"Storage"</strong> tab (Firefox)</li>
+            <li>In the left sidebar, expand <strong>"Local Storage"</strong></li>
+            <li>Click on <code>https://developer.hdfcsky.com</code></li>
+            <li>You'll see a table with keys and values</li>
+            <li>Find <code>accessToken</code> and <code>token_id</code></li>
+            <li>Click on the value to select it, then copy it</li>
+        </ol>
+    </div>
+
+    <div class="step">
+        <h2><span class="step-number">7</span> Update Your .env File</h2>
+        <p>Once you have the values:</p>
+        <ol>
+            <li>Open: <code>scripts/brokers/hdfc_token_id_template.txt</code></li>
+            <li>Paste the values:
+                <div class="code">
+API_KEY=your_api_key_here
+TOKEN_ID=your_token_id_here
+                </div>
+            </li>
+            <li>Save the file</li>
+            <li>Run: <code>.\scripts\brokers\import_hdfc_token_id.ps1</code></li>
+        </ol>
+    </div>
+
+    <div class="step">
+        <h2>❓ Troubleshooting</h2>
+        <p><strong>Q: I don't see Developer Tools</strong></p>
+        <ul>
+            <li>Make sure you're on https://developer.hdfcsky.com</li>
+            <li>Try a different browser (Chrome, Edge, Firefox)</li>
+            <li>Make sure JavaScript is enabled</li>
+        </ul>
+        
+        <p><strong>Q: The Console shows an error</strong></p>
+        <ul>
+            <li>Make sure you copied the entire command</li>
+            <li>Try typing it manually instead of pasting</li>
+            <li>Make sure you're on the HDFC Sky website</li>
+        </ul>
+        
+        <p><strong>Q: I don't see accessToken or token_id</strong></p>
+        <ul>
+            <li>Make sure you're logged in to the HDFC Sky developer portal</li>
+            <li>Try refreshing the page (F5) and running the command again</li>
+            <li>Check the Application/Storage tab instead</li>
+        </ul>
+    </div>
+
+    <script>
+        function copyCommand() {
+            const command = document.getElementById('command').textContent;
+            navigator.clipboard.writeText(command).then(() => {
+                alert('✅ Command copied! Now paste it in the browser console and press Enter.');
+            }).catch(err => {
+                // Fallback for older browsers
+                const textArea = document.createElement('textarea');
+                textArea.value = command;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                alert('✅ Command copied! Now paste it in the browser console and press Enter.');
+            });
+        }
+    </script>
+</body>
+</html>
+

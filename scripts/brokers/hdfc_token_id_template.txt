@@ -1,0 +1,37 @@
+# HDFC Sky Credentials Template
+# 
+# INSTRUCTIONS:
+# Since the URL doesn't contain api_key and token_id, extract them from browser:
+#
+# METHOD 1: Browser Console (Easiest) - Based on React Code
+# 1. Open Developer Tools (F12) → Console tab
+# 2. Run these exact commands:
+#    localStorage.getItem('api_key')
+#    localStorage.getItem('token_id')
+#    localStorage.getItem('accessToken')
+# 3. Copy the values and paste them below
+#
+# METHOD 2: Application Tab
+# 1. Open Developer Tools (F12) → Application tab
+# 2. Check Local Storage → https://developer.hdfcsky.com
+# 3. Look for api_key and token_id keys
+#
+# METHOD 3: Network Tab
+# 1. Open Developer Tools (F12) → Network tab
+# 2. Refresh page, check any API call's URL or headers
+# 3. Look for ?api_key=...&token_id=... in request URL
+#
+# Once you have the values, paste them below:
+#
+# IMPORTANT: This file will be deleted after importing for security
+
+# Option 1: Paste the COMPLETE URL here (if it has ?api_key=...&token_id=...)
+URL=
+
+# Option 2: Or paste the values directly here (from localStorage):
+API_KEY=
+TOKEN_ID=
+
+# Optional: JWT token (from localStorage.accessToken) - for Authorization header
+ACCESS_TOKEN=
+

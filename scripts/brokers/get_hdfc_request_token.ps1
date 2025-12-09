@@ -2,11 +2,9 @@
 # This script helps you get a request token via OAuth flow
 
 # ============================================================================
-# CONFIGURATION: Update this when your ngrok URL changes
+# CONFIGURATION: Cloudflare Pages Callback URL
 # ============================================================================
-$NGROK_URL = "top-manatee-busy.ngrok-free.app"  # Update this when ngrok restarts
-# For custom domain (paid ngrok): Use your reserved domain here
-# Example: $NGROK_URL = "aurumharmony.ngrok-free.app"
+$CALLBACK_BASE_URL = "https://aurumharmony-v1-beta.pages.dev"
 
 Write-Host "`n=== HDFC Sky OAuth Request Token ===" -ForegroundColor Cyan
 Write-Host ""
@@ -47,8 +45,8 @@ Write-Host "✅ API Key found: $($apiKey.Substring(0, [Math]::Min(10, $apiKey.Le
 Write-Host ""
 
 # Method 1: Direct OAuth URL
-# Using ngrok URL (since localhost not accepted by HDFC Sky)
-$redirectUri = "https://$NGROK_URL/callback"
+# Using Cloudflare Pages callback URL
+$redirectUri = "$CALLBACK_BASE_URL/callback/hdfc"
 
 # Try different OAuth endpoint paths (HDFC Sky might use different path)
 # Option 1: Standard OAuth (currently getting 404)
@@ -62,7 +60,7 @@ $oauthUrl4 = "https://developer.hdfcsky.com/authorize?api_key=$apiKey&redirect_u
 # Use the first one (update if docs show different path)
 $oauthUrl = $oauthUrl1
 
-Write-Host "Using ngrok URL: https://$NGROK_URL" -ForegroundColor Gray
+Write-Host "Using callback URL: $redirectUri" -ForegroundColor Gray
 Write-Host ""
 
 Write-Host "=== Method 1: Direct OAuth URL ===" -ForegroundColor Yellow

@@ -117,16 +117,38 @@ if ($LASTEXITCODE -eq 0) {
     Start-Sleep -Seconds 3
     
     try {
-        $response = Invoke-WebRequest -Uri "https://api.ah.saffronbolt.in/health" -TimeoutSec 10 -UseBasicParsing
-        if ($response.StatusCode -eq 200) {
-            Write-Host "✅ Worker is responding!" -ForegroundColor Green
-            $content = $response.Content | ConvertFrom-Json
+        Write-Host "Testing health endpoint..." -ForegroundColor Gray
+        $healthResponse = Invoke-WebRequest -Uri "https://api.ah.saffronbolt.in/health" -TimeoutSec 10 -UseBasicParsing
+        if ($healthResponse.StatusCode -eq 200) {
+            Write-Host "✅ Health endpoint working!" -ForegroundColor Green
+            $content = $healthResponse.Content | ConvertFrom-Json
             Write-Host "   Status: $($content.status)" -ForegroundColor Gray
             Write-Host "   Service: $($content.service)" -ForegroundColor Gray
+            Write-Host "   Version: $($content.version)" -ForegroundColor Gray
+        }
+        
+        Write-Host "`nTesting login endpoint (should return 501 for bcrypt)..." -ForegroundColor Gray
+        try {
+            $loginBody = @{email="test@test.com";password="test"} | ConvertTo-Json
+            $loginResponse = Invoke-WebRequest -Uri "https://api.ah.saffronbolt.in/api/auth/login" -Method Post -Body $loginBody -ContentType "application/json" -TimeoutSec 10 -UseBasicParsing -ErrorAction Stop
+            Write-Host "   Status: $($loginResponse.StatusCode)" -ForegroundColor Gray
+        } catch {
+            $statusCode = $_.Exception.Response.StatusCode.value__
+            if ($statusCode -eq 501) {
+                Write-Host "   ✅ Login endpoint working (returns 501 for bcrypt - correct!)" -ForegroundColor Green
+            } elseif ($statusCode -eq 401) {
+                Write-Host "   ✅ Login endpoint working (returns 401 for invalid credentials - correct!)" -ForegroundColor Green
+            } else {
+                Write-Host "   ⚠️  Login endpoint returned: $statusCode" -ForegroundColor Yellow
+            }
         }
     } catch {
         Write-Host "⚠️  Worker not responding yet (may take a few seconds)" -ForegroundColor Yellow
     }
+    
+    Write-Host "`n💡 Worker deployed successfully!" -ForegroundColor Green
+    Write-Host "   URL: https://api.ah.saffronbolt.in" -ForegroundColor Cyan
+    Write-Host "   Login will automatically fallback to Flask backend (localhost:5000)" -ForegroundColor Gray
 } else {
     Write-Host ""
     Write-Host "❌ Deployment failed!" -ForegroundColor Red

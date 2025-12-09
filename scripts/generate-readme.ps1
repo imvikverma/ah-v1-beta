@@ -1,7 +1,10 @@
 # Dynamic README Generator
 # Generates README.md from various project sources
 
-$root = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
+# Get project root (script is in scripts/, so go up one level)
+$scriptPath = $MyInvocation.MyCommand.Path
+$scriptsDir = Split-Path -Parent $scriptPath
+$root = Split-Path -Parent $scriptsDir
 $readmePath = Join-Path $root "README.md"
 $changelogPath = Join-Path $root "CHANGELOG.md"
 $fileStructurePath = Join-Path $root "FILE_STRUCTURE.md"
@@ -37,27 +40,26 @@ $readmeContent = @"
 ### Prerequisites
 - Python 3.8+
 - Flutter SDK
-- ngrok (for webhook testing)
+- Git (for deployment)
 - Broker API credentials (HDFC Sky, Kotak Neo)
 
 ### Quick Launch
 \`\`\`powershell
 # Use the master launcher (recommended)
-.\_local\development\zzz-quick-access\start-all.ps1
+.\start-all.ps1
 
 # Or start services individually:
-.\scripts\start_backend.ps1      # Flask backend (port 5000)
-.\scripts\start_ngrok.ps1        # Ngrok tunnel
-.\scripts\start_flutter.ps1       # Flutter web app
+.\scripts\start_backend_silent.ps1   # Flask backend (port 5000)
+.\scripts\start_flutter_silent.ps1   # Flutter web app (port 58643)
 \`\`\`
 
 ### First Time Setup
 1. **Environment Variables**: Create \`.env\` file with broker credentials
    - See \`docs/setup/\` for detailed guides
-2. **Ngrok Setup**: Run \`.\scripts\setup\setup_ngrok_authtoken.ps1\`
-3. **Broker Integration**: 
-   - HDFC Sky: \`.\scripts\brokers\get_hdfc_request_token.ps1\`
-   - Kotak Neo: \`.\scripts\brokers\add_kotak_token.ps1\`
+2. **Broker Integration**: 
+   - HDFC Sky: \`.\scripts\brokers\setup_hdfc_sky.ps1\`
+   - Kotak Neo: \`.\scripts\brokers\setup_kotak_credentials.ps1\`
+3. **Git Configuration**: Ensure Git is configured for auto-deploy
 
 ## 📁 Project Structure
 
@@ -96,10 +98,12 @@ AurumHarmonyTest/
 - **Real-time Updates**: WebSocket support for live data
 
 ### Developer Tools
-- **Quick Access Launcher**: Master script for all services
-- **Automated Deployment**: Cloudflare Pages integration
+- **Quick Access Launcher**: Master script for all services (\`start-all.ps1\`)
+- **Automated Deployment**: Cloudflare Pages integration with auto-deploy
+- **File Watcher**: Auto-deploy on file changes (watches Flutter frontend)
 - **Dynamic Documentation**: Auto-generated README and changelog
 - **Comprehensive Testing**: Test scripts for all integrations
+- **Firefox Auto-Refresh**: Browser tool for hard refresh during development
 
 ## 📊 Project Stats
 
@@ -142,23 +146,40 @@ See \`docs/setup/\` for detailed configuration guides.
 
 ## 🚢 Deployment
 
-### Cloudflare Pages (Automatic)
+### Auto-Deploy (Recommended)
 \`\`\`powershell
-# Deploy with changelog-based commit message
-.\_local\development\zzz-quick-access\start-all.ps1
-# Select option 6: Deploy to Cloudflare Pages
+# Start file watcher - auto-deploys when you save files in Cursor
+.\start-all.ps1
+# Select option 6: Watch & Auto-Deploy
+
+# Or run directly:
+.\scripts\watch_and_deploy.ps1
+\`\`\`
+
+The watcher will:
+- Monitor Flutter frontend files for changes
+- Auto-deploy when files are saved (min 2 min between deploys)
+- Regenerate README and update CHANGELOG automatically
+
+### Manual Deployment
+\`\`\`powershell
+# Quick deploy trigger
+.\scripts\trigger_deploy.ps1
+
+# Full deploy with menu
+.\start-all.ps1
+# Select option 5: Deploy to Cloudflare Pages
+
+# Or direct script
+.\scripts\deploy_cloudflare.ps1
 \`\`\`
 
 The deploy script will:
 1. Build Flutter web app
-2. Read latest changelog entry
-3. Commit and push to GitHub
-4. Cloudflare automatically deploys
-
-### Manual Deployment
-\`\`\`powershell
-.\scripts\deploy_cloudflare.ps1
-\`\`\`
+2. Regenerate README.md (auto-updates stats and version)
+3. Read latest changelog entry for commit message
+4. Commit and push to GitHub
+5. Cloudflare automatically deploys (1-3 minutes)
 
 ## 🔄 Updating Changelog
 
@@ -179,16 +200,23 @@ python .\scripts\tests\test_hdfc_credentials.py
 # Test Kotak Neo credentials
 python .\config\get_kotak_token.py
 
-# Run diagnostic
-.\_local\development\zzz-quick-access\diagnose.ps1
+# Test broker integrations
+.\scripts\brokers\test_hdfc_paper_trading.py
+.\scripts\brokers\test_hdfc_integration.py
 \`\`\`
 
 ## 📝 Development
 
 ### Adding Changes
-1. Make your code changes
-2. Update changelog: \`.\scripts\update-changelog.ps1\`
-3. Deploy: \`.\start-all.ps1\` → Option 6
+1. Make your code changes in Cursor
+2. (Optional) Update changelog: \`.\scripts\update-changelog.ps1\`
+3. **Auto-deploy**: If watcher is running, it will deploy automatically
+4. **Manual deploy**: \`.\start-all.ps1\` → Option 5, or \`.\scripts\trigger_deploy.ps1\`
+
+### Auto-Update Features
+- **README.md**: Auto-regenerated on every deploy with latest stats
+- **CHANGELOG.md**: Auto-read for commit messages (add entries under \`[Unreleased]\`)
+- **File Watcher**: Detects changes and triggers deployment automatically
 
 ### Code Structure
 - **Backend**: \`aurum_harmony/master_codebase/Master_AurumHarmony_261125.py\`

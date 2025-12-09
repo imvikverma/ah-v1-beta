@@ -23,8 +23,44 @@ _active_sessions: Dict[str, KotakNeoAPI] = {}
 
 
 def get_kotak_client(user_id: str) -> Optional[KotakNeoAPI]:
-    """Get or create Kotak Neo client for user"""
-    return _active_sessions.get(user_id)
+    """
+    Get or create Kotak Neo client for user.
+    Checks stored tokens first, then active sessions.
+    """
+    # Check active sessions first
+    if user_id in _active_sessions:
+        client = _active_sessions[user_id]
+        if client.is_authenticated():
+            return client
+    
+    # Try to load from stored tokens
+    try:
+        from aurum_harmony.database.kotak_tokens import token_storage
+        from aurum_harmony.engines.trade_execution.broker_adapter_factory import get_kotak_client_from_env
+        
+        token_data = token_storage.get_tokens(user_id)
+        if token_data:
+            # Create client from stored tokens
+            client = get_kotak_client_from_env()
+            if client:
+                client.view_token = token_data["view_token"]
+                client.view_sid = token_data["view_sid"]
+                client.trade_token = token_data["trade_token"]
+                client.trade_sid = token_data["trade_sid"]
+                client.base_url = token_data["base_url"]
+                # Set expiry
+                from datetime import datetime
+                expires_at = datetime.fromisoformat(token_data["expires_at"])
+                client.token_expiry = expires_at
+                
+                if client.is_authenticated():
+                    store_kotak_client(user_id, client)
+                    logger.info(f"Restored Kotak client from stored tokens for user {user_id}")
+                    return client
+    except Exception as e:
+        logger.warning(f"Error loading stored tokens: {e}")
+    
+    return None
 
 
 def store_kotak_client(user_id: str, client: KotakNeoAPI):
@@ -98,14 +134,29 @@ def validate_mpin():
         
         result = client.validate_mpin(mpin)
         
+        # Store tokens for future use (one-time setup)
+        try:
+            from aurum_harmony.database.kotak_tokens import token_storage
+            token_storage.store_tokens(
+                user_id=user_id,
+                view_token=client.view_token or "",
+                view_sid=client.view_sid or "",
+                trade_token=result.get("token", ""),
+                trade_sid=result.get("sid", ""),
+                base_url=result.get("baseUrl", "")
+            )
+        except Exception as e:
+            logger.warning(f"Error storing tokens: {e}")
+        
         return jsonify({
             "success": True,
-            "message": "MPIN validation successful",
+            "message": "MPIN validation successful. Tokens stored for future use.",
             "data": {
                 "trade_token": result.get("token"),
                 "trade_sid": result.get("sid"),
                 "base_url": result.get("baseUrl"),
-                "kType": result.get("kType")
+                "kType": result.get("kType"),
+                "tokens_stored": True
             }
         })
     except Exception as e:
@@ -363,7 +414,7 @@ def get_quotes():
 @kotak_bp.route('/status', methods=['GET'])
 def get_status():
     """
-    Get authentication status
+    Get authentication status (checks stored tokens)
     Query params: user_id
     """
     try:
@@ -372,10 +423,21 @@ def get_status():
         if not user_id:
             return jsonify({"error": "Missing user_id"}), 400
         
+        # Check for stored tokens first
+        try:
+            from aurum_harmony.database.kotak_tokens import token_storage
+            has_stored = token_storage.has_valid_tokens(user_id)
+        except Exception:
+            has_stored = False
+        
+        # Check active session
         client = get_kotak_client(user_id)
+        is_authenticated = client.is_authenticated() if client else False
         
         return jsonify({
-            "authenticated": client.is_authenticated() if client else False,
+            "success": True,
+            "authenticated": is_authenticated or has_stored,
+            "has_stored_tokens": has_stored,
             "has_view_token": client.view_token is not None if client else False,
             "has_trade_token": client.trade_token is not None if client else False
         })

@@ -44,7 +44,7 @@ def load_token():
 @app.route('/get-login-url')
 def get_login_url():
     api_key = os.getenv("HDFC_SKY_API_KEY")
-    redirect_uri = "http://localhost:5000/callback"
+    redirect_uri = "https://aurumharmony-v1-beta.pages.dev/callback/hdfc"
     login_url = f"https://developer.hdfcsky.com/oauth/authorize?api_key={api_key}&redirect_uri={redirect_uri}"
     return redirect(login_url)
 
