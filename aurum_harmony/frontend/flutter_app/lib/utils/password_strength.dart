@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart';
+
 /// Password strength calculator and validator
 enum PasswordStrength {
   weak,

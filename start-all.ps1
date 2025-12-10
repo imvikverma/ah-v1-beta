@@ -28,12 +28,11 @@ function Show-Menu {
     Write-Host "  - https://aurumharmony.saffronbolt.in" -ForegroundColor White
     Write-Host ""
     Write-Host "Select an option:" -ForegroundColor Yellow
-    Write-Host "  1. Run Backend (Flask)" -ForegroundColor Cyan
-    Write-Host "  2. Run Frontend (Flutter Web)" -ForegroundColor Cyan
-    Write-Host "  3. Run Both (Backend + Frontend - Silent)" -ForegroundColor Cyan
-    Write-Host "  4. Run ALL Other Processes (Push, Deploy, D1, API Worker)" -ForegroundColor Magenta
-    Write-Host "  5. Check and Fix Login Issues" -ForegroundColor Yellow
-    Write-Host "  6. Exit" -ForegroundColor Gray
+    Write-Host "  1. Launch All Processes [Normal]" -ForegroundColor Green
+    Write-Host "  2. Launch All Processes with Fixes [Error Detection & Auto-Correction]" -ForegroundColor Yellow
+    Write-Host "  3. Quick Deploy [1-Click: Build & Push to GitHub → Cloudflare]" -ForegroundColor Magenta
+    Write-Host "  4. Invoke Backend + Frontend [Silent, smallest windows minimised]" -ForegroundColor Cyan
+    Write-Host "  5. Exit" -ForegroundColor Gray
     Write-Host ""
 }
 
@@ -46,15 +45,22 @@ function Start-Backend {
     
     $backendScript = Join-Path $projectRoot "scripts\start_backend_silent.ps1"
     if (Test-Path $backendScript) {
-        # Run in minimized window, hidden from taskbar initially
+        # Run in minimized window (smallest window, minimized)
         $psi = New-Object System.Diagnostics.ProcessStartInfo
         $psi.FileName = $PowerShellExe
         $psi.Arguments = "-NoExit -WindowStyle Minimized -File `"$backendScript`""
         $psi.WindowStyle = [System.Diagnostics.ProcessWindowStyle]::Minimized
         $psi.CreateNoWindow = $false
-        [System.Diagnostics.Process]::Start($psi) | Out-Null
+        $process = [System.Diagnostics.Process]::Start($psi)
+        
+        if ($process) {
+            Write-Host "✅ Backend process started (PID: $($process.Id))" -ForegroundColor Green
+            Write-Host "   Window minimized - check taskbar to restore if needed" -ForegroundColor Gray
+        } else {
+            Write-Host "❌ Failed to start Backend process" -ForegroundColor Red
+        }
     } else {
-        Write-Host "Backend script not found!" -ForegroundColor Red
+        Write-Host "❌ Backend script not found at: $backendScript" -ForegroundColor Red
     }
 }
 
@@ -74,7 +80,7 @@ function Start-Frontend {
             Start-Sleep -Seconds 2
         }
         
-        # Run in minimized window
+        # Run in minimized window (smallest window, minimized)
         $psi = New-Object System.Diagnostics.ProcessStartInfo
         $psi.FileName = $PowerShellExe
         $psi.Arguments = "-NoExit -WindowStyle Minimized -File `"$flutterScript`""
@@ -84,6 +90,7 @@ function Start-Frontend {
         
         if ($process) {
             Write-Host "✅ Flutter process started (PID: $($process.Id))" -ForegroundColor Green
+            Write-Host "   Window minimized - check taskbar to restore if needed" -ForegroundColor Gray
             Write-Host "   Check logs for startup status: _local\logs\flutter.log" -ForegroundColor Gray
         } else {
             Write-Host "❌ Failed to start Flutter process" -ForegroundColor Red
@@ -116,7 +123,10 @@ function Invoke-CloudflareDeploy {
         
         Write-Host "[1/4] Building Flutter web..." -ForegroundColor Cyan
         Set-Location $flutterDir
-        flutter clean
+        $cleanOutput = flutter clean 2>&1 | Out-String
+        # Filter out confusing "Removed X of Y files" messages
+        $cleanOutput = $cleanOutput -replace 'Removed \d+ of \d+ files?', 'Cleaned build files'
+        $cleanOutput = $cleanOutput -replace 'Removed \d+ files?', 'Cleaned build files'
         flutter pub get
         flutter build web --release
         
@@ -311,6 +321,163 @@ function Show-Documentation {
     }
 }
 
+function Invoke-AllInfrastructureProcesses {
+    Write-Host "`n=== Running All Infrastructure Processes ===" -ForegroundColor Magenta
+    Write-Host ""
+    
+    Write-Host "[1/3] Setting up D1 Database..." -ForegroundColor Yellow
+    Initialize-D1Database
+    Write-Host ""
+    
+    Write-Host "[2/3] Deploying Cloudflare Worker..." -ForegroundColor Yellow
+    Deploy-Worker
+    Write-Host ""
+    
+    Write-Host "[3/3] Deploying to Cloudflare Pages..." -ForegroundColor Yellow
+    Invoke-CloudflareDeploy
+    Write-Host ""
+    
+    Write-Host "✅ All infrastructure processes completed!" -ForegroundColor Green
+}
+
+function Invoke-AllProcesses {
+    Write-Host "`n=== Launching All Processes ===" -ForegroundColor Green
+    Write-Host ""
+    
+    # Step 1: Run all infrastructure processes first
+    Write-Host "Step 1: Setting up infrastructure..." -ForegroundColor Cyan
+    Invoke-AllInfrastructureProcesses
+    Write-Host ""
+    
+    # Step 2: Start backend and frontend
+    Write-Host "Step 2: Starting services..." -ForegroundColor Cyan
+    Start-Backend
+    Start-Sleep -Seconds 3
+    Start-Frontend
+    Start-Sleep -Seconds 1
+    Write-Host ""
+    
+    Write-Host "✅ All processes launched!" -ForegroundColor Green
+    Write-Host "   - Flask Backend: http://localhost:5000" -ForegroundColor Yellow
+    Write-Host "   - Flutter: http://localhost:58643" -ForegroundColor Yellow
+    Write-Host "   - Check logs: _local\logs\" -ForegroundColor Gray
+}
+
+function Invoke-AllProcessesWithFixes {
+    Write-Host "`n=== Launching All Processes with Fixes ===" -ForegroundColor Yellow
+    Write-Host ""
+    
+    # Step 1: Check and fix issues first
+    Write-Host "Step 1: Checking and fixing issues..." -ForegroundColor Yellow
+    Test-LoginIssues
+    Write-Host ""
+    
+    # Step 2: Run all infrastructure processes
+    Write-Host "Step 2: Setting up infrastructure..." -ForegroundColor Cyan
+    Invoke-AllInfrastructureProcesses
+    Write-Host ""
+    
+    # Step 3: Start backend and frontend
+    Write-Host "Step 3: Starting services..." -ForegroundColor Cyan
+    Start-Backend
+    Start-Sleep -Seconds 3
+    Start-Frontend
+    Start-Sleep -Seconds 1
+    Write-Host ""
+    
+    Write-Host "✅ All processes launched with fixes applied!" -ForegroundColor Green
+    Write-Host "   - Flask Backend: http://localhost:5000" -ForegroundColor Yellow
+    Write-Host "   - Flutter: http://localhost:58643" -ForegroundColor Yellow
+    Write-Host "   - Check logs: _local\logs\" -ForegroundColor Gray
+}
+
+function Invoke-QuickDeploy {
+    Write-Host "`n=== Quick Deploy (1-Click) ===" -ForegroundColor Magenta
+    Write-Host "Building Flutter web and pushing to GitHub → Cloudflare auto-deploys" -ForegroundColor Yellow
+    Write-Host ""
+    
+    Set-Location $projectRoot
+    
+    # Step 1: Build Flutter web
+    Write-Host "[1/3] Building Flutter web app..." -ForegroundColor Cyan
+    $flutterDir = Join-Path $projectRoot "aurum_harmony\frontend\flutter_app"
+    Set-Location $flutterDir
+    
+    Write-Host "   Getting dependencies..." -ForegroundColor Gray
+    flutter pub get 2>&1 | Out-Null
+    
+    Write-Host "   Building web (this may take 1-2 minutes)..." -ForegroundColor Gray
+    $buildOutput = flutter build web --release 2>&1 | Out-String
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "❌ Build failed!" -ForegroundColor Red
+        Write-Host $buildOutput -ForegroundColor Red
+        return
+    }
+    Write-Host "   ✅ Build completed" -ForegroundColor Green
+    
+    # Step 2: Copy to docs
+    Write-Host "`n[2/3] Copying build to docs/..." -ForegroundColor Cyan
+    Set-Location $projectRoot
+    
+    $buildPath = Join-Path $flutterDir "build\web"
+    if (-not (Test-Path $buildPath)) {
+        Write-Host "❌ Build directory not found: $buildPath" -ForegroundColor Red
+        return
+    }
+    
+    $docsPath = Join-Path $projectRoot "docs"
+    if (Test-Path $docsPath) {
+        Remove-Item -Recurse -Force $docsPath
+    }
+    New-Item -ItemType Directory -Path $docsPath -Force | Out-Null
+    Copy-Item -Recurse "$buildPath\*" -Destination $docsPath -Force
+    Write-Host "   ✅ Build files copied" -ForegroundColor Green
+    
+    # Step 3: Commit and push
+    Write-Host "`n[3/3] Committing and pushing to GitHub..." -ForegroundColor Cyan
+    
+    if (-not (Test-Path ".git")) {
+        Write-Host "❌ Not in a git repository!" -ForegroundColor Red
+        return
+    }
+    
+    $env:GIT_EDITOR = "true"
+    git add docs 2>&1 | Out-Null
+    $stagedFiles = git diff --staged --name-only
+    
+    if ($stagedFiles) {
+        $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+        git commit -m "Quick deploy: Update Flutter web build ($timestamp)" 2>&1 | Out-Null
+        
+        Write-Host "   Pushing to GitHub..." -ForegroundColor Gray
+        git push origin main 2>&1 | Out-Null
+        
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "`n✅ Quick deploy completed!" -ForegroundColor Green
+            Write-Host "   Cloudflare will auto-deploy in ~60 seconds" -ForegroundColor Yellow
+            Write-Host "   Live at: https://ah.saffronbolt.in" -ForegroundColor Cyan
+        } else {
+            Write-Host "❌ Push failed. Check git status." -ForegroundColor Red
+        }
+    } else {
+        Write-Host "⚠️  No changes to commit. Build output is identical." -ForegroundColor Yellow
+    }
+}
+
+function Invoke-BackendAndFrontend {
+    Write-Host "`n=== Starting Backend + Frontend ===" -ForegroundColor Cyan
+    Write-Host ""
+    Start-Backend
+    Start-Sleep -Seconds 3
+    Start-Frontend
+    Start-Sleep -Seconds 1
+    Write-Host ""
+    Write-Host "✅ Both services started in silent mode!" -ForegroundColor Green
+    Write-Host "   - Flask Backend: http://localhost:5000" -ForegroundColor Yellow
+    Write-Host "   - Flutter: http://localhost:58643" -ForegroundColor Yellow
+    Write-Host "   - Check logs: _local\logs\" -ForegroundColor Gray
+}
+
 function Start-Automated {
     Write-Host "Starting automated system..." -ForegroundColor Green
     Write-Host "This will:" -ForegroundColor Yellow
@@ -336,52 +503,39 @@ do {
     Set-Location $projectRoot -ErrorAction SilentlyContinue
     
     Show-Menu
-    $choice = Read-Host "Enter your choice (1-6)"
+    $choice = Read-Host "Enter your choice (1-5)"
     
     switch ($choice) {
         "1" {
             Set-Location $projectRoot
-            Start-Backend
+            Invoke-AllProcesses
             Write-Host "`nPress any key to return to menu..."
             $null = Read-Host
         }
         "2" {
             Set-Location $projectRoot
-            Start-Frontend
+            Invoke-AllProcessesWithFixes
             Write-Host "`nPress any key to return to menu..."
             $null = Read-Host
         }
         "3" {
             Set-Location $projectRoot
-            Write-Host "`nStarting both services silently..." -ForegroundColor Green
-            Start-Backend
-            Start-Sleep -Seconds 2
-            Start-Frontend
-            Write-Host "`n✅ Both services started in silent mode!" -ForegroundColor Green
-            Write-Host "   - Flask Backend: http://localhost:5000" -ForegroundColor Yellow
-            Write-Host "   - Flutter: http://localhost:58643" -ForegroundColor Yellow
-            Write-Host "   - Check logs: _local\logs\" -ForegroundColor Gray
+            Invoke-QuickDeploy
             Write-Host "`nPress any key to return to menu..."
             $null = Read-Host
         }
         "4" {
             Set-Location $projectRoot
-            Invoke-AllOtherProcesses
+            Invoke-BackendAndFrontend
             Write-Host "`nPress any key to return to menu..."
             $null = Read-Host
         }
         "5" {
-            Set-Location $projectRoot
-            Test-LoginIssues
-            Write-Host "`nPress any key to return to menu..."
-            $null = Read-Host
-        }
-        "6" {
             Write-Host "`nExiting..." -ForegroundColor Yellow
             exit 0
         }
         default {
-            Write-Host "`nInvalid choice. Please select 1-6." -ForegroundColor Red
+            Write-Host "`nInvalid choice. Please select 1-5." -ForegroundColor Red
             Start-Sleep -Seconds 1
         }
     }

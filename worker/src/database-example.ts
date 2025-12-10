@@ -15,7 +15,8 @@ export async function loginWithDatabase(
   env: { DB: D1Database }
 ): Promise<Response> {
   try {
-    const { email, phone, password } = await request.json();
+    const body: any = await request.json();
+    const { email, phone, password } = body;
 
     if (!password) {
       return Response.json(
@@ -32,7 +33,7 @@ export async function loginWithDatabase(
     }
 
     // Query user from D1 database
-    let user;
+    let user: any;
     if (email) {
       user = await env.DB.prepare(
         "SELECT * FROM users WHERE email = ? AND is_active = 1"
@@ -145,7 +146,8 @@ export async function registerUser(
   env: { DB: D1Database }
 ): Promise<Response> {
   try {
-    const { email, password, phone } = await request.json();
+    const body: any = await request.json();
+    const { email, password, phone } = body;
 
     if (!email) {
       return Response.json(

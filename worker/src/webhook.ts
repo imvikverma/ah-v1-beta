@@ -62,7 +62,7 @@ export default {
       }
 
       // Parse GitHub webhook payload
-      const payload = await request.json();
+      const payload: any = await request.json();
 
       // Only process push events to main/master branch
       if (eventType === 'push') {

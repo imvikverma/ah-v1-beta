@@ -58,6 +58,10 @@ Write-Host "`n[4/4] Running flutter clean..." -ForegroundColor Yellow
 Set-Location $flutterAppPath
 $cleanOutput = flutter clean 2>&1 | Out-String
 
+# Filter out confusing "Removed X of Y files" messages (Flutter sometimes reports inconsistent counts)
+$cleanOutput = $cleanOutput -replace 'Removed \d+ of \d+ files?', 'Cleaned build files'
+$cleanOutput = $cleanOutput -replace 'Removed \d+ files?', 'Cleaned build files'
+
 # Check for errors (but don't fail - these are usually safe)
 if ($cleanOutput -match "Failed to remove|cannot access|A program may still be using") {
     Write-Host "   ⚠️  Some directories couldn't be deleted" -ForegroundColor Yellow

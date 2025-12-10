@@ -9,7 +9,7 @@
  * - API routing with proper error handling
  */
 
-import { hashPassword, verifyPassword, generateSessionToken, verifySessionToken, generateUserCode } from './auth';
+import { hashPassword, verifyPassword, generateSessionToken, verifySessionToken, generateUserCode, generateEmailVerificationToken } from './auth';
 
 // CORS headers helper
 const corsHeaders = {
@@ -70,7 +70,7 @@ const routes: Route[] = [
     handler: async (request, env: Env) => {
       try {
         // Parse request body
-        let body;
+        let body: any;
         try {
           body = await request.json();
         } catch (e) {
@@ -274,7 +274,7 @@ const routes: Route[] = [
     path: '/api/auth/register',
     handler: async (request, env: Env) => {
       try {
-        const body = await request.json();
+        const body: any = await request.json();
         const { email, password, phone, username, profile_picture_url, terms_accepted } = body;
 
         if (!email) {
@@ -1151,7 +1151,7 @@ const routes: Route[] = [
         }
 
         // Parse GitHub webhook payload
-        const payload = await request.json();
+        const payload: any = await request.json();
 
         // Only process push events to main/master branch
         if (eventType === 'push') {
@@ -1266,7 +1266,8 @@ const routes: Route[] = [
     path: '/callback/kotak',
     handler: async (request, env) => {
       try {
-        const { totp } = await request.json();
+        const body: any = await request.json();
+        const { totp } = body;
         if (!totp) {
           return Response.json(
             { error: 'Missing TOTP' },

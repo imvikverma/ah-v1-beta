@@ -1,5 +1,5 @@
 -- Data migration from SQLite to D1
--- Generated: 2025-12-10T17:19:53.196110
+-- Generated: 2025-12-10T18:36:52.880201
 
 INSERT OR IGNORE INTO users (id, email, phone, password_hash, user_code, is_admin, is_active, created_at, updated_at, date_of_birth, anniversary, initial_capital, max_trades_per_index, max_accounts_allowed) VALUES ('1', 'admin@aurumharmony.com', '+919876543210', '$2b$12$xi14WRVYq/wGc0iF1qbag.79uB5c.x8flkQM0ncmYNyxMgnUK7IQq', 'U001', '1', '1', '2025-12-05 18:34:09.473885', '2025-12-05 18:34:09.473894', NULL, NULL, '10000.0', NULL, '1');
 INSERT OR IGNORE INTO users (id, email, phone, password_hash, user_code, is_admin, is_active, created_at, updated_at, date_of_birth, anniversary, initial_capital, max_trades_per_index, max_accounts_allowed) VALUES ('2', 'vikrm@saffronbolt.in', '9321096343', '$2b$12$NIFZWjb2X3rS2gd4CuaRx.YVeDR8sxN/Healm9iAlV9jntDACp4rq', 'U002', '0', '1', '2025-12-07 07:19:17.695237', '2025-12-07 07:19:17.695242', NULL, NULL, '10000.0', NULL, '1');

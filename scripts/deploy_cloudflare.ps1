@@ -45,6 +45,11 @@ try {
     # Clean Flutter with better error handling
     Write-Host "   Cleaning Flutter project..." -ForegroundColor Gray
     $cleanOutput = flutter clean 2>&1 | Out-String
+    
+    # Filter out confusing "Removed X of Y files" messages (Flutter sometimes reports inconsistent counts)
+    $cleanOutput = $cleanOutput -replace 'Removed \d+ of \d+ files?', 'Cleaned build files'
+    $cleanOutput = $cleanOutput -replace 'Removed \d+ files?', 'Cleaned build files'
+    
     # Ignore deletion errors for ephemeral directories (they're recreated anyway)
     if ($cleanOutput -match "Failed to remove|cannot access") {
         Write-Host "   ⚠️  Some directories couldn't be deleted (safe to ignore)" -ForegroundColor Yellow
