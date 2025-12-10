@@ -55,9 +55,9 @@ class _AdminScreenState extends State<AdminScreen> with SingleTickerProviderStat
       _error = null;
     });
     try {
-      final token = await AuthService.getToken();
+      final token = await AuthService.getValidToken();
       if (token == null) {
-        throw Exception('Not authenticated');
+        throw Exception('Authentication expired. Please login again.');
       }
       final resp = await http.get(
         Uri.parse('$kBackendBaseUrl/api/admin/users'),
@@ -65,7 +65,7 @@ class _AdminScreenState extends State<AdminScreen> with SingleTickerProviderStat
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
-      );
+      ).timeout(const Duration(seconds: 10));
       if (resp.statusCode == 200) {
         final data = jsonDecode(resp.body) as Map<String, dynamic>;
         if (data['success'] == true) {
@@ -75,6 +75,8 @@ class _AdminScreenState extends State<AdminScreen> with SingleTickerProviderStat
         } else {
           throw Exception(data['error'] ?? 'Failed to load users');
         }
+      } else if (resp.statusCode == 401) {
+        throw Exception('Authentication expired. Please login again.');
       } else {
         final error = jsonDecode(resp.body) as Map<String, dynamic>;
         throw Exception(error['error'] ?? 'Error ${resp.statusCode}');
@@ -83,6 +85,22 @@ class _AdminScreenState extends State<AdminScreen> with SingleTickerProviderStat
       setState(() {
         _error = 'Error: $e';
       });
+      if (mounted && e.toString().contains('expired')) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: SelectableText('Token expired: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+            duration: const Duration(seconds: 10),
+            action: SnackBarAction(
+              label: 'Dismiss',
+              textColor: Colors.white,
+              onPressed: () {
+                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              },
+            ),
+          ),
+        );
+      }
     } finally {
       setState(() {
         _loading = false;

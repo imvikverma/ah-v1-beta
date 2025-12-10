@@ -192,7 +192,7 @@ function Start-AutoDeploy {
     }
 }
 
-function Check-LoginIssues {
+function Test-LoginIssues {
     Write-Host "Checking and fixing login issues..." -ForegroundColor Yellow
     Write-Host ""
     
@@ -205,7 +205,7 @@ function Check-LoginIssues {
     }
 }
 
-function Run-AllOtherProcesses {
+function Invoke-AllOtherProcesses {
     Write-Host "=== All Other Processes Menu ===" -ForegroundColor Magenta
     Write-Host ""
     Write-Host "Select what to run:" -ForegroundColor Yellow
@@ -230,7 +230,7 @@ function Run-AllOtherProcesses {
         }
         "3" {
             Set-Location $projectRoot
-            Setup-D1Database
+            Initialize-D1Database
         }
         "4" {
             Set-Location $projectRoot
@@ -240,7 +240,7 @@ function Run-AllOtherProcesses {
             Set-Location $projectRoot
             Write-Host "`nRunning all deployment processes..." -ForegroundColor Green
             Write-Host "[1/3] Setting up D1 Database..." -ForegroundColor Yellow
-            Setup-D1Database
+            Initialize-D1Database
             Write-Host "`n[2/3] Deploying Worker..." -ForegroundColor Yellow
             Deploy-Worker
             Write-Host "`n[3/3] Deploying to Cloudflare Pages..." -ForegroundColor Yellow
@@ -270,7 +270,7 @@ function Deploy-Worker {
     }
 }
 
-function Setup-D1Database {
+function Initialize-D1Database {
     Write-Host "Setting up D1 Database for Cloudflare Worker..." -ForegroundColor Magenta
     Write-Host "This will:" -ForegroundColor Yellow
     Write-Host "  • Check/Create D1 database" -ForegroundColor Gray
@@ -366,13 +366,13 @@ do {
         }
         "4" {
             Set-Location $projectRoot
-            Run-AllOtherProcesses
+            Invoke-AllOtherProcesses
             Write-Host "`nPress any key to return to menu..."
             $null = Read-Host
         }
         "5" {
             Set-Location $projectRoot
-            Check-LoginIssues
+            Test-LoginIssues
             Write-Host "`nPress any key to return to menu..."
             $null = Read-Host
         }
@@ -382,7 +382,7 @@ do {
         }
         default {
             Write-Host "`nInvalid choice. Please select 1-6." -ForegroundColor Red
-rror            Start-Sleep -Seconds 1
+            Start-Sleep -Seconds 1
         }
     }
 } while ($true)

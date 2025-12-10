@@ -22,6 +22,14 @@ class User(db.Model):
     is_admin = Column(Boolean, default=False, nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
     
+    # Signup improvements fields
+    username = Column(String(100), nullable=True, index=True)  # Display name
+    profile_picture_url = Column(String(500), nullable=True)  # Profile picture URL
+    email_verified = Column(Boolean, default=False, nullable=False)  # Email verification status
+    email_verification_token = Column(String(255), nullable=True)  # Email verification token
+    terms_accepted = Column(Boolean, default=False, nullable=False)  # Terms & Conditions acceptance
+    terms_accepted_at = Column(DateTime, nullable=True)  # When terms were accepted
+    
     # Additional user profile fields
     date_of_birth = Column(Date, nullable=True)  # Used for birthday fee waivers
     anniversary = Column(Date, nullable=True)  # Used for anniversary fee discounts
@@ -50,6 +58,9 @@ class User(db.Model):
             'id': self.id,
             'email': self.email,
             'phone': self.phone,
+            'username': getattr(self, 'username', None),
+            'profile_picture_url': getattr(self, 'profile_picture_url', None),
+            'email_verified': getattr(self, 'email_verified', False),
             'user_code': self.user_code,
             'is_admin': self.is_admin,
             'is_active': self.is_active,

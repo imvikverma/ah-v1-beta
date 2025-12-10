@@ -13,7 +13,14 @@ class AuthService:
     """Service for user authentication and session management."""
     
     @staticmethod
-    def register_user(email: str, password: str, phone: Optional[str] = None) -> Dict[str, Any]:
+    def register_user(
+        email: str, 
+        password: str, 
+        phone: Optional[str] = None,
+        username: Optional[str] = None,
+        profile_picture_url: Optional[str] = None,
+        terms_accepted: bool = False
+    ) -> Dict[str, Any]:
         """
         Register a new user.
         
@@ -21,19 +28,24 @@ class AuthService:
             email: User email
             password: Plain text password
             phone: Optional phone number
+            username: Optional username/display name
+            profile_picture_url: Optional profile picture URL
+            terms_accepted: Whether user accepted terms & conditions
             
         Returns:
             Dict with 'success', 'user', and optional 'error'
         """
-        # Check if user already exists
+        # Check if user already exists (by email, phone, or username)
         existing_user = User.query.filter(
-            (User.email == email) | (User.phone == phone)
+            (User.email == email) | 
+            (User.phone == phone) |
+            (username and hasattr(User, 'username') and User.username == username)
         ).first()
         
         if existing_user:
             return {
                 'success': False,
-                'error': 'User with this email or phone already exists'
+                'error': 'User with this email, phone, or username already exists'
             }
         
         # Generate user code
@@ -42,15 +54,30 @@ class AuthService:
         # Hash password
         password_hash = PasswordService.hash_password(password)
         
-        # Create user
-        user = User(
-            email=email,
-            phone=phone,
-            password_hash=password_hash,
-            user_code=user_code,
-            is_admin=False,
-            is_active=True
-        )
+        # Create user with new fields (if database columns exist)
+        user_data = {
+            'email': email,
+            'phone': phone,
+            'password_hash': password_hash,
+            'user_code': user_code,
+            'is_admin': False,
+            'is_active': True
+        }
+        
+        # Add optional fields if they exist in the model
+        if username and hasattr(User, 'username'):
+            user_data['username'] = username
+        if profile_picture_url and hasattr(User, 'profile_picture_url'):
+            user_data['profile_picture_url'] = profile_picture_url
+        if hasattr(User, 'terms_accepted'):
+            user_data['terms_accepted'] = terms_accepted
+        if hasattr(User, 'terms_accepted_at') and terms_accepted:
+            from datetime import datetime
+            user_data['terms_accepted_at'] = datetime.utcnow()
+        if hasattr(User, 'email_verified'):
+            user_data['email_verified'] = False
+        
+        user = User(**user_data)
         
         try:
             db.session.add(user)

@@ -32,6 +32,53 @@ class AuthService {
     }
   }
 
+  /// Validate and refresh token if needed
+  static Future<String?> getValidToken() async {
+    final token = await getToken();
+    if (token == null) return null;
+    
+    // Try to validate token by calling /api/auth/me
+    try {
+      final response = await http.get(
+        Uri.parse('$kBackendBaseUrl/api/auth/me'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      ).timeout(const Duration(seconds: 5));
+      
+      if (response.statusCode == 200) {
+        return token; // Token is valid
+      } else if (response.statusCode == 401) {
+        // Token expired, try fallback
+        try {
+          final fallbackResponse = await http.get(
+            Uri.parse('$kBackendBaseUrlFallback/api/auth/me'),
+            headers: {
+              'Authorization': 'Bearer $token',
+              'Content-Type': 'application/json',
+            },
+          ).timeout(const Duration(seconds: 5));
+          
+          if (fallbackResponse.statusCode == 200) {
+            return token; // Valid on fallback
+          }
+        } catch (e) {
+          // Fallback failed
+        }
+        
+        // Token expired, clear it
+        await logout();
+        return null;
+      }
+    } catch (e) {
+      // Network error, return token anyway (might work)
+      return token;
+    }
+    
+    return token;
+  }
+
   /// Login with email/phone and password
   static Future<void> login({
     String? email,
@@ -91,7 +138,7 @@ class AuthService {
           throw Exception('ENDPOINT_NOT_MIGRATED');
         }
       } else if (response.statusCode == 503) {
-        // Worker returns 503 for database not configured or service unavailable - trigger fallback
+        // Service unavailable - try fallback
         throw Exception('SERVICE_UNAVAILABLE');
       } else {
         final error = jsonDecode(response.body) as Map<String, dynamic>;
@@ -99,28 +146,6 @@ class AuthService {
       }
     } catch (e) {
       lastError = e is Exception ? e : Exception('Network error: $e');
-      
-      // Check if this is a 501/503 response or network error that should trigger fallback
-      final errorString = e.toString().toLowerCase();
-      final isNetworkError = errorString.contains('networkerror') || 
-                            errorString.contains('failed host lookup') ||
-                            errorString.contains('timeout') ||
-                            errorString.contains('socketexception') ||
-                            errorString.contains('connection refused') ||
-                            errorString.contains('connection closed') ||
-                            errorString.contains('connection reset') ||
-                            errorString.contains('connection timed out') ||
-                            errorString.contains('endpoint_not_migrated') ||
-                            errorString.contains('bcrypt_fallback') ||
-                            errorString.contains('service_unavailable') ||
-                            errorString.contains('cannot connect') ||
-                            errorString.contains('connection failed') ||
-                            errorString.contains('network is unreachable') ||
-                            errorString.contains('no internet connection') ||
-                            errorString.contains('handshake exception') ||
-                            errorString.contains('certificate') ||
-                            errorString.contains('ssl') ||
-                            errorString.contains('tls');
       
       // If production API failed and we're not already on localhost, ALWAYS try localhost fallback
       // This ensures we try Flask backend even if error detection isn't perfect
@@ -163,111 +188,28 @@ class AuthService {
           // Both production API and localhost fallback failed
           final isProduction = apiUrl.contains('saffronbolt.in') || apiUrl.contains('pages.dev');
           if (isProduction) {
-            throw Exception('Cannot connect to Cloudflare Worker API (https://api.ah.saffronbolt.in).\n\nTried fallback to localhost:5000 but backend is not running.\n\nTo fix:\n1. Start Flask backend: .\start-all.ps1 → Option 1\n2. Or access app from: http://localhost:58643 (if running locally)');
+            throw Exception('Cannot connect to Cloudflare Worker API (https://api.ah.saffronbolt.in).\n\nEmergency troubleshooting:\n1. Check if Cloudflare Worker is deployed and running\n2. Verify DNS records for api.ah.saffronbolt.in\n3. For local testing, run backend locally (Option 1 in start-all.ps1) and access app from http://localhost');
           } else {
-            throw Exception('Cannot connect to backend API. Please ensure the Flask backend is running on localhost:5000.\n\nStart it with: .\start-all.ps1 → Option 1');
+            throw Exception('Cannot connect to backend API. Please ensure the Flask backend is running on localhost:5000.\n\nStart it with: Option 1 in start-all.ps1');
           }
-        }
-      } else {
-        // Already tried fallback or already on localhost - re-throw the original error
-        final isProductionUrl = apiUrl.contains('saffronbolt.in') || apiUrl.contains('pages.dev');
-        if (isProductionUrl) {
-          // Check if it's a 501 (endpoint not migrated) vs actual connection failure
-          if (e.toString().contains('ENDPOINT_NOT_MIGRATED') || 
-              (lastError?.toString().contains('501') ?? false)) {
-            throw Exception(
-              'Cloudflare Worker API endpoint not yet migrated.\n\n'
-              'The login endpoint (/api/auth/login) is not yet implemented in the Worker.\n'
-              'Falling back to localhost backend...\n\n'
-              'To use the Worker:\n'
-              '• Migrate the auth endpoints to the Worker\n'
-              '• Or use localhost backend: .\start-all.ps1 → Option 1'
-            );
-          } else {
-            throw Exception(
-              'Cannot connect to Cloudflare Worker API.\n\n'
-              'The production API (https://api.ah.saffronbolt.in) is not accessible.\n'
-              'This may be because:\n'
-              '• Cloudflare Worker is not deployed yet\n'
-              '• DNS is not configured\n'
-              '• Network connectivity issues\n\n'
-              'For local testing:\n'
-              '• Run backend: .\start-all.ps1 → Option 1\n'
-              '• Access app from: http://localhost:58643'
-            );
-          }
-        } else {
-          throw lastError ?? Exception('Login error: $e');
         }
       }
+      
+      // Re-throw if not a network error or fallback already tried
+      throw lastError ?? Exception('Login error: $e');
     }
   }
 
-  /// Logout user
+  /// Logout and clear stored credentials
   static Future<void> logout() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString(_keyToken);
-
-      // Call backend logout if token exists
-      if (token != null && token.isNotEmpty) {
-        try {
-          await http.post(
-            Uri.parse('$kBackendBaseUrl/api/auth/logout'),
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': 'Bearer $token',
-            },
-          );
-        } catch (e) {
-          // Ignore logout errors - clear local storage anyway
-        }
-      }
-
-      // Clear local storage
       await prefs.remove(_keyToken);
       await prefs.remove(_keyUserId);
       await prefs.remove(_keyEmail);
       await prefs.remove(_keyPhone);
       await prefs.remove(_keyIsAdmin);
       await prefs.remove(_keyIndemnityAccepted);
-    } catch (e) {
-      // Clear local storage even if logout fails
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove(_keyToken);
-      await prefs.remove(_keyUserId);
-      await prefs.remove(_keyEmail);
-      await prefs.remove(_keyPhone);
-      await prefs.remove(_keyIsAdmin);
-      await prefs.remove(_keyIndemnityAccepted);
-    }
-  }
-
-  /// Check if current user is admin
-  static Future<bool> isAdmin() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      return prefs.getBool(_keyIsAdmin) ?? false;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  /// Check if user has accepted indemnity
-  static Future<bool> hasAcceptedIndemnity() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      return prefs.getBool(_keyIndemnityAccepted) ?? false;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  /// Mark indemnity as accepted
-  static Future<void> acceptIndemnity() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool(_keyIndemnityAccepted, true);
     } catch (e) {
       // Ignore errors
     }
@@ -301,8 +243,11 @@ class AuthService {
   static Future<void> register({
     required String email,
     String? phone,
+    String? username,
     required String password,
     required String confirmPassword,
+    String? profilePictureUrl,
+    required bool termsAccepted,
   }) async {
     if (email.isEmpty) {
       throw Exception('Email is required');
@@ -316,6 +261,10 @@ class AuthService {
       throw Exception('Passwords do not match');
     }
 
+    if (!termsAccepted) {
+      throw Exception('You must accept the Terms & Conditions');
+    }
+
     // Try production API first, fallback to localhost if it fails
     String? apiUrl = kBackendBaseUrl;
     Exception? lastError;
@@ -327,7 +276,10 @@ class AuthService {
         body: jsonEncode({
           'email': email.trim(),
           if (phone != null && phone.isNotEmpty) 'phone': phone.trim(),
+          if (username != null && username.isNotEmpty) 'username': username.trim(),
           'password': password,
+          if (profilePictureUrl != null) 'profile_picture_url': profilePictureUrl,
+          'terms_accepted': termsAccepted,
         }),
       ).timeout(const Duration(seconds: 10));
 
@@ -368,9 +320,12 @@ class AuthService {
             body: jsonEncode({
               'email': email.trim(),
               if (phone != null && phone.isNotEmpty) 'phone': phone.trim(),
+              if (username != null && username.isNotEmpty) 'username': username.trim(),
               'password': password,
+              if (profilePictureUrl != null) 'profile_picture_url': profilePictureUrl,
+              'terms_accepted': termsAccepted,
             }),
-          ).timeout(const Duration(seconds: 5));
+            ).timeout(const Duration(seconds: 5));
 
           if (response.statusCode == 201) {
             final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -422,5 +377,22 @@ class AuthService {
       'api_secret': prefs.getString(_keyApiSecret),
     };
   }
-}
 
+  /// Check if user is admin
+  static Future<bool> isAdmin() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_keyIsAdmin) ?? false;
+  }
+
+  /// Check if user has accepted indemnity
+  static Future<bool> hasAcceptedIndemnity() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_keyIndemnityAccepted) ?? false;
+  }
+
+  /// Accept indemnity
+  static Future<void> acceptIndemnity() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keyIndemnityAccepted, true);
+  }
+}

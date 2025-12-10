@@ -5,9 +5,9 @@ import 'auth_service.dart';
 
 class DbAdminService {
   static Future<Map<String, dynamic>> _get(String path) async {
-    final token = await AuthService.getToken();
+    final token = await AuthService.getValidToken();
     if (token == null) {
-      throw Exception('Authentication token not found.');
+      throw Exception('Authentication token expired. Please login again.');
     }
     final headers = {
       'Content-Type': 'application/json',
@@ -19,6 +19,8 @@ class DbAdminService {
       final response = await http.get(uri, headers: headers).timeout(const Duration(seconds: 10));
       if (response.statusCode >= 200 && response.statusCode < 300) {
         return jsonDecode(response.body) as Map<String, dynamic>;
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication expired. Please login again.');
       } else {
         final error = jsonDecode(response.body) as Map<String, dynamic>;
         throw Exception(error['error'] ?? 'Failed to fetch data');
@@ -29,9 +31,9 @@ class DbAdminService {
   }
 
   static Future<Map<String, dynamic>> _post(String path, Map<String, dynamic> body) async {
-    final token = await AuthService.getToken();
+    final token = await AuthService.getValidToken();
     if (token == null) {
-      throw Exception('Authentication token not found.');
+      throw Exception('Authentication token expired. Please login again.');
     }
     final headers = {
       'Content-Type': 'application/json',
@@ -43,6 +45,8 @@ class DbAdminService {
       final response = await http.post(uri, headers: headers, body: jsonEncode(body)).timeout(const Duration(seconds: 10));
       if (response.statusCode >= 200 && response.statusCode < 300) {
         return jsonDecode(response.body) as Map<String, dynamic>;
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication expired. Please login again.');
       } else {
         final error = jsonDecode(response.body) as Map<String, dynamic>;
         throw Exception(error['error'] ?? 'Failed to execute query');

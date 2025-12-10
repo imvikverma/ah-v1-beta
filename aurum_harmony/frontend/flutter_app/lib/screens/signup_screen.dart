@@ -1,7 +1,13 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import '../services/auth_service.dart';
 import '../services/theme_service.dart';
+import '../utils/password_strength.dart';
+import '../utils/phone_formatter.dart';
 import 'login_screen.dart';
+import 'onboarding_screen.dart';
 
 class SignUpScreen extends StatefulWidget {
   final VoidCallback? onSignUpSuccess;
@@ -16,23 +22,147 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
+  final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _isLoading = false;
+  bool _termsAccepted = false;
+  File? _profilePicture;
+  PasswordStrength _passwordStrength = PasswordStrength.weak;
+  
+  final ImagePicker _imagePicker = ImagePicker();
+
+  @override
+  void initState() {
+    super.initState();
+    _passwordController.addListener(_checkPasswordStrength);
+  }
 
   @override
   void dispose() {
     _emailController.dispose();
     _phoneController.dispose();
+    _usernameController.dispose();
+    _passwordController.removeListener(_checkPasswordStrength);
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
   }
 
+  void _checkPasswordStrength() {
+    setState(() {
+      _passwordStrength = PasswordStrengthChecker.calculateStrength(_passwordController.text);
+    });
+  }
+
+  Future<void> _pickProfilePicture() async {
+    try {
+      final XFile? image = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 512,
+        maxHeight: 512,
+        imageQuality: 85,
+      );
+      
+      if (image != null) {
+        setState(() {
+          _profilePicture = File(image.path);
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: SelectableText('Error picking image: $e'),
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _takeProfilePicture() async {
+    try {
+      final XFile? image = await _imagePicker.pickImage(
+        source: ImageSource.camera,
+        maxWidth: 512,
+        maxHeight: 512,
+        imageQuality: 85,
+      );
+      
+      if (image != null) {
+        setState(() {
+          _profilePicture = File(image.path);
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: SelectableText('Error taking photo: $e'),
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _showProfilePictureOptions() async {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('Choose from Gallery'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickProfilePicture();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: const Text('Take Photo'),
+              onTap: () {
+                Navigator.pop(context);
+                _takeProfilePicture();
+              },
+            ),
+            if (_profilePicture != null)
+              ListTile(
+                leading: const Icon(Icons.delete),
+                title: const Text('Remove Photo'),
+                onTap: () {
+                  Navigator.pop(context);
+                  setState(() {
+                    _profilePicture = null;
+                  });
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _handleSignUp() async {
     if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    if (!_termsAccepted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const SelectableText('Please accept the Terms & Conditions to continue'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+          duration: const Duration(seconds: 5),
+        ),
+      );
       return;
     }
 
@@ -41,16 +171,37 @@ class _SignUpScreenState extends State<SignUpScreen> {
     });
 
     try {
-      final phone = _phoneController.text.trim();
+      final phone = _phoneController.text.trim().replaceAll(RegExp(r'[^\d+]'), '');
+      String? profilePictureUrl;
+      
+      // TODO: Upload profile picture to cloud storage and get URL
+      // For now, we'll pass null and handle it later
+      if (_profilePicture != null) {
+        // In production, upload to Cloudflare R2, AWS S3, or similar
+        // profilePictureUrl = await uploadImage(_profilePicture!);
+      }
+
       await AuthService.register(
         email: _emailController.text.trim(),
         phone: phone.isNotEmpty ? phone : null,
+        username: _usernameController.text.trim().isNotEmpty 
+            ? _usernameController.text.trim() 
+            : null,
         password: _passwordController.text,
         confirmPassword: _confirmPasswordController.text,
+        profilePictureUrl: profilePictureUrl,
+        termsAccepted: true,
       );
 
       if (mounted) {
-        widget.onSignUpSuccess?.call();
+        // Navigate to onboarding screen instead of directly calling callback
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => OnboardingScreen(
+              onComplete: widget.onSignUpSuccess,
+            ),
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -58,7 +209,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
           SnackBar(
             content: SelectableText('Sign up failed: $e'),
             backgroundColor: Theme.of(context).colorScheme.error,
-            duration: const Duration(seconds: 30), // Extended duration for copying
+            duration: const Duration(seconds: 30),
             action: SnackBarAction(
               label: 'Dismiss',
               textColor: Colors.white,
@@ -103,7 +254,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
         child: SafeArea(
           child: Stack(
             children: [
-              // Theme Toggle Button (top right) - Mobile-friendly
+              // Theme Toggle Button
               Positioned(
                 top: 8,
                 right: 8,
@@ -149,12 +300,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           // Logo
                           Image.asset(
                             'assets/logo/AurumHarmony_logo.png',
-                            height: 120,
+                            height: 100,
                             fit: BoxFit.contain,
                             errorBuilder: (context, error, stackTrace) {
                               return Icon(
                                 Icons.account_balance_wallet,
-                                size: 80,
+                                size: 60,
                                 color: colors.primary,
                               );
                             },
@@ -178,7 +329,81 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               color: colors.onSurface.withOpacity(0.6),
                             ),
                           ),
-                          const SizedBox(height: 32),
+                          const SizedBox(height: 24),
+
+                          // Profile Picture
+                          Center(
+                            child: GestureDetector(
+                              onTap: _showProfilePictureOptions,
+                              child: Stack(
+                                children: [
+                                  CircleAvatar(
+                                    radius: 50,
+                                    backgroundColor: colors.primaryContainer,
+                                    backgroundImage: _profilePicture != null
+                                        ? FileImage(_profilePicture!)
+                                        : null,
+                                    child: _profilePicture == null
+                                        ? Icon(
+                                            Icons.person,
+                                            size: 50,
+                                            color: colors.onPrimaryContainer,
+                                          )
+                                        : null,
+                                  ),
+                                  Positioned(
+                                    bottom: 0,
+                                    right: 0,
+                                    child: CircleAvatar(
+                                      radius: 16,
+                                      backgroundColor: colors.primary,
+                                      child: Icon(
+                                        _profilePicture == null
+                                            ? Icons.add_a_photo
+                                            : Icons.edit,
+                                        size: 18,
+                                        color: colors.onPrimary,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Center(
+                            child: Text(
+                              'Tap to add profile picture (Optional)',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: colors.onSurface.withOpacity(0.6),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+
+                          // Username
+                          TextFormField(
+                            controller: _usernameController,
+                            decoration: InputDecoration(
+                              labelText: 'Username (Optional)',
+                              hintText: 'Choose a display name',
+                              prefixIcon: const Icon(Icons.person_outline),
+                            ),
+                            textCapitalization: TextCapitalization.words,
+                            validator: (value) {
+                              if (value != null && value.trim().isNotEmpty) {
+                                if (value.length < 3) {
+                                  return 'Username must be at least 3 characters';
+                                }
+                                if (!RegExp(r'^[a-zA-Z0-9_]+$').hasMatch(value)) {
+                                  return 'Username can only contain letters, numbers, and underscores';
+                                }
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 16),
 
                           // Email
                           TextFormField(
@@ -193,7 +418,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               if (value == null || value.trim().isEmpty) {
                                 return 'Email is required';
                               }
-                              if (!value.contains('@') || !value.contains('.')) {
+                              if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
                                 return 'Please enter a valid email';
                               }
                               return null;
@@ -201,19 +426,22 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           ),
                           const SizedBox(height: 16),
 
-                          // Phone (optional)
+                          // Phone with formatting
                           TextFormField(
                             controller: _phoneController,
                             decoration: InputDecoration(
                               labelText: 'Phone (Optional)',
-                              hintText: '+91-XXXXXXXXXX',
+                              hintText: '+91 12345 67890',
                               prefixIcon: const Icon(Icons.phone),
                             ),
                             keyboardType: TextInputType.phone,
+                            inputFormatters: [
+                              PhoneNumberFormatter(),
+                            ],
                             validator: (value) {
                               if (value != null && value.trim().isNotEmpty) {
                                 final phone = value.replaceAll(RegExp(r'[^\d+]'), '');
-                                if (phone.length < 10) {
+                                if (phone.length < 10 || phone.length > 13) {
                                   return 'Please enter a valid phone number';
                                 }
                               }
@@ -222,7 +450,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           ),
                           const SizedBox(height: 16),
 
-                          // Password
+                          // Password with strength indicator
                           TextFormField(
                             controller: _passwordController,
                             obscureText: _obscurePassword,
@@ -253,6 +481,33 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               return null;
                             },
                           ),
+                          // Password Strength Indicator
+                          if (_passwordController.text.isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: LinearProgressIndicator(
+                                    value: PasswordStrengthChecker.getStrengthProgress(_passwordStrength),
+                                    backgroundColor: colors.surfaceVariant,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      PasswordStrengthChecker.getStrengthColor(_passwordStrength),
+                                    ),
+                                    minHeight: 4,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Text(
+                                  PasswordStrengthChecker.getStrengthText(_passwordStrength),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: PasswordStrengthChecker.getStrengthColor(_passwordStrength),
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
                           const SizedBox(height: 16),
 
                           // Confirm Password
@@ -286,8 +541,63 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               return null;
                             },
                           ),
+                          const SizedBox(height: 24),
 
-                          const SizedBox(height: 32),
+                          // Terms & Conditions
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Checkbox(
+                                value: _termsAccepted,
+                                onChanged: (value) {
+                                  setState(() {
+                                    _termsAccepted = value ?? false;
+                                  });
+                                },
+                              ),
+                              Expanded(
+                                child: GestureDetector(
+                                  onTap: () {
+                                    setState(() {
+                                      _termsAccepted = !_termsAccepted;
+                                    });
+                                  },
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(top: 12),
+                                    child: RichText(
+                                      text: TextSpan(
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: colors.onSurface,
+                                        ),
+                                        children: [
+                                          const TextSpan(text: 'I agree to the '),
+                                          TextSpan(
+                                            text: 'Terms & Conditions',
+                                            style: TextStyle(
+                                              color: colors.primary,
+                                              fontWeight: FontWeight.w600,
+                                              decoration: TextDecoration.underline,
+                                            ),
+                                          ),
+                                          const TextSpan(text: ' and '),
+                                          TextSpan(
+                                            text: 'Privacy Policy',
+                                            style: TextStyle(
+                                              color: colors.primary,
+                                              fontWeight: FontWeight.w600,
+                                              decoration: TextDecoration.underline,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 24),
 
                           // Sign Up Button
                           Center(
@@ -301,10 +611,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: colors.primary,
                                       foregroundColor: colors.onPrimary,
-                                      padding: const EdgeInsets.symmetric(vertical: 12),
+                                      padding: const EdgeInsets.symmetric(vertical: 14),
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(12),
                                       ),
+                                      elevation: 2,
                                     ),
                                     child: _isLoading
                                         ? SizedBox(
@@ -316,7 +627,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                             ),
                                           )
                                         : const Text(
-                                            'Sign Up',
+                                            'Create Account',
                                             style: TextStyle(
                                               fontSize: 16,
                                               fontWeight: FontWeight.w600,
@@ -390,4 +701,3 @@ class _SignUpScreenState extends State<SignUpScreen> {
     );
   }
 }
-

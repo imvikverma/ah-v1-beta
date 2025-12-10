@@ -9,7 +9,7 @@
  * - API routing with proper error handling
  */
 
-import { hashPassword, verifyPassword, generateSessionToken, verifySessionToken, generateUserCode, generateEmailVerificationToken } from './auth';
+import { hashPassword, verifyPassword, generateSessionToken, verifySessionToken, generateUserCode } from './auth';
 
 // CORS headers helper
 const corsHeaders = {
@@ -275,7 +275,7 @@ const routes: Route[] = [
     handler: async (request, env: Env) => {
       try {
         const body = await request.json();
-        const { email, password, phone } = body;
+        const { email, password, phone, username, profile_picture_url, terms_accepted } = body;
 
         if (!email) {
           return Response.json(
@@ -291,6 +291,13 @@ const routes: Route[] = [
           );
         }
 
+        if (terms_accepted !== true) {
+          return Response.json(
+            { error: 'You must accept the Terms & Conditions' },
+            { status: 400, headers: corsHeaders }
+          );
+        }
+
         // Check if database is available
         if (!env.DB) {
           return Response.json(
@@ -299,14 +306,14 @@ const routes: Route[] = [
           );
         }
 
-        // Check if user already exists
+        // Check if user already exists (by email, phone, or username)
         const existing = await env.DB.prepare(
-          "SELECT id FROM users WHERE email = ? OR phone = ?"
-        ).bind(email, phone || '').first();
+          "SELECT id FROM users WHERE email = ? OR phone = ? OR username = ?"
+        ).bind(email, phone || '', username || '').first();
 
         if (existing) {
           return Response.json(
-            { error: 'User already exists' },
+            { error: 'User with this email, phone, or username already exists' },
             { status: 409, headers: corsHeaders }
           );
         }
@@ -332,16 +339,28 @@ const routes: Route[] = [
           attempts++;
         }
 
-        // Insert user
+        // Generate email verification token
+        const emailVerificationToken = generateEmailVerificationToken();
+
+        // Insert user with new fields
         const now = new Date().toISOString();
         const result = await env.DB.prepare(
-          `INSERT INTO users (email, phone, password_hash, user_code, is_admin, is_active, initial_capital, max_accounts_allowed, created_at, updated_at)
-           VALUES (?, ?, ?, ?, 0, 1, 10000.0, 1, ?, ?)`
+          `INSERT INTO users (
+            email, phone, password_hash, user_code, username, profile_picture_url,
+            is_admin, is_active, email_verified, email_verification_token,
+            terms_accepted, terms_accepted_at,
+            initial_capital, max_accounts_allowed, created_at, updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, 0, 1, 0, ?, ?, ?, 10000.0, 1, ?, ?)`
         ).bind(
           email,
           phone || null,
           passwordHash,
           finalUserCode,
+          username || null,
+          profile_picture_url || null,
+          emailVerificationToken,
+          terms_accepted ? 1 : 0,
+          terms_accepted ? now : null,
           now,
           now
         ).run();
@@ -353,8 +372,11 @@ const routes: Route[] = [
               id: result.meta.last_row_id,
               email,
               phone,
+              username,
               user_code: finalUserCode,
+              email_verified: false,
             },
+            email_verification_token: emailVerificationToken, // Send token for verification
           },
           { status: 201, headers: corsHeaders }
         );

@@ -208,6 +208,79 @@ def migrate_user_fields():
             db.session.rollback()
             print(f"    ⚠️  Could not add max_accounts_allowed: {e}")
     
+    # Signup improvements fields
+    if 'username' not in columns:
+        print("  - Adding username column...")
+        try:
+            db.session.execute(db.text('ALTER TABLE users ADD COLUMN username VARCHAR(100)'))
+            db.session.commit()
+            # Create index if possible
+            try:
+                db.session.execute(db.text('CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)'))
+                db.session.commit()
+            except:
+                pass  # Index might already exist or not supported
+            new_fields_added = True
+            print("    ✅ username added")
+        except Exception as e:
+            db.session.rollback()
+            print(f"    ⚠️  Could not add username: {e}")
+    
+    if 'profile_picture_url' not in columns:
+        print("  - Adding profile_picture_url column...")
+        try:
+            db.session.execute(db.text('ALTER TABLE users ADD COLUMN profile_picture_url VARCHAR(500)'))
+            db.session.commit()
+            new_fields_added = True
+            print("    ✅ profile_picture_url added")
+        except Exception as e:
+            db.session.rollback()
+            print(f"    ⚠️  Could not add profile_picture_url: {e}")
+    
+    if 'email_verified' not in columns:
+        print("  - Adding email_verified column...")
+        try:
+            db.session.execute(db.text('ALTER TABLE users ADD COLUMN email_verified BOOLEAN DEFAULT 0 NOT NULL'))
+            db.session.commit()
+            new_fields_added = True
+            print("    ✅ email_verified added")
+        except Exception as e:
+            db.session.rollback()
+            print(f"    ⚠️  Could not add email_verified: {e}")
+    
+    if 'email_verification_token' not in columns:
+        print("  - Adding email_verification_token column...")
+        try:
+            db.session.execute(db.text('ALTER TABLE users ADD COLUMN email_verification_token VARCHAR(255)'))
+            db.session.commit()
+            new_fields_added = True
+            print("    ✅ email_verification_token added")
+        except Exception as e:
+            db.session.rollback()
+            print(f"    ⚠️  Could not add email_verification_token: {e}")
+    
+    if 'terms_accepted' not in columns:
+        print("  - Adding terms_accepted column...")
+        try:
+            db.session.execute(db.text('ALTER TABLE users ADD COLUMN terms_accepted BOOLEAN DEFAULT 0 NOT NULL'))
+            db.session.commit()
+            new_fields_added = True
+            print("    ✅ terms_accepted added")
+        except Exception as e:
+            db.session.rollback()
+            print(f"    ⚠️  Could not add terms_accepted: {e}")
+    
+    if 'terms_accepted_at' not in columns:
+        print("  - Adding terms_accepted_at column...")
+        try:
+            db.session.execute(db.text('ALTER TABLE users ADD COLUMN terms_accepted_at DATETIME'))
+            db.session.commit()
+            new_fields_added = True
+            print("    ✅ terms_accepted_at added")
+        except Exception as e:
+            db.session.rollback()
+            print(f"    ⚠️  Could not add terms_accepted_at: {e}")
+    
     if new_fields_added:
         print("✅ New user fields migrated")
     else:

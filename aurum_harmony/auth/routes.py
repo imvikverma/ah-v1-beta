@@ -45,6 +45,9 @@ def register():
     email = data.get('email', '').strip()
     password = data.get('password', '')
     phone = data.get('phone', '').strip() or None
+    username = data.get('username', '').strip() or None
+    profile_picture_url = data.get('profile_picture_url') or None
+    terms_accepted = data.get('terms_accepted', False)
     
     if not email:
         return jsonify({'error': 'Email is required'}), 400
@@ -52,7 +55,15 @@ def register():
     if not password or len(password) < 6:
         return jsonify({'error': 'Password must be at least 6 characters'}), 400
     
-    result = AuthService.register_user(email, password, phone)
+    if not terms_accepted:
+        return jsonify({'error': 'You must accept the Terms & Conditions'}), 400
+    
+    result = AuthService.register_user(
+        email, password, phone, 
+        username=username,
+        profile_picture_url=profile_picture_url,
+        terms_accepted=terms_accepted
+    )
     
     if result['success']:
         return jsonify({
