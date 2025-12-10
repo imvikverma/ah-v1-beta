@@ -33,7 +33,12 @@ def init_db(app):
     if database_url.startswith('sqlite'):
         app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
             'poolclass': StaticPool,
-            'connect_args': {'check_same_thread': False}
+            'connect_args': {
+                'check_same_thread': False,
+                'timeout': 20.0  # 20 second timeout for database operations
+            },
+            'pool_pre_ping': True,  # Verify connections before using
+            'pool_recycle': 3600  # Recycle connections after 1 hour
         }
     
     db.init_app(app)
