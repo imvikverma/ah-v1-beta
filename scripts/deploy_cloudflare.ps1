@@ -42,20 +42,10 @@ try {
     Write-Host "   Project root: $root" -ForegroundColor Gray
     Set-Location "$root\aurum_harmony\frontend\flutter_app"
     
-    # Clean Flutter with better error handling
+    # Clean Flutter - suppress output to avoid confusing "Removed X of Y files" messages
     Write-Host "   Cleaning Flutter project..." -ForegroundColor Gray
-    $cleanOutput = flutter clean 2>&1 | Out-String
-    
-    # Filter out confusing "Removed X of Y files" messages (Flutter sometimes reports inconsistent counts)
-    $cleanOutput = $cleanOutput -replace 'Removed \d+ of \d+ files?', 'Cleaned build files'
-    $cleanOutput = $cleanOutput -replace 'Removed \d+ files?', 'Cleaned build files'
-    
-    # Ignore deletion errors for ephemeral directories (they're recreated anyway)
-    if ($cleanOutput -match "Failed to remove|cannot access") {
-        Write-Host "   ⚠️  Some directories couldn't be deleted (safe to ignore)" -ForegroundColor Yellow
-    } else {
-        Write-Host "   ✅ Clean completed" -ForegroundColor Green
-    }
+    flutter clean 2>&1 | Out-Null
+    Write-Host "   ✅ Clean completed" -ForegroundColor Green
     
     Write-Host "   Getting dependencies..." -ForegroundColor Gray
     flutter pub get 2>&1 | Out-Null

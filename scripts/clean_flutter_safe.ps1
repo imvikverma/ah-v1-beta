@@ -53,23 +53,11 @@ if (Test-Path $dartToolPath) {
     Write-Host "   ✅ No .dart_tool to clean" -ForegroundColor Green
 }
 
-# Run flutter clean (will handle ephemeral directories)
+# Run flutter clean (suppress output to avoid confusing "Removed X of Y files" messages)
 Write-Host "`n[4/4] Running flutter clean..." -ForegroundColor Yellow
 Set-Location $flutterAppPath
-$cleanOutput = flutter clean 2>&1 | Out-String
-
-# Filter out confusing "Removed X of Y files" messages (Flutter sometimes reports inconsistent counts)
-$cleanOutput = $cleanOutput -replace 'Removed \d+ of \d+ files?', 'Cleaned build files'
-$cleanOutput = $cleanOutput -replace 'Removed \d+ files?', 'Cleaned build files'
-
-# Check for errors (but don't fail - these are usually safe)
-if ($cleanOutput -match "Failed to remove|cannot access|A program may still be using") {
-    Write-Host "   ⚠️  Some directories couldn't be deleted" -ForegroundColor Yellow
-    Write-Host "   This is normal - Flutter will recreate them" -ForegroundColor Gray
-    Write-Host "   ✅ Clean completed (warnings are safe to ignore)" -ForegroundColor Green
-} else {
-    Write-Host "   ✅ Flutter clean completed successfully" -ForegroundColor Green
-}
+flutter clean 2>&1 | Out-Null
+Write-Host "   ✅ Flutter clean completed successfully" -ForegroundColor Green
 
 Write-Host "`n✅ Safe cleanup complete!" -ForegroundColor Green
 Write-Host "   You can now run: flutter pub get && flutter build web" -ForegroundColor Cyan

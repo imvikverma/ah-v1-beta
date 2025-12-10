@@ -2,7 +2,7 @@
 Flask routes for authentication.
 """
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from ..database.db import db
 from ..database.models import User, BrokerCredential
 from ..database.utils.encryption import get_encryption_service
@@ -80,28 +80,35 @@ def login():
     # Handle OPTIONS preflight request
     if request.method == 'OPTIONS':
         return '', 200
-    data = request.get_json() or {}
     
-    email = data.get('email', '').strip()
-    phone = data.get('phone', '').strip()
-    password = data.get('password', '')
-    
-    if not password:
-        return jsonify({'error': 'Password is required'}), 400
-    
-    if not email and not phone:
-        return jsonify({'error': 'Email or phone is required'}), 400
-    
-    result = AuthService.login_user(email=email or None, phone=phone or None, password=password)
-    
-    if result['success']:
-        return jsonify({
-            'message': 'Login successful',
-            'token': result['token'],
-            'user': result['user']
-        }), 200
-    else:
-        return jsonify({'error': result['error']}), 401
+    try:
+        data = request.get_json() or {}
+        
+        email = data.get('email', '').strip()
+        phone = data.get('phone', '').strip()
+        password = data.get('password', '')
+        
+        if not password:
+            return jsonify({'error': 'Password is required'}), 400
+        
+        if not email and not phone:
+            return jsonify({'error': 'Email or phone is required'}), 400
+        
+        result = AuthService.login_user(email=email or None, phone=phone or None, password=password)
+        
+        if result['success']:
+            return jsonify({
+                'message': 'Login successful',
+                'token': result['token'],
+                'user': result['user']
+            }), 200
+        else:
+            return jsonify({'error': result['error']}), 401
+    except Exception as e:
+        # Log the full exception for debugging
+        import traceback
+        current_app.logger.error(f"Login error: {str(e)}\n{traceback.format_exc()}")
+        return jsonify({'error': 'Internal server error during login. Please try again.'}), 500
 
 
 @auth_bp.route('/logout', methods=['POST', 'OPTIONS'])

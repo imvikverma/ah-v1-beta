@@ -164,16 +164,22 @@ try {
     # Start Flutter web
     Write-Log "Starting Flutter web server on port $webPort..." "INFO"
     Write-Log "Frontend will be available at: http://localhost:$webPort" "INFO"
+    Write-Host ""
+    Write-Host "═══════════════════════════════════════" -ForegroundColor Cyan
+    Write-Host "  Flutter Hot Reload Menu Available!" -ForegroundColor Yellow
+    Write-Host "═══════════════════════════════════════" -ForegroundColor Cyan
+    Write-Host "  Restore this window from taskbar to use:" -ForegroundColor White
+    Write-Host "  • Press 'r' for hot reload" -ForegroundColor Green
+    Write-Host "  • Press 'R' for hot restart" -ForegroundColor Green
+    Write-Host "  • Press 'q' to quit" -ForegroundColor Gray
+    Write-Host "═══════════════════════════════════════" -ForegroundColor Cyan
+    Write-Host ""
+    Write-Host "Note: Window is minimized. Restore from taskbar to interact." -ForegroundColor Gray
+    Write-Host ""
     
-    # Run Flutter (output to log, errors to console)
-    & $flutterCmd run -d web-server --web-port=$webPort 2>&1 | ForEach-Object {
-        $line = $_
-        Write-Log $line "INFO"
-        # Check for critical errors
-        if ($line -match "ERROR|FAILURE|Exception|Fatal") {
-            Write-Host $line -ForegroundColor Red
-        }
-    }
+    # Run Flutter directly (preserves interactive menu)
+    # When window is restored, full interactive menu will be available
+    & $flutterCmd run -d web-server --web-port=$webPort
     
 } catch {
     Show-CriticalError "Unexpected error: $_"

@@ -6,10 +6,8 @@ $flutterAppPath = Join-Path $projectRoot 'aurum_harmony\frontend\flutter_app'
 
 Write-Host 'Cleaning Flutter build cache...' -ForegroundColor Cyan
 Set-Location $flutterAppPath
-$cleanOutput = flutter clean 2>&1 | Out-String
-# Filter out confusing "Removed X of Y files" messages (Flutter sometimes reports inconsistent counts)
-$cleanOutput = $cleanOutput -replace 'Removed \d+ of \d+ files?', 'Cleaned build files'
-$cleanOutput = $cleanOutput -replace 'Removed \d+ files?', 'Cleaned build files'
+# Suppress output to avoid confusing "Removed X of Y files" messages
+flutter clean 2>&1 | Out-Null
 Write-Host '   ✅ Clean completed' -ForegroundColor Green
 
 Write-Host 'Getting dependencies...' -ForegroundColor Cyan

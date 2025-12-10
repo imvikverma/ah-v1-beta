@@ -149,21 +149,71 @@ class AuthService:
             expires_at=expires_at
         )
         
-        try:
-            db.session.add(session)
-            db.session.commit()
-            
-            return {
-                'success': True,
-                'token': token,
-                'user': user.to_dict()
-            }
-        except Exception as e:
-            db.session.rollback()
-            return {
-                'success': False,
-                'error': f'Login failed: {str(e)}'
-            }
+        # Retry database operation up to 3 times for transient errors
+        max_retries = 3
+        retry_count = 0
+        
+        while retry_count < max_retries:
+            try:
+                db.session.add(session)
+                db.session.commit()
+                
+                return {
+                    'success': True,
+                    'token': token,
+                    'user': user.to_dict()
+                }
+            except Exception as e:
+                db.session.rollback()
+                
+                # Log the error for debugging but don't expose internal details to client
+                import logging
+                import time
+                logging.error(f"Database error during login (attempt {retry_count + 1}/{max_retries}): {str(e)}", exc_info=True)
+                
+                # Check if it's a database connection issue that might be transient
+                error_str = str(e).lower()
+                is_transient = (
+                    'operationalerror' in error_str or 
+                    'database is locked' in error_str or
+                    'timeout' in error_str or
+                    'remoteexception' in error_str
+                )
+                
+                if is_transient and retry_count < max_retries - 1:
+                    # Wait a bit before retrying (exponential backoff)
+                    time.sleep(0.1 * (2 ** retry_count))
+                    retry_count += 1
+                    # Recreate session object for retry
+                    session = Session(
+                        user_id=user.id,
+                        session_token=token,
+                        expires_at=expires_at
+                    )
+                    continue
+                
+                # Non-retryable error or max retries reached
+                if 'operationalerror' in error_str or 'database is locked' in error_str:
+                    return {
+                        'success': False,
+                        'error': 'Database connection error. Please try again in a moment.'
+                    }
+                elif 'integrityerror' in error_str or 'unique constraint' in error_str:
+                    return {
+                        'success': False,
+                        'error': 'Session creation failed. Please try logging in again.'
+                    }
+                else:
+                    return {
+                        'success': False,
+                        'error': 'Login failed. Please try again.'
+                    }
+        
+        # Should not reach here, but just in case
+        return {
+            'success': False,
+            'error': 'Login failed after multiple attempts. Please try again.'
+        }
     
     @staticmethod
     def get_user_from_token(token: str) -> Optional[User]:

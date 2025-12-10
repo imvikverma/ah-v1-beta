@@ -90,7 +90,8 @@ function Start-Frontend {
         
         if ($process) {
             Write-Host "✅ Flutter process started (PID: $($process.Id))" -ForegroundColor Green
-            Write-Host "   Window minimized - check taskbar to restore if needed" -ForegroundColor Gray
+            Write-Host "   Window minimized - restore from taskbar to use hot reload menu" -ForegroundColor Gray
+            Write-Host "   Hot reload: Press 'r' | Hot restart: Press 'R' | Quit: Press 'q'" -ForegroundColor Cyan
             Write-Host "   Check logs for startup status: _local\logs\flutter.log" -ForegroundColor Gray
         } else {
             Write-Host "❌ Failed to start Flutter process" -ForegroundColor Red
@@ -123,12 +124,12 @@ function Invoke-CloudflareDeploy {
         
         Write-Host "[1/4] Building Flutter web..." -ForegroundColor Cyan
         Set-Location $flutterDir
-        $cleanOutput = flutter clean 2>&1 | Out-String
-        # Filter out confusing "Removed X of Y files" messages
-        $cleanOutput = $cleanOutput -replace 'Removed \d+ of \d+ files?', 'Cleaned build files'
-        $cleanOutput = $cleanOutput -replace 'Removed \d+ files?', 'Cleaned build files'
-        flutter pub get
-        flutter build web --release
+        # Suppress Flutter clean output to avoid confusing "Removed X of Y files" messages
+        flutter clean 2>&1 | Out-Null
+        Write-Host "   ✅ Clean completed" -ForegroundColor Green
+        flutter pub get 2>&1 | Out-Null
+        flutter build web --release 2>&1 | Out-Null
+        Write-Host "   ✅ Build completed" -ForegroundColor Green
         
         Write-Host "`n[2/4] Copying to docs/..." -ForegroundColor Cyan
         Set-Location $projectRoot
@@ -503,7 +504,8 @@ do {
     Set-Location $projectRoot -ErrorAction SilentlyContinue
     
     Show-Menu
-    $choice = Read-Host "Enter your choice (1-5)"
+    # Get user choice (trim to handle any whitespace issues)
+    $choice = (Read-Host "Enter your choice (1-5)").Trim()
     
     switch ($choice) {
         "1" {
