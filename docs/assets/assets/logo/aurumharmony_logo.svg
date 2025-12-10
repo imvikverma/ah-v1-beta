@@ -1,0 +1,10 @@
+<svg width="160" height="40" viewBox="0 0 160 40" xmlns="http://www.w3.org/2000/svg">
+  <rect width="160" height="40" fill="black"/>
+  <circle cx="18" cy="20" r="12" fill="#FF9933"/>
+  <rect x="12" y="14" width="12" height="12" fill="black" opacity="0.3"/>
+  <text x="38" y="25" font-family="Segoe UI, system-ui, -apple-system" font-size="18" fill="#FFFFFF">
+    AurumHarmony
+  </text>
+</svg>
+
+
