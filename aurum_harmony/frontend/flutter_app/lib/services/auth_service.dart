@@ -186,11 +186,49 @@ class AuthService {
           }
         } catch (fallbackError) {
           // Both production API and localhost fallback failed
-          final isProduction = apiUrl.contains('saffronbolt.in') || apiUrl.contains('pages.dev');
-          if (isProduction) {
-            throw Exception('Cannot connect to Cloudflare Worker API (https://api.ah.saffronbolt.in).\n\nEmergency troubleshooting:\n1. Check if Cloudflare Worker is deployed and running\n2. Verify DNS records for api.ah.saffronbolt.in\n3. For local testing, run backend locally (Option 1 in start-all.ps1) and access app from http://localhost');
+          // Extract the actual error message
+          String errorMessage = '';
+          if (fallbackError is Exception) {
+            errorMessage = fallbackError.toString();
           } else {
-            throw Exception('Cannot connect to backend API. Please ensure the Flask backend is running on localhost:5000.\n\nStart it with: Option 1 in start-all.ps1');
+            errorMessage = fallbackError.toString();
+          }
+          
+          final errorMessageLower = errorMessage.toLowerCase();
+          
+          // Determine the actual error type
+          final isNetworkError = errorMessageLower.contains('socketexception') || 
+                                 errorMessageLower.contains('failed host lookup') ||
+                                 errorMessageLower.contains('connection refused') ||
+                                 errorMessageLower.contains('timeout') ||
+                                 errorMessageLower.contains('network') ||
+                                 errorMessageLower.contains('connection failed');
+          
+          // Check for database errors in the error message
+          final isDatabaseError = errorMessageLower.contains('database connection error') || 
+                                  errorMessageLower.contains('database is locked') ||
+                                  errorMessageLower.contains('remoteexception') ||
+                                  errorMessageLower.contains('operationalerror') ||
+                                  errorMessageLower.contains('internal server error');
+          
+          // Check if localhost backend is actually reachable (not a network error)
+          // If it's a network error, the backend isn't running
+          // If it's not a network error, the backend is running but returned an error
+          if (isNetworkError) {
+            // Backend is not running or not reachable
+            final isProduction = apiUrl.contains('saffronbolt.in') || apiUrl.contains('pages.dev');
+            if (isProduction) {
+              throw Exception('Cannot connect to backend APIs.\n\nBoth production API and local backend failed:\n• Production API (https://api.ah.saffronbolt.in) is unreachable\n• Local backend (http://localhost:5000) is not running\n\nTo fix:\n1. Start Flask backend: Run Option 1 or 4 in start-all.ps1\n2. Access app from http://localhost (not production URL)');
+            } else {
+              throw Exception('Cannot connect to backend API. Please ensure the Flask backend is running on localhost:5000.\n\nStart it with: Option 1 or 4 in start-all.ps1');
+            }
+          } else if (isDatabaseError) {
+            // Backend is running but has a database error
+            throw Exception('Backend database error. Please try again in a moment.\n\nIf this persists:\n1. Check backend logs: _local\\logs\\backend.log\n2. Restart backend: Option 1 or 4 in start-all.ps1');
+          } else {
+            // Backend is running but returned another error (e.g., invalid credentials)
+            // Pass through the actual error message from backend
+            throw fallbackError;
           }
         }
       }
@@ -344,11 +382,49 @@ class AuthService {
           }
         } catch (fallbackError) {
           // Both production API and localhost fallback failed
-          final isProduction = apiUrl.contains('saffronbolt.in') || apiUrl.contains('pages.dev');
-          if (isProduction) {
-            throw Exception('Cannot connect to Cloudflare Worker API (https://api.ah.saffronbolt.in).\n\nEmergency troubleshooting:\n1. Check if Cloudflare Worker is deployed and running\n2. Verify DNS records for api.ah.saffronbolt.in\n3. For local testing, run backend locally (Option 1 in start-all.ps1) and access app from http://localhost');
+          // Extract the actual error message
+          String errorMessage = '';
+          if (fallbackError is Exception) {
+            errorMessage = fallbackError.toString();
           } else {
-            throw Exception('Cannot connect to backend API. Please ensure the Flask backend is running on localhost:5000.\n\nStart it with: Option 1 in start-all.ps1');
+            errorMessage = fallbackError.toString();
+          }
+          
+          final errorMessageLower = errorMessage.toLowerCase();
+          
+          // Determine the actual error type
+          final isNetworkError = errorMessageLower.contains('socketexception') || 
+                                 errorMessageLower.contains('failed host lookup') ||
+                                 errorMessageLower.contains('connection refused') ||
+                                 errorMessageLower.contains('timeout') ||
+                                 errorMessageLower.contains('network') ||
+                                 errorMessageLower.contains('connection failed');
+          
+          // Check for database errors in the error message
+          final isDatabaseError = errorMessageLower.contains('database connection error') || 
+                                  errorMessageLower.contains('database is locked') ||
+                                  errorMessageLower.contains('remoteexception') ||
+                                  errorMessageLower.contains('operationalerror') ||
+                                  errorMessageLower.contains('internal server error');
+          
+          // Check if localhost backend is actually reachable (not a network error)
+          // If it's a network error, the backend isn't running
+          // If it's not a network error, the backend is running but returned an error
+          if (isNetworkError) {
+            // Backend is not running or not reachable
+            final isProduction = apiUrl.contains('saffronbolt.in') || apiUrl.contains('pages.dev');
+            if (isProduction) {
+              throw Exception('Cannot connect to backend APIs.\n\nBoth production API and local backend failed:\n• Production API (https://api.ah.saffronbolt.in) is unreachable\n• Local backend (http://localhost:5000) is not running\n\nTo fix:\n1. Start Flask backend: Run Option 1 or 4 in start-all.ps1\n2. Access app from http://localhost (not production URL)');
+            } else {
+              throw Exception('Cannot connect to backend API. Please ensure the Flask backend is running on localhost:5000.\n\nStart it with: Option 1 or 4 in start-all.ps1');
+            }
+          } else if (isDatabaseError) {
+            // Backend is running but has a database error
+            throw Exception('Backend database error. Please try again in a moment.\n\nIf this persists:\n1. Check backend logs: _local\\logs\\backend.log\n2. Restart backend: Option 1 or 4 in start-all.ps1');
+          } else {
+            // Backend is running but returned another error (e.g., invalid credentials)
+            // Pass through the actual error message from backend
+            throw fallbackError;
           }
         }
       }
