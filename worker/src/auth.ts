@@ -135,3 +135,10 @@ export function generateUserCode(): string {
   const random = Math.random().toString(36).substring(2, 8);
   return `user${random}`;
 }
+
+export function generateEmailVerificationToken(): string {
+  // Generate a secure random token for email verification
+  const array = new Uint8Array(32);
+  crypto.getRandomValues(array);
+  return Array.from(array, b => b.toString(16).padStart(2, '0')).join('');
+}

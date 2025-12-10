@@ -9,7 +9,7 @@
  * - API routing with proper error handling
  */
 
-import { hashPassword, verifyPassword, generateSessionToken, verifySessionToken, generateUserCode } from './auth';
+import { hashPassword, verifyPassword, generateSessionToken, verifySessionToken, generateUserCode, generateEmailVerificationToken } from './auth';
 
 // CORS headers helper
 const corsHeaders = {
