@@ -451,14 +451,81 @@ function Invoke-QuickDeploy {
         git commit -m "Quick deploy: Update Flutter web build ($timestamp)" 2>&1 | Out-Null
         
         Write-Host "   Pushing to GitHub..." -ForegroundColor Gray
-        git push origin main 2>&1 | Out-Null
+        $pushOutput = git push origin main 2>&1 | Out-String
         
         if ($LASTEXITCODE -eq 0) {
             Write-Host "`n✅ Quick deploy completed!" -ForegroundColor Green
             Write-Host "   Cloudflare will auto-deploy in ~60 seconds" -ForegroundColor Yellow
             Write-Host "   Live at: https://ah.saffronbolt.in" -ForegroundColor Cyan
         } else {
-            Write-Host "❌ Push failed. Check git status." -ForegroundColor Red
+            # Handle non-fast-forward error
+            if (($pushOutput -match "rejected.*fetch first") -or ($pushOutput -match "Updates were rejected") -or ($pushOutput -match "non-fast-forward")) {
+                Write-Host "   ⚠️  Remote has new changes. Pulling and merging..." -ForegroundColor Yellow
+                
+                # Abort any existing rebase/merge first
+                if ((Test-Path ".git/rebase-merge") -or (Test-Path ".git/rebase-apply")) {
+                    git rebase --abort 2>&1 | Out-Null
+                }
+                if (Test-Path ".git/MERGE_HEAD") {
+                    git merge --abort 2>&1 | Out-Null
+                }
+                
+                # Pull with merge (not rebase - simpler for docs/ conflicts)
+                $pullOutput = git pull origin main --no-edit 2>&1 | Out-String
+                
+                # Check if merge resulted in conflicts
+                if ($pullOutput -match "CONFLICT|conflict") {
+                    Write-Host "   Resolving conflicts in docs/ (keeping new build)..." -ForegroundColor Gray
+                    # During merge: --ours is our branch (new build), --theirs is remote
+                    # We want to keep our new build files
+                    $conflictFiles = git diff --name-only --diff-filter=U 2>&1 | Out-String
+                    if ($conflictFiles -match "docs/") {
+                        git checkout --ours docs/ 2>&1 | Out-Null
+                        git add docs/ 2>&1 | Out-Null
+                    }
+                    # Add all resolved files and complete merge
+                    git add -A 2>&1 | Out-Null
+                    git commit --no-edit 2>&1 | Out-Null
+                }
+                
+                if ($LASTEXITCODE -eq 0) {
+                    
+                    # Try push again
+                    $pushOutput = git push origin main 2>&1 | Out-String
+                    
+                    if ($LASTEXITCODE -eq 0) {
+                        Write-Host "`n✅ Quick deploy completed!" -ForegroundColor Green
+                        Write-Host "   Cloudflare will auto-deploy in ~60 seconds" -ForegroundColor Yellow
+                        Write-Host "   Live at: https://ah.saffronbolt.in" -ForegroundColor Cyan
+                    } else {
+                        # Try force-with-lease as last resort
+                        if ($pushOutput -match "non-fast-forward") {
+                            Write-Host "   ⚠️  Trying force-with-lease as last resort..." -ForegroundColor Yellow
+                            $pushOutput = git push origin main --force-with-lease 2>&1 | Out-String
+                            if ($LASTEXITCODE -eq 0) {
+                                Write-Host "`n✅ Quick deploy completed!" -ForegroundColor Green
+                                Write-Host "   Cloudflare will auto-deploy in ~60 seconds" -ForegroundColor Yellow
+                                Write-Host "   Live at: https://ah.saffronbolt.in" -ForegroundColor Cyan
+                            } else {
+                                Write-Host "`n❌ Push failed after retry attempts" -ForegroundColor Red
+                                Write-Host "   Error: $pushOutput" -ForegroundColor Gray
+                                Write-Host "   💡 Try running: git pull origin main --rebase && git push origin main" -ForegroundColor Cyan
+                            }
+                        } else {
+                            Write-Host "`n❌ Push failed after merge" -ForegroundColor Red
+                            Write-Host "   Error: $pushOutput" -ForegroundColor Gray
+                            Write-Host "   💡 Try running: git pull origin main && git push origin main" -ForegroundColor Cyan
+                        }
+                    }
+                } else {
+                    Write-Host "`n❌ Could not pull remote changes" -ForegroundColor Red
+                    Write-Host "   Error: $pullOutput" -ForegroundColor Gray
+                    Write-Host "   💡 Manual fix: git pull origin main && git push origin main" -ForegroundColor Cyan
+                }
+            } else {
+                Write-Host "`n❌ Push failed. Check git status." -ForegroundColor Red
+                Write-Host "   Error: $pushOutput" -ForegroundColor Gray
+            }
         }
     } else {
         Write-Host "⚠️  No changes to commit. Build output is identical." -ForegroundColor Yellow

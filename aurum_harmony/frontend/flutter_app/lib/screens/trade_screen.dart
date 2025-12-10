@@ -183,26 +183,37 @@ class _TradeScreenState extends State<TradeScreen> {
       _loading = true;
     });
     try {
+      final token = await AuthService.getValidToken();
       final resp = await http.post(
-        Uri.parse('$kBackendBaseUrl/predict'),
-        headers: {'Content-Type': 'application/json'},
+        Uri.parse('$kBackendBaseUrl/api/orchestrator/run'),
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
         body: jsonEncode({
-          'features': [1.0, 2.0, 3.0], // Placeholder
-          'vix': 15.0,
-          'capital': 10000,
-          'peak': 10000,
+          'user_id': _userId,
+          'auto_execute': true, // Automatically execute approved trades
         }),
-      );
+      ).timeout(const Duration(seconds: 30));
+      
       if (resp.statusCode == 200) {
-        final data = jsonDecode(resp.body);
+        final data = jsonDecode(resp.body) as Map<String, dynamic>;
         if (mounted) {
+          final ordersExecuted = data['orders_executed'] ?? 0;
+          final signalsProcessed = data['signals_processed'] ?? 0;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Prediction: ${data['prediction']}'),
+              content: Text('Orchestrator run complete: $signalsProcessed signals processed, $ordersExecuted orders executed'),
               backgroundColor: Colors.green,
+              duration: const Duration(seconds: 5),
             ),
           );
+          // Reload positions to show new trades
+          _loadPositions();
         }
+      } else {
+        final error = jsonDecode(resp.body) as Map<String, dynamic>;
+        throw Exception(error['error']?.toString() ?? 'Orchestrator run failed');
       }
     } catch (e) {
       if (mounted) {
@@ -210,7 +221,7 @@ class _TradeScreenState extends State<TradeScreen> {
           SnackBar(
             content: SelectableText('Error: $e'),
             backgroundColor: Colors.red,
-            duration: const Duration(seconds: 30), // Extended duration for copying
+            duration: const Duration(seconds: 10),
             action: SnackBarAction(
               label: 'Dismiss',
               textColor: Colors.white,
@@ -391,33 +402,34 @@ class _TradeScreenState extends State<TradeScreen> {
           ),
           const SizedBox(height: 16),
 
-          // Place Order Button (Paper Trading)
+          // Paper Trading Status (Automatic - no manual orders)
           if (_paperTradingEnabled)
             Card(
+              color: colors.surfaceVariant.withOpacity(0.3),
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Place Order',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed: () => _showPlaceOrderDialog(),
-                        icon: const Icon(Icons.add_shopping_cart),
-                        label: const Text('New Paper Trade Order'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Theme.of(context).colorScheme.primary,
-                          foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
+                    Row(
+                      children: [
+                        Icon(Icons.auto_awesome, color: colors.primary),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'Paper Trading (Automatic)',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Trades are executed automatically by the orchestrator based on AI predictions. No manual intervention required.',
+                      style: TextStyle(
+                        color: colors.onSurface.withOpacity(0.7),
+                        fontSize: 14,
                       ),
                     ),
                   ],

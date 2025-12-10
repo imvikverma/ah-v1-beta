@@ -32,7 +32,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   int _maxTrades = 180;
   String _activeIndex = 'NIFTY50'; // progressive unlock: NIFTY50 → BANKNIFTY → SENSEX
   double _vixLevel = 18; // for VIX Mood Ring
-  Duration _nextIncrementCountdown = const Duration(hours: 3); // placeholder
+  // Removed: Next Increment not required
 
   // Account balances (placeholder - will be fetched from backend in production)
   double _dematOpening = 100000.0;
@@ -386,33 +386,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           const SizedBox(height: 16),
 
-          // 3. Next Increment Countdown
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  const Icon(Icons.timer, size: 20, color: Colors.white70),
-                  const SizedBox(width: 8),
-                  const Text(
-                    'Next Increment',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const Spacer(),
-                  Text(
-                    _formatCountdown(_nextIncrementCountdown),
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+          // Removed: Next Increment not required
           const SizedBox(height: 16),
 
           // 4. Paper Trading Portfolio or Demat + Savings account balances
@@ -482,12 +456,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return 'Volatile';
   }
 
-  String _formatCountdown(Duration d) {
-    final h = d.inHours.toString().padLeft(2, '0');
-    final m = (d.inMinutes % 60).toString().padLeft(2, '0');
-    final s = (d.inSeconds % 60).toString().padLeft(2, '0');
-    return '$h:$m:$s';
-  }
+  // Removed: _formatCountdown - Next Increment not required
 
   Widget _buildStatColumn(String label, String value, IconData icon,
       {Color? color}) {

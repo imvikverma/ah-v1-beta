@@ -7,6 +7,33 @@ import os
 import sys
 from pathlib import Path
 
+# Fix Windows console encoding for Unicode characters
+# We'll use a wrapper that catches encoding errors without modifying sys.stdout
+def safe_print(*args, **kwargs):
+    """Print wrapper that handles Unicode encoding errors on Windows."""
+    try:
+        print(*args, **kwargs)
+    except (UnicodeEncodeError, ValueError, OSError):
+        # Replace Unicode characters with ASCII equivalents
+        safe_args = []
+        for arg in args:
+            if isinstance(arg, str):
+                safe_arg = arg.replace('✅', '[OK]').replace('⚠️', '[WARN]')
+                safe_args.append(safe_arg)
+            else:
+                safe_args.append(arg)
+        try:
+            print(*safe_args, **kwargs)
+        except (UnicodeEncodeError, ValueError, OSError):
+            # Last resort: print without Unicode
+            ascii_args = []
+            for arg in args:
+                if isinstance(arg, str):
+                    ascii_args.append(str(arg).encode('ascii', 'replace').decode('ascii'))
+                else:
+                    ascii_args.append(arg)
+            print(*ascii_args, **kwargs)
+
 # Add project root to path
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
@@ -16,6 +43,13 @@ from aurum_harmony.database.db import db, init_db
 from aurum_harmony.database.models import User, BrokerCredential, Session
 from aurum_harmony.database.utils.password import PasswordService
 from aurum_harmony.database.utils.encryption import get_encryption_service
+
+# Only monkey-patch print when running as main script, not when imported
+# This prevents breaking Flask's stdout when imported
+if __name__ == '__main__':
+    import builtins
+    _original_print = builtins.print
+    builtins.print = safe_print
 
 
 def migrate_existing_users():

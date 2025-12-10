@@ -208,20 +208,51 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                               ),
                             ],
                           ),
-                          trailing: isUnread
-                              ? Container(
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (isUnread)
+                                Container(
                                   width: 8,
                                   height: 8,
+                                  margin: const EdgeInsets.only(right: 8),
                                   decoration: BoxDecoration(
                                     color: colors.primary,
                                     shape: BoxShape.circle,
                                   ),
-                                )
-                              : null,
+                                ),
+                              IconButton(
+                                icon: Icon(
+                                  isUnread ? Icons.close : Icons.check_circle_outline,
+                                  size: 20,
+                                ),
+                                tooltip: isUnread ? 'Mark as read' : 'Read',
+                                onPressed: () {
+                                  setState(() {
+                                    notif['read'] = true;
+                                  });
+                                },
+                              ),
+                            ],
+                          ),
                           onTap: () {
+                            // Mark as read
                             setState(() {
                               notif['read'] = true;
                             });
+                            // Show notification details
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(notif['message'] as String),
+                                duration: const Duration(seconds: 3),
+                                action: SnackBarAction(
+                                  label: 'Dismiss',
+                                  onPressed: () {
+                                    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                                  },
+                                ),
+                              ),
+                            );
                           },
                         ),
                       );

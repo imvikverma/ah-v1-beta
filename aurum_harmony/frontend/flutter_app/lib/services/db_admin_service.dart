@@ -7,7 +7,9 @@ class DbAdminService {
   static Future<Map<String, dynamic>> _get(String path) async {
     final token = await AuthService.getValidToken();
     if (token == null) {
-      throw Exception('Authentication token expired. Please login again.');
+      // Token expired or invalid - ensure logout and throw clear error
+      await AuthService.logout();
+      throw Exception('Session expired. Please refresh the page and login again.');
     }
     final headers = {
       'Content-Type': 'application/json',
@@ -20,12 +22,18 @@ class DbAdminService {
       if (response.statusCode >= 200 && response.statusCode < 300) {
         return jsonDecode(response.body) as Map<String, dynamic>;
       } else if (response.statusCode == 401) {
-        throw Exception('Authentication expired. Please login again.');
+        // Token expired - clear it and throw error
+        await AuthService.logout();
+        throw Exception('Session expired. Please refresh the page and login again.');
       } else {
         final error = jsonDecode(response.body) as Map<String, dynamic>;
         throw Exception(error['error'] ?? 'Failed to fetch data');
       }
     } catch (e) {
+      // If it's already our custom exception, re-throw it
+      if (e.toString().contains('Session expired')) {
+        rethrow;
+      }
       throw Exception('Error: $e');
     }
   }
@@ -33,7 +41,9 @@ class DbAdminService {
   static Future<Map<String, dynamic>> _post(String path, Map<String, dynamic> body) async {
     final token = await AuthService.getValidToken();
     if (token == null) {
-      throw Exception('Authentication token expired. Please login again.');
+      // Token expired or invalid - ensure logout and throw clear error
+      await AuthService.logout();
+      throw Exception('Session expired. Please refresh the page and login again.');
     }
     final headers = {
       'Content-Type': 'application/json',
@@ -46,12 +56,18 @@ class DbAdminService {
       if (response.statusCode >= 200 && response.statusCode < 300) {
         return jsonDecode(response.body) as Map<String, dynamic>;
       } else if (response.statusCode == 401) {
-        throw Exception('Authentication expired. Please login again.');
+        // Token expired - clear it and throw error
+        await AuthService.logout();
+        throw Exception('Session expired. Please refresh the page and login again.');
       } else {
         final error = jsonDecode(response.body) as Map<String, dynamic>;
         throw Exception(error['error'] ?? 'Failed to execute query');
       }
     } catch (e) {
+      // If it's already our custom exception, re-throw it
+      if (e.toString().contains('Session expired')) {
+        rethrow;
+      }
       throw Exception('Error: $e');
     }
   }

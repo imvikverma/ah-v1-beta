@@ -70,8 +70,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
           _userReport = data;
         });
       } else if (resp.statusCode == 401) {
+        // Session expired - clear token silently
+        await AuthService.logout();
         setState(() {
-          _error = 'Authentication expired. Please login again.';
+          _error = 'Session expired. Please refresh the page and login again.';
         });
       } else {
         final errorData = jsonDecode(resp.body) as Map<String, dynamic>;
@@ -130,13 +132,21 @@ class _ReportsScreenState extends State<ReportsScreen> {
           );
         }
       } else if (resp.statusCode == 401) {
-        throw Exception('Authentication expired. Please login again.');
+        // Session expired - clear token silently
+        await AuthService.logout();
+        throw Exception('Session expired. Please refresh the page and login again.');
       } else {
         final errorData = jsonDecode(resp.body) as Map<String, dynamic>;
         throw Exception(errorData['error']?.toString() ?? 'Backtest failed');
       }
     } catch (e) {
-      if (mounted) {
+      // Check if it's a session expiration - don't show popup for expired sessions
+      final errorStr = e.toString().toLowerCase();
+      final isExpired = errorStr.contains('expired') || 
+                       errorStr.contains('session expired') ||
+                       errorStr.contains('authentication expired');
+      
+      if (mounted && !isExpired) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: SelectableText('Backtest error: $e'),

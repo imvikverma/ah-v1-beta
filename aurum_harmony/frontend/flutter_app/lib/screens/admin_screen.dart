@@ -82,24 +82,25 @@ class _AdminScreenState extends State<AdminScreen> with SingleTickerProviderStat
         throw Exception(error['error'] ?? 'Error ${resp.statusCode}');
       }
     } catch (e) {
-      setState(() {
-        _error = 'Error: $e';
-      });
-      if (mounted && e.toString().contains('expired')) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: SelectableText('Token expired: $e'),
-            backgroundColor: Theme.of(context).colorScheme.error,
-            duration: const Duration(seconds: 10),
-            action: SnackBarAction(
-              label: 'Dismiss',
-              textColor: Colors.white,
-              onPressed: () {
-                ScaffoldMessenger.of(context).hideCurrentSnackBar();
-              },
-            ),
-          ),
-        );
+      // Check if it's a session expiration error
+      final errorStr = e.toString().toLowerCase();
+      final isExpired = errorStr.contains('expired') || 
+                       errorStr.contains('session expired') ||
+                       errorStr.contains('authentication expired');
+      
+      if (isExpired) {
+        // Session expired - clear token and show message (no popup)
+        await AuthService.logout();
+        if (mounted) {
+          setState(() {
+            _error = 'Session expired. Please refresh the page and login again.';
+          });
+        }
+        // Don't show SnackBar popup - just set error message
+      } else {
+        setState(() {
+          _error = 'Error: $e';
+        });
       }
     } finally {
       setState(() {

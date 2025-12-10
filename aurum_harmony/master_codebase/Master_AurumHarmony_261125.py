@@ -64,6 +64,30 @@ CORS(app, resources={
 if AUTH_AVAILABLE:
     try:
         init_db(app)
+        # Run database migrations to add missing columns
+        try:
+            from aurum_harmony.database.migrate import migrate_user_fields
+            with app.app_context():
+                # Suppress migration output to avoid encoding issues and stdout conflicts
+                import sys
+                import io
+                original_stdout = sys.stdout
+                try:
+                    # Redirect stdout to a null device during migration
+                    sys.stdout = io.StringIO()
+                    migrate_user_fields()
+                finally:
+                    # Always restore stdout
+                    sys.stdout = original_stdout
+        except Exception as migration_error:
+            # Log the error but don't fail startup
+            # Use logging instead of print to avoid stdout issues
+            import logging
+            try:
+                logging.warning(f"Migration error (non-fatal): {migration_error}")
+            except:
+                pass  # Even logging might fail, so just ignore
+        
         app.register_blueprint(auth_bp)
         app.register_blueprint(brokers_bp)
         if kotak_bp:
@@ -182,6 +206,60 @@ def backtest_edge():
     """
     result = run_edge_tests()
     return jsonify(result)
+
+@app.route("/api/orchestrator/run", methods=["POST"])
+def orchestrator_run():
+    """
+    Run the trading orchestrator once to execute paper trades automatically.
+    This endpoint triggers the orchestrator to:
+    1. Fetch signals from AI engine
+    2. Run through risk engine
+    3. Automatically execute approved trades in paper trading mode
+    """
+    try:
+        data = request.json or {}
+        user_id = data.get('user_id')
+        auto_execute = data.get('auto_execute', True)
+        
+        # Import orchestrator components
+        from aurum_harmony.app.orchestrator import TradingOrchestrator
+        from aurum_harmony.engines.predictive_ai.Predictive_AI_Engine import PredictiveAIEngine
+        
+        # Create orchestrator with AI engine as signal source
+        signal_source = PredictiveAIEngine()
+        orchestrator = TradingOrchestrator(signal_source=signal_source)
+        
+        # Run orchestrator once
+        orders = orchestrator.run_once()
+        
+        # Count executed orders
+        executed_count = len([o for o in orders if o.status.value == "FILLED"])
+        rejected_count = len([o for o in orders if o.status.value == "REJECTED"])
+        
+        return jsonify({
+            'success': True,
+            'signals_processed': orchestrator.execution_stats.get('total_signals', 0),
+            'orders_executed': executed_count,
+            'orders_rejected': rejected_count,
+            'orders': [
+                {
+                    'symbol': o.symbol,
+                    'side': o.side.value,
+                    'quantity': float(o.quantity),
+                    'status': o.status.value,
+                    'broker_order_id': o.broker_order_id,
+                }
+                for o in orders
+            ],
+            'message': f'Orchestrator run complete: {executed_count} orders executed, {rejected_count} rejected'
+        })
+    except Exception as e:
+        import traceback
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }), 500
 
 @app.route('/callback')
 def callback():
