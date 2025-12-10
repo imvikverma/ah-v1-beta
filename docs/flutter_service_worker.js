@@ -3,38 +3,11 @@ const MANIFEST = 'flutter-app-manifest';
 const TEMP = 'flutter-temp-cache';
 const CACHE_NAME = 'flutter-app-cache';
 
-<<<<<<< Updated upstream
 const RESOURCES = {"flutter.js": "4b2350e14c6650ba82871f60906437ea",
-=======
-const RESOURCES = {"assets/AssetManifest.bin": "ba600f8a2032c60d2df2312fbe62353d",
-"assets/AssetManifest.bin.json": "15c0f2fe481f22a2b0571f40758df716",
-"assets/assets/logo/AurumHarmony_logo.png": "0e49a3ab338a6e13b01fd2891467b305",
-"assets/assets/logo/aurumharmony_logo.svg": "5a01e494ff62f8b4b4628e92e3c9aba8",
-"assets/FontManifest.json": "7b2a36307916a9721811788013e65289",
-"assets/fonts/MaterialIcons-Regular.otf": "961f44c53f35a851d9c5593b52f92265",
-"assets/NOTICES": "0a4492cf71d8c0c38794baaf1ae23bec",
-"assets/shaders/ink_sparkle.frag": "ecc85a2e95f5e9f53123dcaf8cb9b6ce",
-"assets/shaders/stretch_effect.frag": "40d68efbbf360632f614c731219e95f0",
-"canvaskit/canvaskit.js": "8331fe38e66b3a898c4f37648aaf7ee2",
-"canvaskit/canvaskit.js.symbols": "a3c9f77715b642d0437d9c275caba91e",
-"canvaskit/canvaskit.wasm": "9b6a7830bf26959b200594729d73538e",
-"canvaskit/chromium/canvaskit.js": "a80c765aaa8af8645c9fb1aae53f9abf",
-"canvaskit/chromium/canvaskit.js.symbols": "e2d09f0e434bc118bf67dae526737d07",
-"canvaskit/chromium/canvaskit.wasm": "a726e3f75a84fcdf495a15817c63a35d",
-"canvaskit/skwasm.js": "8060d46e9a4901ca9991edd3a26be4f0",
-"canvaskit/skwasm.js.symbols": "3a4aadf4e8141f284bd524976b1d6bdc",
-"canvaskit/skwasm.wasm": "7e5f3afdd3b0747a1fd4517cea239898",
-"canvaskit/skwasm_heavy.js": "740d43a6b8240ef9e23eed8c48840da4",
-"canvaskit/skwasm_heavy.js.symbols": "0755b4fb399918388d71b59ad390b055",
-"canvaskit/skwasm_heavy.wasm": "b0be7910760d205ea4e011458df6ee01",
-"favicon.png": "5dcef449791fa27946b3d35ad8803796",
-"flutter.js": "24bc71911b75b5f8135c949e27a2984e",
-"flutter_bootstrap.js": "550db3b193025007903db74e02c9c874",
-"icons/Icon-192.png": "ac9a721a12bbc803b44f645561ecb1e1",
->>>>>>> Stashed changes
 "icons/Icon-512.png": "96e752610906ba2a93c65f8abe1645f1",
+"icons/Icon-maskable-512.png": "301a7604d45b3e739efc881eb04896ea",
+"icons/Icon-192.png": "ac9a721a12bbc803b44f645561ecb1e1",
 "icons/Icon-maskable-192.png": "c457ef57daa1d16f64b27b786ec2ea3c",
-<<<<<<< Updated upstream
 "manifest.json": "6a29829be88168773447fee1e58acc32",
 "index.html": "104b6253403ac20ac67c6cf11353a7fc",
 "/": "104b6253403ac20ac67c6cf11353a7fc",
@@ -58,17 +31,9 @@ const RESOURCES = {"assets/AssetManifest.bin": "ba600f8a2032c60d2df2312fbe62353d
 "canvaskit/canvaskit.js.symbols": "efc2cd87d1ff6c586b7d4c7083063a40",
 "canvaskit/skwasm.js.symbols": "96263e00e3c9bd9cd878ead867c04f3c",
 "favicon.png": "5dcef449791fa27946b3d35ad8803796",
-"flutter_bootstrap.js": "7f0d6e5a3037498afc9c3d316e40afc1",
+"flutter_bootstrap.js": "8ebed47d739735d734dea622268192a3",
 "version.json": "a742cecd643c70862af54c499df67187",
 "main.dart.js": "4c92047a7c4503323e2b43eba9ed46eb"};
-=======
-"icons/Icon-maskable-512.png": "301a7604d45b3e739efc881eb04896ea",
-"index.html": "0340d4cb80159287212c962237f55649",
-"/": "0340d4cb80159287212c962237f55649",
-"main.dart.js": "4daaabb5b48f5fb671900a9aa84a0d72",
-"manifest.json": "99e22d8000ed8c89a83aa6b5827ed99c",
-"version.json": "a742cecd643c70862af54c499df67187"};
->>>>>>> Stashed changes
 // The application shell files that are downloaded before a service worker can
 // start.
 const CORE = ["main.dart.js",
