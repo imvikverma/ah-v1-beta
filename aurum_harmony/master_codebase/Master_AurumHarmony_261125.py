@@ -34,6 +34,8 @@ try:
     from aurum_harmony.brokers import brokers_bp, kotak_bp, hdfc_bp
     from aurum_harmony.paper_trading import paper_bp
     from aurum_harmony.admin import admin_bp, admin_db_bp
+    from aurum_harmony.admin.db_console_routes import db_console_bp
+    from aurum_harmony.auth.password_change_routes import password_change_bp
     from aurum_harmony.database.db import init_db
     AUTH_AVAILABLE = True
 except ImportError as e:
@@ -89,6 +91,7 @@ if AUTH_AVAILABLE:
                 pass  # Even logging might fail, so just ignore
         
         app.register_blueprint(auth_bp)
+        app.register_blueprint(password_change_bp)
         app.register_blueprint(brokers_bp)
         if kotak_bp:
             app.register_blueprint(kotak_bp)
@@ -100,6 +103,7 @@ if AUTH_AVAILABLE:
             app.register_blueprint(admin_bp)
         if admin_db_bp:
             app.register_blueprint(admin_db_bp)
+        app.register_blueprint(db_console_bp)
         print("SUCCESS: Auth, broker, paper trading, admin, and database admin blueprints registered")
         if kotak_bp:
             print("  - Kotak Neo broker routes registered")

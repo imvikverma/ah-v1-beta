@@ -286,6 +286,8 @@ class AuthService {
     required String confirmPassword,
     String? profilePictureUrl,
     required bool termsAccepted,
+    DateTime? dateOfBirth,
+    DateTime? anniversary,
   }) async {
     if (email.isEmpty) {
       throw Exception('Email is required');
@@ -318,6 +320,8 @@ class AuthService {
           'password': password,
           if (profilePictureUrl != null) 'profile_picture_url': profilePictureUrl,
           'terms_accepted': termsAccepted,
+          if (dateOfBirth != null) 'date_of_birth': dateOfBirth.toIso8601String().split('T')[0],
+          if (anniversary != null) 'anniversary': anniversary.toIso8601String().split('T')[0],
         }),
       ).timeout(const Duration(seconds: 10));
 
