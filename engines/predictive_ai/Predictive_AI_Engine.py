@@ -6,6 +6,7 @@ from sklearn.model_selection import train_test_split
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense
 import time
+from typing import List
 
 
 class PredictiveAIEngine:
@@ -70,6 +71,40 @@ class PredictiveAIEngine:
         if self.hyperledger_client:
             self.hyperledger_client.log_prediction(result)
         return result
+
+    def get_signals(self) -> List:
+        """
+        Generate trade signals for the orchestrator.
+        This is a demo implementation for paper trading.
+        In production, this would analyze real market data and use the trained ML model.
+        """
+        # Import TradeSignal from orchestrator
+        try:
+            from aurum_harmony.app.orchestrator import TradeSignal, OrderSide
+        except ImportError:
+            # Fallback if orchestrator not available
+            return []
+        
+        signals = []
+        
+        # For demo/paper trading, generate a simple buy signal
+        # In production, this would analyze real market data
+        signals.append(TradeSignal(
+            symbol="NIFTY50",
+            side=OrderSide.BUY,
+            quantity=1.0,
+            reason="Demo paper trading signal - Bullish market conditions detected"
+        ))
+        
+        # Optionally add more signals for different symbols
+        signals.append(TradeSignal(
+            symbol="BANKNIFTY",
+            side=OrderSide.BUY,
+            quantity=1.0,
+            reason="Demo paper trading signal - Banking sector strength"
+        ))
+        
+        return signals
 
 
 

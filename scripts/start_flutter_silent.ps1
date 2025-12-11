@@ -1,6 +1,9 @@
 # AurumHarmony Flutter Frontend Startup Script (Silent Mode)
 # Runs in minimized window, only shows critical errors
 
+# Set window title for easy identification
+$host.ui.RawUI.WindowTitle = "AurumHarmony - Frontend (Flutter)"
+
 $ErrorActionPreference = "Continue"
 $projectRoot = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 $flutterAppPath = Join-Path $projectRoot "aurum_harmony\frontend\flutter_app"

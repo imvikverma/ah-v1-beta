@@ -97,10 +97,15 @@ def login():
         result = AuthService.login_user(email=email or None, phone=phone or None, password=password)
         
         if result['success']:
+            # Check if user needs to change password
+            user = result.get('user', {})
+            force_password_change = user.get('force_password_change', False)
+            
             return jsonify({
                 'message': 'Login successful',
                 'token': result['token'],
-                'user': result['user']
+                'user': result['user'],
+                'force_password_change': force_password_change
             }), 200
         else:
             return jsonify({'error': result['error']}), 401

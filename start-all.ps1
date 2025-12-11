@@ -45,16 +45,15 @@ function Start-Backend {
     
     $backendScript = Join-Path $projectRoot "scripts\start_backend_silent.ps1"
     if (Test-Path $backendScript) {
-        # Run in minimized window (smallest window, minimized)
-        $psi = New-Object System.Diagnostics.ProcessStartInfo
-        $psi.FileName = $PowerShellExe
-        $psi.Arguments = "-NoExit -WindowStyle Minimized -File `"$backendScript`""
-        $psi.WindowStyle = [System.Diagnostics.ProcessWindowStyle]::Minimized
-        $psi.CreateNoWindow = $false
-        $process = [System.Diagnostics.Process]::Start($psi)
+        # Run in minimized window with title
+        $process = Start-Process -FilePath $PowerShellExe `
+            -ArgumentList "-NoExit", "-WindowStyle", "Minimized", "-File", "`"$backendScript`"" `
+            -WindowStyle Minimized `
+            -PassThru
         
         if ($process) {
             Write-Host "✅ Backend process started (PID: $($process.Id))" -ForegroundColor Green
+            Write-Host "   Window title: 'AurumHarmony - Backend (Flask)'" -ForegroundColor Cyan
             Write-Host "   Window minimized - check taskbar to restore if needed" -ForegroundColor Gray
         } else {
             Write-Host "❌ Failed to start Backend process" -ForegroundColor Red
@@ -80,16 +79,15 @@ function Start-Frontend {
             Start-Sleep -Seconds 2
         }
         
-        # Run in minimized window (smallest window, minimized)
-        $psi = New-Object System.Diagnostics.ProcessStartInfo
-        $psi.FileName = $PowerShellExe
-        $psi.Arguments = "-NoExit -WindowStyle Minimized -File `"$flutterScript`""
-        $psi.WindowStyle = [System.Diagnostics.ProcessWindowStyle]::Minimized
-        $psi.CreateNoWindow = $false
-        $process = [System.Diagnostics.Process]::Start($psi)
+        # Run in minimized window with title
+        $process = Start-Process -FilePath $PowerShellExe `
+            -ArgumentList "-NoExit", "-WindowStyle", "Minimized", "-File", "`"$flutterScript`"" `
+            -WindowStyle Minimized `
+            -PassThru
         
         if ($process) {
             Write-Host "✅ Flutter process started (PID: $($process.Id))" -ForegroundColor Green
+            Write-Host "   Window title: 'AurumHarmony - Frontend (Flutter)'" -ForegroundColor Cyan
             Write-Host "   Window minimized - restore from taskbar to use hot reload menu" -ForegroundColor Gray
             Write-Host "   Hot reload: Press 'r' | Hot restart: Press 'R' | Quit: Press 'q'" -ForegroundColor Cyan
             Write-Host "   Check logs for startup status: _local\logs\flutter.log" -ForegroundColor Gray

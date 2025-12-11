@@ -25,6 +25,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final _dobController = TextEditingController();
+  final _anniversaryController = TextEditingController();
   
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
@@ -32,6 +34,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
   bool _termsAccepted = false;
   File? _profilePicture;
   PasswordStrength _passwordStrength = PasswordStrength.weak;
+  DateTime? _selectedDob;
+  DateTime? _selectedAnniversary;
   
   final ImagePicker _imagePicker = ImagePicker();
 
@@ -49,6 +53,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
     _passwordController.removeListener(_checkPasswordStrength);
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _dobController.dispose();
+    _anniversaryController.dispose();
     super.dispose();
   }
 
@@ -150,6 +156,38 @@ class _SignUpScreenState extends State<SignUpScreen> {
     );
   }
 
+  Future<void> _selectDateOfBirth() async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now().subtract(const Duration(days: 365 * 25)), // Default to 25 years ago
+      firstDate: DateTime(1900),
+      lastDate: DateTime.now(),
+      helpText: 'Select Date of Birth',
+    );
+    if (picked != null) {
+      setState(() {
+        _selectedDob = picked;
+        _dobController.text = '${picked.day.toString().padLeft(2, '0')}/${picked.month.toString().padLeft(2, '0')}/${picked.year}';
+      });
+    }
+  }
+
+  Future<void> _selectAnniversary() async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(1900),
+      lastDate: DateTime.now(),
+      helpText: 'Select Anniversary Date',
+    );
+    if (picked != null) {
+      setState(() {
+        _selectedAnniversary = picked;
+        _anniversaryController.text = '${picked.day.toString().padLeft(2, '0')}/${picked.month.toString().padLeft(2, '0')}/${picked.year}';
+      });
+    }
+  }
+
   Future<void> _handleSignUp() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -191,6 +229,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
         confirmPassword: _confirmPasswordController.text,
         profilePictureUrl: profilePictureUrl,
         termsAccepted: true,
+        dateOfBirth: _selectedDob,
+        anniversary: _selectedAnniversary,
       );
 
       if (mounted) {
@@ -447,6 +487,42 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               }
                               return null;
                             },
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Date of Birth
+                          TextFormField(
+                            controller: _dobController,
+                            decoration: InputDecoration(
+                              labelText: 'Date of Birth (Optional)',
+                              hintText: 'DD/MM/YYYY',
+                              prefixIcon: const Icon(Icons.cake),
+                              suffixIcon: IconButton(
+                                icon: const Icon(Icons.calendar_today),
+                                onPressed: _selectDateOfBirth,
+                              ),
+                              helperText: 'Get birthday fee waivers',
+                            ),
+                            readOnly: true,
+                            onTap: _selectDateOfBirth,
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Anniversary
+                          TextFormField(
+                            controller: _anniversaryController,
+                            decoration: InputDecoration(
+                              labelText: 'Anniversary (Optional)',
+                              hintText: 'DD/MM/YYYY',
+                              prefixIcon: const Icon(Icons.favorite),
+                              suffixIcon: IconButton(
+                                icon: const Icon(Icons.calendar_today),
+                                onPressed: _selectAnniversary,
+                              ),
+                              helperText: 'Get anniversary fee discounts',
+                            ),
+                            readOnly: true,
+                            onTap: _selectAnniversary,
                           ),
                           const SizedBox(height: 16),
 

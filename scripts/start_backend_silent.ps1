@@ -1,6 +1,9 @@
 # AurumHarmony Backend Startup Script (Silent Mode)
 # Runs in minimized window, only shows critical errors
 
+# Set window title for easy identification
+$host.ui.RawUI.WindowTitle = "AurumHarmony - Backend (Flask)"
+
 $ErrorActionPreference = "Continue"
 $projectRoot = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 Set-Location $projectRoot

@@ -64,6 +64,7 @@ class User(db.Model):
             'user_code': self.user_code,
             'is_admin': self.is_admin,
             'is_active': self.is_active,
+            'force_password_change': getattr(self, 'force_password_change', False),
             'date_of_birth': self.date_of_birth.isoformat() if self.date_of_birth else None,
             'anniversary': self.anniversary.isoformat() if self.anniversary else None,
             'initial_capital': self.initial_capital,

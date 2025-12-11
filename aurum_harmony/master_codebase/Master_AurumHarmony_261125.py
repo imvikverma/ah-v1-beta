@@ -223,9 +223,9 @@ def orchestrator_run():
         
         # Import orchestrator components
         from aurum_harmony.app.orchestrator import TradingOrchestrator
-        from aurum_harmony.engines.predictive_ai.Predictive_AI_Engine import PredictiveAIEngine
         
         # Create orchestrator with AI engine as signal source
+        # PredictiveAIEngine is already imported at the top of this file
         signal_source = PredictiveAIEngine()
         orchestrator = TradingOrchestrator(signal_source=signal_source)
         
