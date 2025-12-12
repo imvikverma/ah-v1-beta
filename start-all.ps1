@@ -1,6 +1,10 @@
 # AurumHarmony - Master Launcher Menu
 # Double-click this file or run: .\start-all.ps1
 
+# Enhanced error handling to capture RemoteException details
+$ErrorActionPreference = "Continue"
+$ErrorView = "NormalView"  # Show full error details including inner exceptions
+
 $projectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $projectRoot
 
@@ -31,8 +35,9 @@ function Show-Menu {
     Write-Host "  1. Launch All Processes [Normal]" -ForegroundColor Green
     Write-Host "  2. Launch All Processes with Fixes [Error Detection & Auto-Correction]" -ForegroundColor Yellow
     Write-Host "  3. Quick Deploy [1-Click: Build & Push to GitHub → Cloudflare]" -ForegroundColor Magenta
-    Write-Host "  4. Invoke Backend + Frontend [Silent, smallest windows minimised]" -ForegroundColor Cyan
-    Write-Host "  5. Exit" -ForegroundColor Gray
+    Write-Host "  4. Invoke Backend + Frontend [Sequential with Health Check]" -ForegroundColor Cyan
+    Write-Host "  5. Stop All Services [Clean shutdown of Backend + Frontend]" -ForegroundColor Red
+    Write-Host "  6. Exit" -ForegroundColor Gray
     Write-Host ""
 }
 
@@ -43,23 +48,135 @@ function Start-Backend {
     Write-Host "Logs: _local\logs\backend.log" -ForegroundColor Gray
     Write-Host ""
     
-    $backendScript = Join-Path $projectRoot "scripts\start_backend_silent.ps1"
-    if (Test-Path $backendScript) {
-        # Run in minimized window with title
-        $process = Start-Process -FilePath $PowerShellExe `
-            -ArgumentList "-NoExit", "-WindowStyle", "Minimized", "-File", "`"$backendScript`"" `
-            -WindowStyle Minimized `
-            -PassThru
-        
-        if ($process) {
-            Write-Host "✅ Backend process started (PID: $($process.Id))" -ForegroundColor Green
-            Write-Host "   Window title: 'AurumHarmony - Backend (Flask)'" -ForegroundColor Cyan
-            Write-Host "   Window minimized - check taskbar to restore if needed" -ForegroundColor Gray
-        } else {
-            Write-Host "❌ Failed to start Backend process" -ForegroundColor Red
+    # Use batch file wrapper to avoid PowerShell 7.5.4 RemoteException
+    # This is the most reliable method across all PowerShell versions
+    $wrapperScript = Join-Path $projectRoot "scripts" "start_backend_wrapper.bat"
+    $backendScript = Join-Path $projectRoot "scripts" "start_backend_silent.ps1"
+    
+    if (-not (Test-Path $backendScript)) {
+        Write-Host "[ERROR] Backend script not found at: $backendScript" -ForegroundColor Red
+        return
+    }
+    
+    # Ensure wrapper exists
+    if (-not (Test-Path $wrapperScript)) {
+        Write-Host "[INFO] Creating backend wrapper..." -ForegroundColor Yellow
+        $wrapperContent = @"
+@echo off
+REM Wrapper for starting backend - avoids PowerShell 7.5.4 RemoteException
+cd /d "%~dp0\.."
+pwsh.exe -NoExit -ExecutionPolicy Bypass -NoProfile -File "%~dp0start_backend_silent.ps1"
+"@
+        try {
+            Set-Content -Path $wrapperScript -Value $wrapperContent -Encoding ASCII -ErrorAction Stop
+            Write-Host "   [OK] Wrapper created" -ForegroundColor Green
+        } catch {
+            Write-Host "   [ERROR] Failed to create wrapper: $_" -ForegroundColor Red
+            return
         }
-    } else {
-        Write-Host "❌ Backend script not found at: $backendScript" -ForegroundColor Red
+    }
+    
+    try {
+        # Check language mode - ConstrainedLanguage can cause RemoteException
+        $languageMode = $ExecutionContext.SessionState.LanguageMode
+        if ($languageMode -eq "ConstrainedLanguage") {
+            Write-Host "[WARN] PowerShell is in ConstrainedLanguage mode" -ForegroundColor Yellow
+            Write-Host "   This may cause RemoteException. Consider running in FullLanguage mode." -ForegroundColor Yellow
+        }
+        
+        # COMPLETE WORKAROUND: Use WMI to create process - bypasses Start-Process entirely
+        # This is the only reliable way to avoid RemoteException in PowerShell 7.5.4
+        $backendScriptFullPath = (Resolve-Path $backendScript -ErrorAction Stop).Path
+        
+        Write-Host "   Starting backend via WMI (bypasses RemoteException)..." -ForegroundColor Gray
+        
+        # Build command line for PowerShell
+        $pwshPath = (Get-Command pwsh.exe -ErrorAction Stop).Source
+        $commandLine = "`"$pwshPath`" -NoExit -ExecutionPolicy Bypass -NoProfile -File `"$backendScriptFullPath`""
+        
+        # Use WMI Win32_Process Create method - completely bypasses Start-Process
+        $processClass = [WmiClass]"Win32_Process"
+        $startup = ([WmiClass]"Win32_ProcessStartup").CreateInstance()
+        $startup.ShowWindow = 7  # SW_SHOWMINNOACTIVE (minimized)
+        
+        $result = $processClass.Create($commandLine, $projectRoot, $startup)
+        
+        if ($result.ReturnValue -eq 0) {
+            Write-Host "[OK] Backend process created (PID: $($result.ProcessId))" -ForegroundColor Green
+            Write-Host "   Waiting for initialization..." -ForegroundColor Gray
+            Start-Sleep -Seconds 3
+            
+            # Verify process is running
+            $pwshProcess = Get-Process -Id $result.ProcessId -ErrorAction SilentlyContinue
+            if ($pwshProcess) {
+                Write-Host "[OK] Backend running (PID: $($pwshProcess.Id))" -ForegroundColor Green
+                Write-Host "   Window minimized - check taskbar to restore if needed" -ForegroundColor Gray
+            } else {
+                Write-Host "[WARN] Process may have exited - check logs: _local\logs\backend.log" -ForegroundColor Yellow
+            }
+        } else {
+            throw "WMI Create failed with return code: $($result.ReturnValue)"
+        }
+    } catch {
+        # Capture FULL error details including inner exception and stack trace
+        $errorMsg = $_.Exception.Message
+        $errorType = $_.Exception.GetType().FullName
+        
+        Write-Host "[ERROR] Failed to start Backend" -ForegroundColor Red
+        Write-Host "   Error Type: $errorType" -ForegroundColor Red
+        Write-Host "   Message: $errorMsg" -ForegroundColor Red
+        
+        # Check for inner exception (RemoteException often wraps the real error)
+        if ($_.Exception.InnerException) {
+            $innerMsg = $_.Exception.InnerException.Message
+            $innerType = $_.Exception.InnerException.GetType().FullName
+            Write-Host "   INNER EXCEPTION (this is the real error):" -ForegroundColor Yellow
+            Write-Host "      Type: $innerType" -ForegroundColor Yellow
+            Write-Host "      Message: $innerMsg" -ForegroundColor Yellow
+            
+            # Show full inner exception details
+            if ($_.Exception.InnerException.StackTrace) {
+                Write-Host "   Inner Stack Trace:" -ForegroundColor Gray
+                Write-Host "      $($_.Exception.InnerException.StackTrace -replace "`r?`n", "`n      ")" -ForegroundColor DarkGray
+            }
+        }
+        
+        # Show stack trace
+        if ($_.ScriptStackTrace) {
+            Write-Host "   Stack Trace:" -ForegroundColor Gray
+            Write-Host "      $($_.ScriptStackTrace -replace "`r?`n", "`n      ")" -ForegroundColor DarkGray
+        }
+        
+        # Save full error to file
+        try {
+            $errorFile = Join-Path $projectRoot "_local\logs\backend_start_error_$(Get-Date -Format 'yyyyMMdd-HHmmss').txt"
+            $errorOutput = @"
+BACKEND START ERROR - $(Get-Date)
+
+Error Type: $errorType
+Message: $errorMsg
+
+Full Exception:
+$($_.Exception | Format-List * -Force | Out-String)
+
+Inner Exception:
+$(if ($_.Exception.InnerException) { $_.Exception.InnerException | Format-List * -Force | Out-String } else { "None" })
+
+Stack Trace:
+$(if ($_.ScriptStackTrace) { $_.ScriptStackTrace } else { "None" })
+
+Error Record:
+$($_ | Format-List * -Force | Out-String)
+"@
+            Set-Content -Path $errorFile -Value $errorOutput -ErrorAction SilentlyContinue
+            Write-Host "   Full error saved to: $errorFile" -ForegroundColor Cyan
+        } catch {
+            # Ignore file save errors
+        }
+        
+        Write-Host "   Backend script: $backendScriptFullPath" -ForegroundColor Gray
+        Write-Host "   Manual start: cd '$projectRoot'; .\scripts\start_backend_silent.ps1" -ForegroundColor Yellow
+        Write-Host "   Or use: .\scripts\start_backend_direct.ps1" -ForegroundColor Yellow
     }
 }
 
@@ -79,20 +196,33 @@ function Start-Frontend {
             Start-Sleep -Seconds 2
         }
         
-        # Run in minimized window with title
-        $process = Start-Process -FilePath $PowerShellExe `
-            -ArgumentList "-NoExit", "-WindowStyle", "Minimized", "-File", "`"$flutterScript`"" `
-            -WindowStyle Minimized `
-            -PassThru
+        # Use WMI to avoid RemoteException (same method as backend)
+        $flutterAppDir = Join-Path $projectRoot "aurum_harmony\frontend\flutter_app"
+        $flutterScriptFullPath = (Resolve-Path $flutterScript -ErrorAction Stop).Path
         
-        if ($process) {
-            Write-Host "✅ Flutter process started (PID: $($process.Id))" -ForegroundColor Green
-            Write-Host "   Window title: 'AurumHarmony - Frontend (Flutter)'" -ForegroundColor Cyan
-            Write-Host "   Window minimized - restore from taskbar to use hot reload menu" -ForegroundColor Gray
-            Write-Host "   Hot reload: Press 'r' | Hot restart: Press 'R' | Quit: Press 'q'" -ForegroundColor Cyan
-            Write-Host "   Check logs for startup status: _local\logs\flutter.log" -ForegroundColor Gray
-        } else {
-            Write-Host "❌ Failed to start Flutter process" -ForegroundColor Red
+        try {
+            # Use WMI Win32_Process Create method - bypasses Start-Process
+            $pwshPath = (Get-Command pwsh.exe -ErrorAction Stop).Source
+            $commandLine = "`"$pwshPath`" -NoExit -ExecutionPolicy Bypass -NoProfile -File `"$flutterScriptFullPath`""
+            
+            $processClass = [WmiClass]"Win32_Process"
+            $startup = ([WmiClass]"Win32_ProcessStartup").CreateInstance()
+            $startup.ShowWindow = 7  # SW_SHOWMINNOACTIVE (minimized)
+            
+            $result = $processClass.Create($commandLine, $flutterAppDir, $startup)
+            
+            if ($result.ReturnValue -eq 0) {
+                Write-Host "[OK] Flutter process started (PID: $($result.ProcessId))" -ForegroundColor Green
+                Write-Host "   Window title: 'AurumHarmony - Frontend (Flutter)'" -ForegroundColor Cyan
+                Write-Host "   Window minimized - restore from taskbar to use hot reload menu" -ForegroundColor Gray
+                Write-Host "   Hot reload: Press 'r' | Hot restart: Press 'R' | Quit: Press 'q'" -ForegroundColor Cyan
+                Write-Host "   Check logs for startup status: _local\logs\flutter.log" -ForegroundColor Gray
+            } else {
+                Write-Host "[ERROR] Failed to start Flutter (WMI return: $($result.ReturnValue))" -ForegroundColor Red
+            }
+        } catch {
+            Write-Host "[ERROR] Failed to start Flutter: $($_.Exception.Message)" -ForegroundColor Red
+            Write-Host "   Manual start: cd '$flutterAppDir'; .\scripts\start_flutter_silent.ps1" -ForegroundColor Yellow
         }
     } else {
         Write-Host "❌ Flutter script not found at: $flutterScript" -ForegroundColor Red
@@ -531,17 +661,164 @@ function Invoke-QuickDeploy {
 }
 
 function Invoke-BackendAndFrontend {
-    Write-Host "`n=== Starting Backend + Frontend ===" -ForegroundColor Cyan
-    Write-Host ""
+    Write-Host "`n╔════════════════════════════════════════╗" -ForegroundColor Cyan
+    Write-Host "║   Sequential Startup with Monitoring   ║" -ForegroundColor Yellow
+    Write-Host "╚════════════════════════════════════════╝`n" -ForegroundColor Cyan
+    
+    # Step 1: Start Backend
+    Write-Host "[1/3] Starting Flask Backend..." -ForegroundColor Green
+    Write-Host "      Port: 5000" -ForegroundColor Gray
     Start-Backend
-    Start-Sleep -Seconds 3
+    
+    # Step 2: Wait for Backend Health Check
+    Write-Host "`n[2/3] Waiting for backend health check..." -ForegroundColor Yellow
+    Write-Host "      Testing: http://localhost:5000/api/health" -ForegroundColor Gray
+    Write-Host "      Flask initialization can take 60-90 seconds..." -ForegroundColor DarkGray
+    Write-Host "      " -NoNewline
+    
+    $maxWait = 120  # Increased to 2 minutes for Flask initialization
+    $waited = 0
+    $backendReady = $false
+    
+    while ($waited -lt $maxWait -and -not $backendReady) {
+        Start-Sleep -Seconds 1
+        $waited++
+        
+        try {
+            # Use .NET HttpClient instead of Invoke-WebRequest to avoid PowerShell 7.5.4 RemoteException
+            $httpClient = New-Object System.Net.Http.HttpClient
+            $httpClient.Timeout = [System.TimeSpan]::FromSeconds(2)
+            $task = $httpClient.GetAsync("http://localhost:5000/api/health")
+            $task.Wait()
+            
+            if ($task.Result.IsSuccessStatusCode) {
+                $backendReady = $true
+                $content = $task.Result.Content.ReadAsStringAsync().Result
+                try {
+                    $data = $content | ConvertFrom-Json -ErrorAction SilentlyContinue
+                    Write-Host "`n      ✅ Backend ready! (took $waited seconds)" -ForegroundColor Green
+                    if ($data -and $data.status) {
+                        Write-Host "      Status: $($data.status)" -ForegroundColor Gray
+                    }
+                } catch {
+                    Write-Host "`n      ✅ Backend ready! (took $waited seconds)" -ForegroundColor Green
+                }
+                $httpClient.Dispose()
+                break
+            }
+            $httpClient.Dispose()
+        } catch {
+            # Ignore all errors (connection refused, timeout, RemoteException, etc.)
+            # Show progress every 10 seconds
+            if ($waited % 10 -eq 0) {
+                Write-Host "`n      ⏳ Still waiting... ($waited seconds elapsed)" -NoNewline -ForegroundColor DarkGray
+            } elseif ($waited % 5 -eq 0) {
+                Write-Host " $waited" -NoNewline -ForegroundColor DarkGray
+            } else {
+                Write-Host "." -NoNewline -ForegroundColor DarkGray
+            }
+        }
+    }
+    
+    if (-not $backendReady) {
+        Write-Host "`n      ⚠️  Backend didn't respond after $maxWait seconds" -ForegroundColor Yellow
+        Write-Host "      This is unusual - Flask should start within 2 minutes" -ForegroundColor Yellow
+        Write-Host "      Check backend log: _local\logs\backend.log" -ForegroundColor Gray
+        Write-Host "      Or restore minimized backend window to see errors" -ForegroundColor Gray
+        Write-Host "      Continuing with frontend startup anyway..." -ForegroundColor Gray
+    }
+    
+    # Step 3: Start Frontend
+    Write-Host "`n[3/3] Starting Flutter Web App..." -ForegroundColor Green
+    Write-Host "      Port: 58643" -ForegroundColor Gray
     Start-Frontend
-    Start-Sleep -Seconds 1
+    
+    # Give Flutter time to start compiling
+    Write-Host "`n      ⏳ Flutter is compiling... (first build takes 2-3 minutes)" -ForegroundColor Yellow
+    Write-Host "      Compilation progress:" -ForegroundColor Gray
+    Start-Sleep -Seconds 10
+    
+    # Check if Flutter is compiling
+    $buildDir = Join-Path $projectRoot "aurum_harmony\frontend\flutter_app\build\web"
+    $maxCompileWait = 180  # 3 minutes for compilation
+    $compileWaited = 10
+    
+    while ($compileWaited -lt $maxCompileWait) {
+        if (Test-Path (Join-Path $buildDir "main.dart.js")) {
+            Write-Host "      ✅ Flutter compiled successfully! (took $compileWaited seconds)" -ForegroundColor Green
+            break
+        }
+        
+        Start-Sleep -Seconds 15
+        $compileWaited += 15
+        Write-Host "      ⏳ Still compiling... ($compileWaited seconds elapsed)" -ForegroundColor DarkGray
+    }
+    
+    if (-not (Test-Path (Join-Path $buildDir "main.dart.js"))) {
+        Write-Host "      ⚠️  Flutter compilation taking longer than expected" -ForegroundColor Yellow
+        Write-Host "      Restore Flutter window from taskbar to see progress" -ForegroundColor Gray
+    }
+    
+    # Summary
+    Write-Host "`n╔════════════════════════════════════════╗" -ForegroundColor Cyan
+    Write-Host "║          Startup Complete!             ║" -ForegroundColor Green
+    Write-Host "╚════════════════════════════════════════╝`n" -ForegroundColor Cyan
+    
+    Write-Host "📡 URLs:" -ForegroundColor Yellow
+    Write-Host "   Backend:  http://localhost:5000" -ForegroundColor White
+    Write-Host "   Frontend: http://localhost:58643" -ForegroundColor White
+    Write-Host "   Admin:    http://localhost:58643/#/admin" -ForegroundColor Cyan
+    
+    Write-Host "`n📋 Logs:" -ForegroundColor Yellow
+    Write-Host "   Backend:  _local\logs\backend.log" -ForegroundColor Gray
+    Write-Host "   Flutter:  _local\logs\flutter.log" -ForegroundColor Gray
+    
+    Write-Host "`n💡 Notes:" -ForegroundColor Yellow
+    Write-Host "   - Windows minimized - check taskbar to restore" -ForegroundColor Gray
+    Write-Host "   - Flask initialization: ~60-90 seconds" -ForegroundColor Gray
+    Write-Host "   - Flutter first compilation: ~2-3 minutes" -ForegroundColor Gray
+    Write-Host "   - Refresh browser if page is blank after compilation" -ForegroundColor Gray
+    
+    Write-Host "`n⚙️  To stop services:" -ForegroundColor Yellow
+    Write-Host "   Use Task Manager or: Get-Process python,dart | Stop-Process" -ForegroundColor Gray
     Write-Host ""
-    Write-Host "✅ Both services started in silent mode!" -ForegroundColor Green
-    Write-Host "   - Flask Backend: http://localhost:5000" -ForegroundColor Yellow
-    Write-Host "   - Flutter: http://localhost:58643" -ForegroundColor Yellow
-    Write-Host "   - Check logs: _local\logs\" -ForegroundColor Gray
+}
+
+function Stop-AllServices {
+    Write-Host "`n╔════════════════════════════════════════╗" -ForegroundColor Cyan
+    Write-Host "║        Stopping All Services           ║" -ForegroundColor Yellow
+    Write-Host "╚════════════════════════════════════════╝`n" -ForegroundColor Cyan
+    
+    Write-Host "🛑 Stopping Flask Backend..." -ForegroundColor Yellow
+    $pythonProcs = Get-Process python -ErrorAction SilentlyContinue
+    if ($pythonProcs) {
+        $pythonProcs | Stop-Process -Force -ErrorAction SilentlyContinue
+        Write-Host "   ✅ Backend stopped ($($pythonProcs.Count) process(es))" -ForegroundColor Green
+    } else {
+        Write-Host "   ℹ️  No backend processes found" -ForegroundColor Gray
+    }
+    
+    Write-Host "`n🛑 Stopping Flutter..." -ForegroundColor Yellow
+    $dartProcs = Get-Process dart,flutter -ErrorAction SilentlyContinue
+    if ($dartProcs) {
+        $dartProcs | Stop-Process -Force -ErrorAction SilentlyContinue
+        Write-Host "   ✅ Flutter stopped ($($dartProcs.Count) process(es))" -ForegroundColor Green
+    } else {
+        Write-Host "   ℹ️  No Flutter processes found" -ForegroundColor Gray
+    }
+    
+    Write-Host "`n🧹 Cleaning up background jobs..." -ForegroundColor Yellow
+    $jobs = Get-Job -ErrorAction SilentlyContinue
+    if ($jobs) {
+        $jobs | Stop-Job -ErrorAction SilentlyContinue
+        $jobs | Remove-Job -Force -ErrorAction SilentlyContinue
+        Write-Host "   ✅ Jobs cleaned up ($($jobs.Count) job(s))" -ForegroundColor Green
+    } else {
+        Write-Host "   ℹ️  No background jobs found" -ForegroundColor Gray
+    }
+    
+    Write-Host "`n✅ All services stopped!" -ForegroundColor Green
+    Write-Host ""
 }
 
 function Start-Automated {
@@ -570,7 +847,7 @@ do {
     
     Show-Menu
     # Get user choice (trim to handle any whitespace issues)
-    $choice = (Read-Host "Enter your choice (1-5)").Trim()
+    $choice = (Read-Host "Enter your choice (1-6)").Trim()
     
     switch ($choice) {
         "1" {
@@ -598,11 +875,17 @@ do {
             $null = Read-Host
         }
         "5" {
+            Set-Location $projectRoot
+            Stop-AllServices
+            Write-Host "`nPress any key to return to menu..."
+            $null = Read-Host
+        }
+        "6" {
             Write-Host "`nExiting..." -ForegroundColor Yellow
             exit 0
         }
         default {
-            Write-Host "`nInvalid choice. Please select 1-5." -ForegroundColor Red
+            Write-Host "`nInvalid choice. Please select 1-6." -ForegroundColor Red
             Start-Sleep -Seconds 1
         }
     }
