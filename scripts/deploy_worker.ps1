@@ -17,7 +17,6 @@ if (-not (Test-Path $workerDir)) {
 
 # Check if wrangler is installed (globally or locally)
 $wranglerCmd = "wrangler"
-$useNpx = $false
 
 try {
     $wranglerVersion = wrangler --version 2>&1
@@ -35,7 +34,6 @@ try {
     
     if ($wranglerLocal) {
         $wranglerCmd = "npx wrangler"
-        $useNpx = $true
         $wranglerVersion = npx wrangler --version 2>&1
         if ($LASTEXITCODE -eq 0) {
             Write-Host "✅ Wrangler found (local): $wranglerVersion" -ForegroundColor Green
@@ -44,7 +42,6 @@ try {
             npm install 2>&1 | Out-Null
             if ($LASTEXITCODE -eq 0) {
                 $wranglerCmd = "npx wrangler"
-                $useNpx = $true
                 Write-Host "✅ Wrangler installed" -ForegroundColor Green
             } else {
                 Write-Host "❌ Failed to install Wrangler" -ForegroundColor Red
@@ -56,7 +53,6 @@ try {
         npm install 2>&1 | Out-Null
         if ($LASTEXITCODE -eq 0) {
             $wranglerCmd = "npx wrangler"
-            $useNpx = $true
             Write-Host "✅ Wrangler installed" -ForegroundColor Green
         } else {
             Write-Host "❌ Failed to install Wrangler" -ForegroundColor Red
@@ -103,11 +99,7 @@ Write-Host "Worker: aurum-api" -ForegroundColor Gray
 Write-Host "URL: https://api.ah.saffronbolt.in" -ForegroundColor Gray
 Write-Host ""
 
-if ($useNpx) {
-    npx wrangler deploy
-} else {
-    wrangler deploy
-}
+Invoke-Expression "$wranglerCmd deploy"
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host ""

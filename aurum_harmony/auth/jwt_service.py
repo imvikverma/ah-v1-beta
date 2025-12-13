@@ -22,13 +22,13 @@ class JWTService:
         self.secret_key = secret_key or os.getenv('JWT_SECRET_KEY') or secrets.token_urlsafe(32)
         self.algorithm = algorithm
     
-    def generate_token(self, user_id: int, expires_in_hours: int = 24) -> str:
+    def generate_token(self, user_id: int, expires_in_hours: int = 168) -> str:
         """
         Generate a JWT token for a user.
         
         Args:
             user_id: User ID
-            expires_in_hours: Token expiration time in hours
+            expires_in_hours: Token expiration time in hours (default: 7 days = 168 hours)
             
         Returns:
             JWT token string

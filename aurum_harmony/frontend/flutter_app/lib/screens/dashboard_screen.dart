@@ -56,7 +56,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _startBalanceUpdates();
     // Delay portfolio loading to respect grace period after login
     // This prevents "Session expired" error immediately after login
-    Future.delayed(const Duration(seconds: 2), () {
+    Future.delayed(const Duration(seconds: 10), () {
       if (mounted) {
         _loadPaperPortfolio();
       }
@@ -71,7 +71,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (userId != null) {
       _loadUserReport(userId);
       // Delay portfolio loading to respect grace period after login
-      Future.delayed(const Duration(seconds: 2), () {
+      Future.delayed(const Duration(seconds: 5), () {
         if (mounted) {
           _loadPaperPortfolio();
         }

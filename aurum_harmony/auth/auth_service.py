@@ -141,8 +141,8 @@ class AuthService:
         # Generate session token
         token = generate_session_token(user.id)
         
-        # Create session record
-        expires_at = datetime.utcnow() + timedelta(hours=24)
+        # Create session record (7 days expiration)
+        expires_at = datetime.utcnow() + timedelta(hours=168)
         session = Session(
             user_id=user.id,
             session_token=token,
