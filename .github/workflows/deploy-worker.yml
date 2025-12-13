@@ -35,7 +35,13 @@ jobs:
 
       - name: Install Worker dependencies
         working-directory: worker
-        run: npm ci
+        run: |
+          if [ -f "package.json" ]; then
+            npm ci
+          else
+            echo "⚠️  package.json not found in worker/, installing dependencies..."
+            npm install
+          fi
 
       - name: TypeScript type check
         working-directory: worker
@@ -43,13 +49,22 @@ jobs:
         continue-on-error: true  # Don't fail on type errors, but warn
 
       - name: Deploy to Cloudflare Workers
-        working-directory: worker
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.Cloudflare_API_Token }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.Cloudflare_Account_ID }}
         run: |
           echo "🚀 Deploying aurum-api Worker to Cloudflare..."
-          wrangler deploy --env production
+          echo "📁 Working directory: $(pwd)"
+          echo "📄 Checking wrangler.toml..."
+          if [ -f "wrangler.toml" ]; then
+            echo "✅ wrangler.toml found"
+          else
+            echo "❌ wrangler.toml not found in root!"
+            exit 1
+          fi
+          
+          # Deploy from root (wrangler.toml is here)
+          wrangler deploy --env production --config wrangler.toml
           
           if [ $? -eq 0 ]; then
             echo "✅ Worker deployed successfully!"
