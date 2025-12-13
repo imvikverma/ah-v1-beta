@@ -4,7 +4,7 @@
 /*
   # Content Security Policy for Flutter Web
   # Flutter web requires 'unsafe-eval' for some features (hot reload, dev tools, etc.)
-  Content-Security-Policy: script-src 'self' 'unsafe-eval' 'unsafe-inline' https://github.githubassets.com https://*.cloudflare.com https://*.workers.dev https://static.cloudflareinsights.com https://www.gstatic.com https://api.ah.saffronbolt.in; object-src 'none'; base-uri 'self'; connect-src 'self' https://api.ah.saffronbolt.in https://*.cloudflare.com https://*.workers.dev https://static.cloudflareinsights.com https://www.gstatic.com https://fonts.gstatic.com; img-src 'self' data: https:; style-src 'self' 'unsafe-inline' https: https://fonts.googleapis.com; font-src 'self' data: https: https://fonts.gstatic.com;
+  Content-Security-Policy: script-src 'self' 'unsafe-eval' 'unsafe-inline' https://github.githubassets.com https://*.cloudflare.com https://*.workers.dev https://static.cloudflareinsights.com https://www.gstatic.com https://api.ah.saffronbolt.in; object-src 'none'; base-uri 'self'; connect-src 'self' https://api.ah.saffronbolt.in https://*.cloudflare.com https://*.workers.dev https://static.cloudflareinsights.com https://cloudflareinsights.com https://www.gstatic.com https://fonts.gstatic.com; img-src 'self' data: https: blob:; style-src 'self' 'unsafe-inline' https: https://fonts.googleapis.com; font-src 'self' data: https: https://fonts.gstatic.com;
   
   # Security headers
   X-Content-Type-Options: nosniff
