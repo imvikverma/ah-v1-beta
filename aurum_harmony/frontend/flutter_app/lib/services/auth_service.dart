@@ -107,22 +107,42 @@ class AuthService {
           // Token expired after multiple failures, clear it
           await logout();
           _validationFailureCount = 0; // Reset counter
+          _lastValidationTime = null; // Reset validation time
           return null;
         }
         
         // Return token anyway on first/second failure (might be temporary timing issue)
         // Production Worker uses database sessions, so token might be valid even if JWT check fails
-        _lastValidationTime = DateTime.now();
+        // BUT: Don't update _lastValidationTime on failure - we want to retry soon
+        // Only update on success to avoid caching failures
         return token;
       }
     } catch (e) {
       // Network error or timeout - return token anyway (might work)
-      // Don't increment failure count on network errors
-      // Production might have temporary network issues
+      // But don't count network errors as validation failures (they're different)
+      final errorStr = e.toString().toLowerCase();
+      final isNetworkError = errorStr.contains('timeout') || 
+                            errorStr.contains('socketexception') ||
+                            errorStr.contains('failed host lookup') ||
+                            errorStr.contains('connection');
+      
+      if (!isNetworkError) {
+        // Only count non-network errors as validation failures
+        _validationFailureCount++;
+        
+        // Only clear token after multiple failures
+        if (_validationFailureCount >= _maxValidationFailures) {
+          await logout();
+          _validationFailureCount = 0;
+          _lastValidationTime = null; // Reset validation time
+          return null;
+        }
+      }
+      
+      // Return token anyway (network might be temporarily down, or it's a temporary error)
+      // Don't update _lastValidationTime on error - we want to retry soon
       return token;
     }
-    
-    return token;
   }
 
   /// Login with email/phone and password
