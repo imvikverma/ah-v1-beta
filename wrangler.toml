@@ -28,3 +28,9 @@ routes = [
   { pattern = "api.ah.saffronbolt.in", zone_name = "saffronbolt.in" }
 ]
 
+# D1 Database binding for production environment
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "aurum-harmony-db"
+database_id = "6d765373-aaa7-4443-9038-3eeda1297312"
+
