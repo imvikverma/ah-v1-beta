@@ -12,12 +12,39 @@ class BacktestResultsTable extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final type = backtestResult['type'] ?? 'unknown';
-    final result = backtestResult['result'] as Map<String, dynamic>?;
+    
+    // Backend returns data directly, not nested under 'result'
+    // Check if data is at root level or nested
+    Map<String, dynamic>? result;
+    if (backtestResult.containsKey('result')) {
+      result = backtestResult['result'] as Map<String, dynamic>?;
+    } else {
+      // Data is at root level - check if it has backtest fields
+      if (backtestResult.containsKey('total_trades') || 
+          backtestResult.containsKey('win_rate') ||
+          backtestResult.containsKey('total_pnl')) {
+        result = backtestResult;
+      }
+    }
     
     if (result == null) {
-      return Text(
-        'No results available',
-        style: TextStyle(color: Colors.grey.shade500, fontStyle: FontStyle.italic),
+      return Container(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Icon(Icons.info_outline, color: Colors.grey.shade500, size: 32),
+            const SizedBox(height: 8),
+            Text(
+              'No results available',
+              style: TextStyle(color: Colors.grey.shade500, fontStyle: FontStyle.italic),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Run a backtest to see results here',
+              style: TextStyle(color: Colors.grey.shade400, fontSize: 12),
+            ),
+          ],
+        ),
       );
     }
 

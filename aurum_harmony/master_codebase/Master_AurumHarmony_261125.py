@@ -36,6 +36,7 @@ try:
     from aurum_harmony.admin import admin_bp, admin_db_bp
     from aurum_harmony.admin.db_console_routes import db_console_bp
     from aurum_harmony.auth.password_change_routes import password_change_bp
+    from aurum_harmony.backtesting.routes import backtest_bp
     from aurum_harmony.database.db import init_db
     AUTH_AVAILABLE = True
 except ImportError as e:
@@ -50,6 +51,7 @@ except ImportError as e:
     paper_bp = None
     admin_bp = None
     admin_db_bp = None
+    backtest_bp = None
 
 app = Flask(__name__)
 # Configure CORS to handle OPTIONS requests properly
@@ -108,11 +110,15 @@ if AUTH_AVAILABLE:
         if admin_db_bp:
             app.register_blueprint(admin_db_bp)
         app.register_blueprint(db_console_bp)
-        print("SUCCESS: Auth, broker, paper trading, admin, and database admin blueprints registered")
+        if backtest_bp:
+            app.register_blueprint(backtest_bp)
+        print("SUCCESS: Auth, broker, paper trading, admin, database admin, and backtesting blueprints registered")
         if kotak_bp:
             print("  - Kotak Neo broker routes registered")
         if hdfc_bp:
             print("  - HDFC Sky broker routes registered")
+        if backtest_bp:
+            print("  - Broker-integrated backtesting routes registered")
     except Exception as e:
         print(f"WARNING: Error initializing auth: {e}")
         import traceback
@@ -203,6 +209,9 @@ def user_report(user_id: str):
 def backtest_realistic():
     """
     Run a realistic 20-day simulation using the current VIX logic.
+    
+    NOTE: For broker-integrated backtesting with real data, use /api/backtest/realistic instead.
+    This endpoint is kept for backward compatibility and VIX-based simulation.
     """
     result = run_realistic_tests()
     return jsonify(result)
@@ -212,6 +221,9 @@ def backtest_realistic():
 def backtest_edge():
     """
     Run an extreme VIX stress test.
+    
+    NOTE: For broker-integrated backtesting with real data, use /api/backtest/edge instead.
+    This endpoint is kept for backward compatibility and VIX-based simulation.
     """
     result = run_edge_tests()
     return jsonify(result)

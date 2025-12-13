@@ -120,33 +120,45 @@ cd /d "%~dp0\.."
             throw "WMI Create failed with return code: $($result.ReturnValue)"
         }
     } catch {
-        # Capture FULL error details including inner exception and stack trace
+        # Capture error details but check if backend actually started
         $errorMsg = $_.Exception.Message
         $errorType = $_.Exception.GetType().FullName
         
-        Write-Host "[ERROR] Failed to start Backend" -ForegroundColor Red
-        Write-Host "   Error Type: $errorType" -ForegroundColor Red
-        Write-Host "   Message: $errorMsg" -ForegroundColor Red
+        # Check if backend is actually running despite the error (RemoteException glitch)
+        Start-Sleep -Milliseconds 2000  # Give backend time to start
+        $backendCheck = Test-NetConnection -ComputerName localhost -Port 5000 -InformationLevel Quiet -WarningAction SilentlyContinue
         
-        # Check for inner exception (RemoteException often wraps the real error)
-        if ($_.Exception.InnerException) {
-            $innerMsg = $_.Exception.InnerException.Message
-            $innerType = $_.Exception.InnerException.GetType().FullName
-            Write-Host "   INNER EXCEPTION (this is the real error):" -ForegroundColor Yellow
-            Write-Host "      Type: $innerType" -ForegroundColor Yellow
-            Write-Host "      Message: $innerMsg" -ForegroundColor Yellow
+        if ($backendCheck) {
+            # Backend is running! The error was just a visual glitch
+            Write-Host "[OK] Backend started successfully (error was visual only)" -ForegroundColor Green
+            Write-Host "   Backend is running on http://localhost:5000" -ForegroundColor Gray
+            Write-Host "   (RemoteException was caught but backend works)" -ForegroundColor DarkGray
+        } else {
+            # Backend actually failed - show full error
+            Write-Host "[ERROR] Failed to start Backend" -ForegroundColor Red
+            Write-Host "   Error Type: $errorType" -ForegroundColor Red
+            Write-Host "   Message: $errorMsg" -ForegroundColor Red
             
-            # Show full inner exception details
-            if ($_.Exception.InnerException.StackTrace) {
-                Write-Host "   Inner Stack Trace:" -ForegroundColor Gray
-                Write-Host "      $($_.Exception.InnerException.StackTrace -replace "`r?`n", "`n      ")" -ForegroundColor DarkGray
+            # Check for inner exception (RemoteException often wraps the real error)
+            if ($_.Exception.InnerException) {
+                $innerMsg = $_.Exception.InnerException.Message
+                $innerType = $_.Exception.InnerException.GetType().FullName
+                Write-Host "   INNER EXCEPTION (this is the real error):" -ForegroundColor Yellow
+                Write-Host "      Type: $innerType" -ForegroundColor Yellow
+                Write-Host "      Message: $innerMsg" -ForegroundColor Yellow
+                
+                # Show full inner exception details
+                if ($_.Exception.InnerException.StackTrace) {
+                    Write-Host "   Inner Stack Trace:" -ForegroundColor Gray
+                    Write-Host "      $($_.Exception.InnerException.StackTrace -replace "`r?`n", "`n      ")" -ForegroundColor DarkGray
+                }
             }
-        }
-        
-        # Show stack trace
-        if ($_.ScriptStackTrace) {
-            Write-Host "   Stack Trace:" -ForegroundColor Gray
-            Write-Host "      $($_.ScriptStackTrace -replace "`r?`n", "`n      ")" -ForegroundColor DarkGray
+            
+            # Show stack trace
+            if ($_.ScriptStackTrace) {
+                Write-Host "   Stack Trace:" -ForegroundColor Gray
+                Write-Host "      $($_.ScriptStackTrace -replace "`r?`n", "`n      ")" -ForegroundColor DarkGray
+            }
         }
         
         # Save full error to file

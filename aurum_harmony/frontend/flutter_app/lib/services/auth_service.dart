@@ -36,9 +36,9 @@ class AuthService {
   static DateTime? _lastLoginTime;
   static DateTime? _lastValidationTime;
   static int _validationFailureCount = 0;
-  static const _validationGracePeriod = Duration(seconds: 10); // Don't validate for 10s after login
+  static const _validationGracePeriod = Duration(seconds: 15); // Don't validate for 15s after login (increased for production)
   static const _validationInterval = Duration(minutes: 2); // Only validate every 2 minutes
-  static const _maxValidationFailures = 2; // Allow 2 failures before clearing token
+  static const _maxValidationFailures = 3; // Allow 3 failures before clearing token (increased for production)
 
   /// Validate and refresh token if needed
   static Future<String?> getValidToken() async {
@@ -69,7 +69,7 @@ class AuthService {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
-      ).timeout(const Duration(seconds: 5));
+      ).timeout(const Duration(seconds: 8)); // Increased timeout for production
       
       if (response.statusCode == 200) {
         // Token is valid - reset failure count
@@ -77,7 +77,7 @@ class AuthService {
         _lastValidationTime = DateTime.now();
         return token;
       } else if (response.statusCode == 401) {
-        // Token expired, try fallback
+        // Token expired, try fallback (for localhost)
         try {
           final fallbackResponse = await http.get(
             Uri.parse('$kBackendBaseUrlFallback/api/auth/me'),
@@ -94,10 +94,12 @@ class AuthService {
             return token;
           }
         } catch (e) {
-          // Fallback failed
+          // Fallback failed (expected if on production)
         }
         
-        // Increment failure count
+        // For production (Cloudflare Worker), 401 might be temporary
+        // Worker uses database fallback, so session might not be ready yet
+        // Don't immediately fail - give it a chance
         _validationFailureCount++;
         
         // Only clear token after multiple failures (not on first failure)
@@ -108,13 +110,15 @@ class AuthService {
           return null;
         }
         
-        // Return token anyway on first failure (might be temporary network issue)
+        // Return token anyway on first/second failure (might be temporary timing issue)
+        // Production Worker uses database sessions, so token might be valid even if JWT check fails
         _lastValidationTime = DateTime.now();
         return token;
       }
     } catch (e) {
-      // Network error, return token anyway (might work)
+      // Network error or timeout - return token anyway (might work)
       // Don't increment failure count on network errors
+      // Production might have temporary network issues
       return token;
     }
     

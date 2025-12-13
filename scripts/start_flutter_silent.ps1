@@ -196,6 +196,11 @@ try {
     Write-Host ""
     Write-Host "Note: Window is minimized. Restore from taskbar to interact." -ForegroundColor Gray
     Write-Host ""
+    Write-Host "═══════════════════════════════════════" -ForegroundColor Green
+    Write-Host "  🌐 Frontend URL:" -ForegroundColor Yellow
+    Write-Host "  http://localhost:$webPort" -ForegroundColor Cyan
+    Write-Host "═══════════════════════════════════════" -ForegroundColor Green
+    Write-Host ""
     
     # Verify we're in the correct directory
     $currentDir = Get-Location
@@ -207,10 +212,24 @@ try {
     
     # Run Flutter directly (preserves interactive menu)
     # When window is restored, full interactive menu will be available
-    & $flutterCmd run -d web-server --web-port=$webPort --web-hostname=0.0.0.0
+    # Use localhost instead of 0.0.0.0 for better UX (shows clickable link)
+    & $flutterCmd run -d web-server --web-port=$webPort --web-hostname=localhost
+    
+    # Flutter has exited (user cancelled via 'q' or menu, or error occurred)
+    # Clear screen and show confirmation path at the very last line
+    Clear-Host
+    Write-Host ""
+    Write-Host "═══════════════════════════════════════" -ForegroundColor Gray
+    Write-Host "  Flutter session ended" -ForegroundColor Yellow
+    Write-Host "═══════════════════════════════════════" -ForegroundColor Gray
+    Write-Host ""
+    Write-Host "Working directory: $currentDir" -ForegroundColor DarkGray
     
 } catch {
     Show-CriticalError "Unexpected error: $_"
+    # Ensure confirmation path is at the last line even on error
+    Write-Host ""
+    Write-Host "Working directory: $(Get-Location)" -ForegroundColor DarkGray
     exit 1
 }
 
