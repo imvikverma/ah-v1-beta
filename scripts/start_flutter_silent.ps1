@@ -7,7 +7,24 @@ $host.ui.RawUI.WindowTitle = "AurumHarmony - Frontend (Flutter)"
 $ErrorActionPreference = "Continue"
 $projectRoot = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 $flutterAppPath = Join-Path $projectRoot "aurum_harmony\frontend\flutter_app"
+
+# Ensure flutter app directory exists
+if (-not (Test-Path $flutterAppPath)) {
+    Write-Host "ERROR: Flutter app directory not found: $flutterAppPath" -ForegroundColor Red
+    Read-Host "Press Enter to exit"
+    exit 1
+}
+
+# Change to flutter app directory
 Set-Location $flutterAppPath
+
+# Double-check we're in the right place
+if (-not (Test-Path "pubspec.yaml")) {
+    Write-Host "ERROR: pubspec.yaml not found in $(Get-Location)" -ForegroundColor Red
+    Write-Host "Expected directory: $flutterAppPath" -ForegroundColor Yellow
+    Read-Host "Press Enter to exit"
+    exit 1
+}
 
 # Log file
 $logDir = Join-Path $projectRoot "_local\logs"
@@ -180,9 +197,17 @@ try {
     Write-Host "Note: Window is minimized. Restore from taskbar to interact." -ForegroundColor Gray
     Write-Host ""
     
+    # Verify we're in the correct directory
+    $currentDir = Get-Location
+    Write-Log "Current directory: $currentDir" "INFO"
+    if (-not (Test-Path "pubspec.yaml")) {
+        Show-CriticalError "pubspec.yaml not found in $currentDir. Cannot start Flutter."
+        exit 1
+    }
+    
     # Run Flutter directly (preserves interactive menu)
     # When window is restored, full interactive menu will be available
-    & $flutterCmd run -d web-server --web-port=$webPort
+    & $flutterCmd run -d web-server --web-port=$webPort --web-hostname=0.0.0.0
     
 } catch {
     Show-CriticalError "Unexpected error: $_"

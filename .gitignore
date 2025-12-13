@@ -8,6 +8,7 @@ _local/documentation/other-files/api_mangal_keshav.json
 
 # Python
 .venv/
+.venv-backup-*/
 __pycache__/
 *.pyc
 
@@ -16,6 +17,11 @@ build/
 .dart_tool/
 .packages
 .pub-cache/
+
+# Flutter generated plugin files (auto-generated, platform-specific)
+**/generated_plugin_registrant.*
+**/GeneratedPluginRegistrant.*
+**/generated_plugins.cmake
 
 # Flutter platform builds
 aurum_harmony/frontend/flutter_app/android/.gradle/

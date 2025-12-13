@@ -32,10 +32,34 @@ class AuthService {
     }
   }
 
+  // Track last login time and validation failures
+  static DateTime? _lastLoginTime;
+  static DateTime? _lastValidationTime;
+  static int _validationFailureCount = 0;
+  static const _validationGracePeriod = Duration(seconds: 10); // Don't validate for 10s after login
+  static const _validationInterval = Duration(minutes: 2); // Only validate every 2 minutes
+  static const _maxValidationFailures = 2; // Allow 2 failures before clearing token
+
   /// Validate and refresh token if needed
   static Future<String?> getValidToken() async {
     final token = await getToken();
     if (token == null) return null;
+    
+    // Skip validation if we just logged in (grace period)
+    if (_lastLoginTime != null) {
+      final timeSinceLogin = DateTime.now().difference(_lastLoginTime!);
+      if (timeSinceLogin < _validationGracePeriod) {
+        return token; // Trust the token, skip validation immediately after login
+      }
+    }
+    
+    // Only validate every 2 minutes (less aggressive)
+    if (_lastValidationTime != null) {
+      final timeSinceValidation = DateTime.now().difference(_lastValidationTime!);
+      if (timeSinceValidation < _validationInterval) {
+        return token; // Skip validation, use cached result
+      }
+    }
     
     // Try to validate token by calling /api/auth/me
     try {
@@ -48,7 +72,10 @@ class AuthService {
       ).timeout(const Duration(seconds: 5));
       
       if (response.statusCode == 200) {
-        return token; // Token is valid
+        // Token is valid - reset failure count
+        _validationFailureCount = 0;
+        _lastValidationTime = DateTime.now();
+        return token;
       } else if (response.statusCode == 401) {
         // Token expired, try fallback
         try {
@@ -61,18 +88,33 @@ class AuthService {
           ).timeout(const Duration(seconds: 5));
           
           if (fallbackResponse.statusCode == 200) {
-            return token; // Valid on fallback
+            // Valid on fallback - reset failure count
+            _validationFailureCount = 0;
+            _lastValidationTime = DateTime.now();
+            return token;
           }
         } catch (e) {
           // Fallback failed
         }
         
-        // Token expired, clear it
-        await logout();
-        return null;
+        // Increment failure count
+        _validationFailureCount++;
+        
+        // Only clear token after multiple failures (not on first failure)
+        if (_validationFailureCount >= _maxValidationFailures) {
+          // Token expired after multiple failures, clear it
+          await logout();
+          _validationFailureCount = 0; // Reset counter
+          return null;
+        }
+        
+        // Return token anyway on first failure (might be temporary network issue)
+        _lastValidationTime = DateTime.now();
+        return token;
       }
     } catch (e) {
       // Network error, return token anyway (might work)
+      // Don't increment failure count on network errors
       return token;
     }
     
@@ -126,6 +168,11 @@ class AuthService {
         // Store admin status
         final isAdmin = user['is_admin'] == true || user['isAdmin'] == true;
         await prefs.setBool(_keyIsAdmin, isAdmin);
+        
+        // Record login time for grace period
+        _lastLoginTime = DateTime.now();
+        _validationFailureCount = 0; // Reset failure count on successful login
+        
         return; // Success!
       } else if (response.statusCode == 501) {
         // Worker returns 501 for bcrypt hashes or unmigrated endpoints - trigger fallback
@@ -178,6 +225,11 @@ class AuthService {
             }
             final isAdmin = user['is_admin'] == true || user['isAdmin'] == true;
             await prefs.setBool(_keyIsAdmin, isAdmin);
+            
+            // Record login time for grace period
+            _lastLoginTime = DateTime.now();
+            _validationFailureCount = 0; // Reset failure count on successful login
+            
             // Success with fallback - login worked, no error message needed
             return;
           } else {

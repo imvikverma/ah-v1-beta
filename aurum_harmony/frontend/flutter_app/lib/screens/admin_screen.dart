@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../constants.dart';
 import '../services/db_admin_service.dart';
+import '../utils/error_dialog.dart';
 import '../services/auth_service.dart';
 
 class AdminScreen extends StatefulWidget {
@@ -124,8 +125,10 @@ class _AdminScreenState extends State<AdminScreen> with SingleTickerProviderStat
         _loadingTables = false;
       });
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading tables: $e')),
+        await ErrorDialog.show(
+          context,
+          title: 'Error Loading Tables',
+          message: e.toString(),
         );
       }
     }
@@ -230,53 +233,108 @@ class _AdminScreenState extends State<AdminScreen> with SingleTickerProviderStat
     }
     return RefreshIndicator(
       onRefresh: _loadUsers,
-      child: ListView.builder(
-        padding: const EdgeInsets.all(8),
-        itemCount: _users.length,
-        itemBuilder: (context, index) {
-          final u = _users[index];
-          return Card(
-            margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            child: ListTile(
-              leading: CircleAvatar(
-                backgroundColor: (u['status'] == 'active' ? Colors.green : Colors.orange).withOpacity(0.2),
-                child: Icon(
-                  u['status'] == 'active' ? Icons.person : Icons.person_outline,
-                  color: u['status'] == 'active' ? Colors.greenAccent : Colors.orangeAccent,
-                ),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Card(
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: DataTable(
+              headingRowColor: MaterialStateProperty.all(
+                Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.5),
               ),
-              title: Text(u['user_id'] ?? '', style: const TextStyle(fontWeight: FontWeight.w600)),
-              subtitle: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 4),
-                  Text('Tier: ${u['tier']} • Capital: ₹${u['capital']}'),
-                  const SizedBox(height: 2),
-                  Text('Max trades/day: ${u['max_trades']}', style: TextStyle(color: Colors.grey.shade500, fontSize: 12)),
-                ],
-              ),
-              trailing: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(999),
-                  color: (u['status'] == 'active' ? Colors.green : Colors.orange).withOpacity(0.15),
-                  border: Border.all(color: u['status'] == 'active' ? Colors.greenAccent : Colors.orangeAccent),
-                ),
-                child: Text(
-                  (u['status'] ?? '').toString().toUpperCase(),
-                  style: TextStyle(
-                    color: u['status'] == 'active' ? Colors.greenAccent : Colors.orangeAccent,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('User: ${u['user_id']}')));
-              },
+              columnSpacing: 24,
+              horizontalMargin: 16,
+              columns: const [
+                DataColumn(label: Text('ID', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                DataColumn(label: Text('Status', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                DataColumn(label: Text('Code', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                DataColumn(label: Text('Username', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                DataColumn(label: Text('Email', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                DataColumn(label: Text('Role', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                DataColumn(label: Text('Capital', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                DataColumn(label: Text('Accounts', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                DataColumn(label: Text('Phone', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                DataColumn(label: Text('Created', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+              ],
+              rows: _users.map((u) {
+                final isActive = u['is_active'] == true;
+                final isAdmin = u['is_admin'] == true;
+                final capital = u['initial_capital'] ?? 0;
+                final createdAt = u['created_at'] as String?;
+                String createdDate = 'N/A';
+                if (createdAt != null) {
+                  try {
+                    final date = DateTime.parse(createdAt);
+                    createdDate = '${date.day}/${date.month}/${date.year}';
+                  } catch (e) {
+                    createdDate = 'Invalid';
+                  }
+                }
+                
+                return DataRow(
+                  cells: [
+                    DataCell(Text('${u['id']}', style: const TextStyle(fontSize: 12))),
+                    DataCell(
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          color: (isActive ? Colors.green : Colors.orange).withOpacity(0.2),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              isActive ? Icons.check_circle : Icons.warning,
+                              size: 12,
+                              color: isActive ? Colors.greenAccent : Colors.orangeAccent,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              isActive ? 'Active' : 'Inactive',
+                              style: TextStyle(
+                                color: isActive ? Colors.greenAccent : Colors.orangeAccent,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    DataCell(Text(u['user_code'] ?? 'N/A', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600))),
+                    DataCell(Text(u['username'] ?? 'Unknown', style: const TextStyle(fontSize: 12))),
+                    DataCell(Text(u['email'] ?? 'N/A', style: const TextStyle(fontSize: 12))),
+                    DataCell(
+                      isAdmin
+                          ? Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.purple.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(4),
+                                border: Border.all(color: Colors.purpleAccent.withOpacity(0.5)),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: const [
+                                  Icon(Icons.admin_panel_settings, size: 12, color: Colors.purpleAccent),
+                                  SizedBox(width: 4),
+                                  Text('ADMIN', style: TextStyle(fontSize: 10, color: Colors.purpleAccent, fontWeight: FontWeight.bold)),
+                                ],
+                              ),
+                            )
+                          : const Text('User', style: TextStyle(fontSize: 12)),
+                    ),
+                    DataCell(Text('₹${capital.toStringAsFixed(0)}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600))),
+                    DataCell(Text('${u['max_accounts_allowed'] ?? 1}', style: const TextStyle(fontSize: 12))),
+                    DataCell(Text(u['phone'] ?? '-', style: const TextStyle(fontSize: 12))),
+                    DataCell(Text(createdDate, style: TextStyle(fontSize: 11, color: Colors.grey.shade500))),
+                  ],
+                );
+              }).toList(),
             ),
-          );
-        },
+          ),
+        ),
       ),
     );
   }
@@ -405,5 +463,6 @@ class _AdminScreenState extends State<AdminScreen> with SingleTickerProviderStat
     );
   }
 }
+
 
 

@@ -4,6 +4,9 @@ import 'package:http/http.dart' as http;
 import '../constants.dart';
 import '../services/auth_service.dart';
 import '../services/paper_trading_service.dart';
+import '../utils/error_dialog.dart';
+import '../widgets/trade_activity_feed.dart';
+import '../widgets/position_progress_card.dart';
 
 class TradeScreen extends StatefulWidget {
   const TradeScreen({super.key});
@@ -14,6 +17,7 @@ class TradeScreen extends StatefulWidget {
 
 class _TradeScreenState extends State<TradeScreen> {
   List<Map<String, dynamic>> _positions = [];
+  List<Map<String, dynamic>> _tradeActivities = []; // Live trade activity feed
   bool _loading = false;
   String? _error;
   bool _isAdmin = false;
@@ -162,11 +166,10 @@ class _TradeScreenState extends State<TradeScreen> {
   Future<void> _runPrediction() async {
     // Check admin access
     if (!_isAdmin) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Access denied: Admin credentials required'),
-          backgroundColor: Colors.red,
-        ),
+      await ErrorDialog.show(
+        context,
+        title: 'Access Denied',
+        message: 'Admin credentials required to run predictions.',
       );
       return;
     }
@@ -201,13 +204,32 @@ class _TradeScreenState extends State<TradeScreen> {
         if (mounted) {
           final ordersExecuted = data['orders_executed'] ?? 0;
           final signalsProcessed = data['signals_processed'] ?? 0;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Orchestrator run complete: $signalsProcessed signals processed, $ordersExecuted orders executed'),
-              backgroundColor: Colors.green,
-              duration: const Duration(seconds: 5),
-            ),
-          );
+          
+          // Add to trade activity feed instead of SnackBar
+          setState(() {
+            _tradeActivities.insert(0, {
+              'type': 'INFO',
+              'timestamp': DateTime.now().toString().substring(11, 19),
+              'message': 'Orchestrator Run Complete',
+              'details': '$signalsProcessed signals processed, $ordersExecuted orders executed',
+            });
+            
+            // Add individual order activities
+            if (ordersExecuted > 0) {
+              _tradeActivities.insert(0, {
+                'type': 'BUY',
+                'timestamp': DateTime.now().toString().substring(11, 19),
+                'message': '$ordersExecuted Position(s) Opened',
+                'details': 'Paper trading mode - virtual execution',
+              });
+            }
+            
+            // Keep only last 20 activities
+            if (_tradeActivities.length > 20) {
+              _tradeActivities = _tradeActivities.sublist(0, 20);
+            }
+          });
+          
           // Reload positions to show new trades
           _loadPositions();
         }
@@ -217,19 +239,10 @@ class _TradeScreenState extends State<TradeScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: SelectableText('Error: $e'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 10),
-            action: SnackBarAction(
-              label: 'Dismiss',
-              textColor: Colors.white,
-              onPressed: () {
-                ScaffoldMessenger.of(context).hideCurrentSnackBar();
-              },
-            ),
-          ),
+        await ErrorDialog.show(
+          context,
+          title: 'Prediction Failed',
+          message: e.toString(),
         );
       }
     } finally {
@@ -432,10 +445,45 @@ class _TradeScreenState extends State<TradeScreen> {
                         fontSize: 14,
                       ),
                     ),
+                    const SizedBox(height: 16),
+                    // Start Paper Trading Button
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: ElevatedButton.icon(
+                        onPressed: _loading ? null : _runPrediction,
+                        icon: const Icon(Icons.rocket_launch),
+                        label: Text(
+                          _loading ? 'Running...' : 'Start Paper Trading',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          foregroundColor: Colors.white,
+                          elevation: 4,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Click to run AI predictions and automatically execute trades in paper trading mode.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: colors.onSurface.withOpacity(0.6),
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
                   ],
                 ),
               ),
             ),
+          const SizedBox(height: 16),
+
+          // Live Trade Activity Feed
+          TradeActivityFeed(activities: _tradeActivities),
           const SizedBox(height: 16),
 
           // Open Positions Card
@@ -515,7 +563,12 @@ class _TradeScreenState extends State<TradeScreen> {
                       ),
                     )
                   else
-                    ..._positions.map((pos) => _buildPositionTile(pos)),
+                    ..._positions.map((pos) => PositionProgressCard(
+                      position: pos,
+                      onClose: _paperTradingEnabled && _userId != null
+                          ? () => _closePosition(pos['symbol'] as String? ?? '')
+                          : null,
+                    )),
                 ],
               ),
             ),
@@ -565,53 +618,7 @@ class _TradeScreenState extends State<TradeScreen> {
     );
   }
 
-  Widget _buildPositionTile(Map<String, dynamic> pos) {
-    final unrealizedPnl = (pos['unrealized_pnl'] as num?)?.toDouble() ?? 0.0;
-    final isProfit = unrealizedPnl >= 0;
-    final symbol = pos['symbol'] as String? ?? 'N/A';
-    final quantity = (pos['quantity'] as num?)?.toDouble() ?? 0.0;
-    final avgPrice = (pos['avg_price'] as num?)?.toDouble() ?? 0.0;
-    final currentPrice = (pos['current_price'] as num?)?.toDouble() ?? 0.0;
-    final side = pos['side'] as String? ?? 'BUY';
-    
-    return ListTile(
-      leading: CircleAvatar(
-        backgroundColor: isProfit
-            ? Colors.green.withOpacity(0.2)
-            : Colors.red.withOpacity(0.2),
-        child: Icon(
-          isProfit ? Icons.trending_up : Icons.trending_down,
-          color: isProfit ? Colors.greenAccent : Colors.redAccent,
-        ),
-      ),
-      title: Text(
-        symbol,
-        style: const TextStyle(fontWeight: FontWeight.w600),
-      ),
-      subtitle: Text(
-        '$side • Qty: ${quantity.abs().toStringAsFixed(0)} • Avg: ₹${avgPrice.toStringAsFixed(2)}\nCurrent: ₹${currentPrice.toStringAsFixed(2)}',
-      ),
-      trailing: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Text(
-            '₹${unrealizedPnl.toStringAsFixed(2)}',
-            style: TextStyle(
-              color: isProfit ? Colors.greenAccent : Colors.redAccent,
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
-            ),
-          ),
-          if (_paperTradingEnabled && _userId != null)
-            TextButton(
-              onPressed: () => _closePosition(symbol),
-              child: const Text('Close', style: TextStyle(fontSize: 12)),
-            ),
-        ],
-      ),
-    );
-  }
+  // Removed _buildPositionTile - now using PositionProgressCard widget
 
   Future<void> _showPlaceOrderDialog() async {
     if (_userId == null) {

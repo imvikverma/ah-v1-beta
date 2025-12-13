@@ -142,25 +142,62 @@ def get_current_user():
     if request.method == 'OPTIONS':
         return '', 200
     
-    # Check auth
-    token = request.headers.get('Authorization')
-    if not token:
-        return jsonify({'error': 'Authorization required'}), 401
-    
-    if token.startswith('Bearer '):
-        token = token[7:]
-    
-    user = AuthService.get_user_from_token(token)
-    if not user:
-        return jsonify({'error': 'Invalid or expired token'}), 401
-    
-    # Get user's broker credentials (without sensitive data)
-    broker_creds = BrokerCredential.query.filter_by(
-        user_id=user.id,
-        is_active=True
-    ).all()
-    
-    user_data = user.to_dict()
-    user_data['brokers'] = [cred.to_dict() for cred in broker_creds]
-    
-    return jsonify(user_data), 200
+    try:
+        # Check auth
+        token = request.headers.get('Authorization')
+        if not token:
+            current_app.logger.debug("No authorization token provided")
+            return jsonify({'error': 'Authorization required'}), 401
+        
+        if token.startswith('Bearer '):
+            token = token[7:]
+        
+        # Get user from token
+        try:
+            user = AuthService.get_user_from_token(token)
+        except Exception as token_error:
+            current_app.logger.error(f"Error getting user from token: {token_error}", exc_info=True)
+            return jsonify({'error': 'Invalid token format'}), 401
+        
+        if not user:
+            current_app.logger.debug("User not found for token")
+            return jsonify({'error': 'Invalid or expired token'}), 401
+        
+        # Get user data safely
+        try:
+            user_data = user.to_dict()
+        except Exception as dict_error:
+            current_app.logger.error(f"Error converting user to dict: {dict_error}", exc_info=True)
+            # Return minimal user data
+            user_data = {
+                'id': user.id,
+                'email': user.email,
+                'user_code': getattr(user, 'user_code', None),
+                'is_admin': getattr(user, 'is_admin', False),
+            }
+        
+        # Get user's broker credentials (without sensitive data)
+        try:
+            broker_creds = BrokerCredential.query.filter_by(
+                user_id=user.id,
+                is_active=True
+            ).all()
+            broker_list = []
+            for cred in broker_creds:
+                try:
+                    broker_list.append(cred.to_dict())
+                except Exception as cred_error:
+                    current_app.logger.warning(f"Error serializing broker credential: {cred_error}")
+                    continue
+        except Exception as broker_error:
+            # If broker query fails, just return empty list
+            current_app.logger.warning(f"Failed to fetch broker credentials: {broker_error}")
+            broker_list = []
+        
+        user_data['brokers'] = broker_list
+        
+        return jsonify(user_data), 200
+        
+    except Exception as e:
+        current_app.logger.error(f"Unhandled error in /api/auth/me: {e}", exc_info=True)
+        return jsonify({'error': 'Internal server error', 'details': str(e)}), 500

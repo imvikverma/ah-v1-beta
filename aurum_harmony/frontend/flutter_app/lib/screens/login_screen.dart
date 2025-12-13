@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../services/theme_service.dart';
+import '../utils/error_dialog.dart';
 import 'signup_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -62,19 +63,11 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: SelectableText('Login failed: $e'),
-            backgroundColor: Theme.of(context).colorScheme.error,
-            duration: const Duration(seconds: 30), // Extended duration for copying
-            action: SnackBarAction(
-              label: 'Dismiss',
-              textColor: Colors.white,
-              onPressed: () {
-                ScaffoldMessenger.of(context).hideCurrentSnackBar();
-              },
-            ),
-          ),
+        // Use global error dialog utility - stays until dismissed, copyable
+        await ErrorDialog.show(
+          context,
+          title: 'Login Failed',
+          message: e.toString(),
         );
       }
     } finally {

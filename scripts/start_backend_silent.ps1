@@ -46,6 +46,13 @@ function Show-CriticalError {
 try {
     Write-Log "Starting AurumHarmony Backend (Silent Mode)" "INFO"
     
+    # CRITICAL: Ensure we're not using a backup venv
+    if ($env:VIRTUAL_ENV -and $env:VIRTUAL_ENV -match "backup") {
+        Write-Log "Backup venv detected! Deactivating..." "WARN"
+        deactivate
+        Start-Sleep -Milliseconds 500
+    }
+    
     # Activate virtual environment
     $venvPath = Join-Path $projectRoot ".venv\Scripts\Activate.ps1"
     if (-not (Test-Path $venvPath)) {

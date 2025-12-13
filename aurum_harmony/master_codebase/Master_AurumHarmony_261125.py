@@ -66,29 +66,33 @@ CORS(app, resources={
 if AUTH_AVAILABLE:
     try:
         init_db(app)
-        # Run database migrations to add missing columns
-        try:
-            from aurum_harmony.database.migrate import migrate_user_fields
-            with app.app_context():
-                # Suppress migration output to avoid encoding issues and stdout conflicts
-                import sys
-                import io
-                original_stdout = sys.stdout
-                try:
-                    # Redirect stdout to a null device during migration
-                    sys.stdout = io.StringIO()
-                    migrate_user_fields()
-                finally:
-                    # Always restore stdout
-                    sys.stdout = original_stdout
-        except Exception as migration_error:
-            # Log the error but don't fail startup
-            # Use logging instead of print to avoid stdout issues
-            import logging
+        
+        # Smart migration: Only run if flag file doesn't exist
+        # This speeds up subsequent startups significantly
+        from pathlib import Path
+        migration_flag = Path(os.path.join(BASE_DIR, "_local", ".db_migration_completed"))
+        
+        # Create _local directory if it doesn't exist
+        migration_flag.parent.mkdir(parents=True, exist_ok=True)
+        
+        # Check if we need to run migrations
+        FORCE_MIGRATION = os.getenv("FORCE_DB_MIGRATION", "false").lower() == "true"
+        
+        if FORCE_MIGRATION or not migration_flag.exists():
+            print("Running database migrations...")
             try:
+                from aurum_harmony.database.migrate import migrate_user_fields
+                with app.app_context():
+                    migrate_user_fields()
+                    # Mark migration as completed
+                    migration_flag.touch()
+                    print("[OK] Database migrations completed")
+            except Exception as migration_error:
+                import logging
                 logging.warning(f"Migration error (non-fatal): {migration_error}")
-            except:
-                pass  # Even logging might fail, so just ignore
+                # Don't create flag if migration failed
+        else:
+            print("[OK] Database migrations already completed (skipping)")
         
         app.register_blueprint(auth_bp)
         app.register_blueprint(password_change_bp)
@@ -137,6 +141,7 @@ except ImportError:
     aurum_system = None
 
 @app.route('/health')
+@app.route('/api/health')
 def health():
     return jsonify({"status": "AurumHarmony v1.0 Beta running", "time": int(time.time())})
 
@@ -281,11 +286,11 @@ def callback():
 # Initialize complete AurumHarmony system
 try:
     from aurum_harmony.app.system_integration import aurum_system
-    print("✅ AurumHarmony System initialized")
+    print("[OK] AurumHarmony System initialized")
     
     # Start all background services
     aurum_system.start_all_services()
-    print("✅ All background services started")
+    print("[OK] All background services started")
 except Exception as e:
     print(f"WARNING: Error initializing AurumHarmony system: {e}")
     import traceback

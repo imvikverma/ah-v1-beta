@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../constants.dart';
 import '../services/auth_service.dart';
+import '../widgets/backtest_results_table.dart';
 
 class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key});
@@ -374,46 +375,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   if (_backtestResult != null) ...[
                     const SizedBox(height: 16),
                     const Divider(),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Backtest Results (${_backtestResult!['type'] ?? 'unknown'}):',
-                      style: TextStyle(
-                        color: Colors.grey.shade400,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    if (_backtestResult!['result'] != null) ...[
-                      _buildReportRow('Total Trades', '${_backtestResult!['result']['total_trades'] ?? 0}'),
-                      _buildReportRow('Win Rate', '${(_backtestResult!['result']['win_rate'] ?? 0).toStringAsFixed(1)}%'),
-                      _buildReportRow('Total P&L', '₹${(_backtestResult!['result']['total_pnl'] ?? 0).toStringAsFixed(2)}',
-                          color: (_backtestResult!['result']['total_pnl'] as num? ?? 0) >= 0
-                              ? Colors.greenAccent
-                              : Colors.redAccent),
-                      _buildReportRow('Max Drawdown', '₹${(_backtestResult!['result']['max_drawdown'] ?? 0).toStringAsFixed(2)}',
-                          color: Colors.orangeAccent),
-                      _buildReportRow('Sharpe Ratio', '${(_backtestResult!['result']['sharpe_ratio'] ?? 0).toStringAsFixed(2)}'),
-                      if (_backtestResult!['result']['message'] != null)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 8),
-                          child: Text(
-                            _backtestResult!['result']['message'],
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: Colors.grey.shade500,
-                              fontStyle: FontStyle.italic,
-                            ),
-                          ),
-                        ),
-                    ] else
-                      Text(
-                        _backtestResult.toString(),
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontFamily: 'monospace',
-                        ),
-                      ),
+                    const SizedBox(height: 16),
+                    BacktestResultsTable(backtestResult: _backtestResult!),
                   ],
                 ],
               ),

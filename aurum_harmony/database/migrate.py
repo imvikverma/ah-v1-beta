@@ -71,9 +71,9 @@ def migrate_existing_users():
                 print(f"  - Assigned user_code {user.user_code} to user {user.email}")
         
         db.session.commit()
-        print("✅ User codes assigned")
+        print("[OK] User codes assigned")
     else:
-        print("✅ All users have user_code")
+        print("[OK] All users have user_code")
 
 
 def migrate_broker_credentials():
@@ -103,12 +103,12 @@ def migrate_broker_credentials():
                     cred.api_secret = encrypted_secret
                     
             except Exception as e:
-                print(f"  ⚠️  Warning: Could not process credentials for {cred.broker_name}: {e}")
+                print(f"  [WARN] Warning: Could not process credentials for {cred.broker_name}: {e}")
         
         db.session.commit()
-        print("✅ Broker credentials migrated")
+        print("[OK] Broker credentials migrated")
     else:
-        print("✅ No existing broker credentials to migrate")
+        print("[OK] No existing broker credentials to migrate")
 
 
 def create_default_admin():
@@ -140,9 +140,9 @@ def create_default_admin():
             print(f"  - Created admin user: {admin_email}")
         
         db.session.commit()
-        print("✅ Admin user ready")
+        print("[OK] Admin user ready")
     else:
-        print(f"✅ Admin user exists: {admin.email}")
+        print(f"[OK] Admin user exists: {admin.email}")
 
 
 def cleanup_expired_sessions():
@@ -161,7 +161,7 @@ def cleanup_expired_sessions():
         db.session.commit()
         print(f"  - Removed {count} expired sessions")
     else:
-        print("✅ No expired sessions to clean")
+        print("[OK] No expired sessions to clean")
 
 
 def migrate_user_fields():
@@ -183,10 +183,10 @@ def migrate_user_fields():
             db.session.execute(db.text('ALTER TABLE users ADD COLUMN date_of_birth DATE'))
             db.session.commit()
             new_fields_added = True
-            print("    ✅ date_of_birth added")
+            print("    [OK] date_of_birth added")
         except Exception as e:
             db.session.rollback()
-            print(f"    ⚠️  Could not add date_of_birth: {e}")
+            print(f"    [WARN] Could not add date_of_birth: {e}")
     
     # Check and add anniversary
     if 'anniversary' not in columns:
@@ -195,10 +195,10 @@ def migrate_user_fields():
             db.session.execute(db.text('ALTER TABLE users ADD COLUMN anniversary DATE'))
             db.session.commit()
             new_fields_added = True
-            print("    ✅ anniversary added")
+            print("    [OK] anniversary added")
         except Exception as e:
             db.session.rollback()
-            print(f"    ⚠️  Could not add anniversary: {e}")
+            print(f"    [WARN] Could not add anniversary: {e}")
     
     # Check and add initial_capital
     if 'initial_capital' not in columns:
@@ -210,10 +210,10 @@ def migrate_user_fields():
             db.session.execute(db.text('UPDATE users SET initial_capital = 10000.0 WHERE initial_capital IS NULL'))
             db.session.commit()
             new_fields_added = True
-            print("    ✅ initial_capital added")
+            print("    [OK] initial_capital added")
         except Exception as e:
             db.session.rollback()
-            print(f"    ⚠️  Could not add initial_capital: {e}")
+            print(f"    [WARN] Could not add initial_capital: {e}")
     
     # Check and add max_trades_per_index
     if 'max_trades_per_index' not in columns:
@@ -222,10 +222,10 @@ def migrate_user_fields():
             db.session.execute(db.text('ALTER TABLE users ADD COLUMN max_trades_per_index TEXT'))
             db.session.commit()
             new_fields_added = True
-            print("    ✅ max_trades_per_index added")
+            print("    [OK] max_trades_per_index added")
         except Exception as e:
             db.session.rollback()
-            print(f"    ⚠️  Could not add max_trades_per_index: {e}")
+            print(f"    [WARN] Could not add max_trades_per_index: {e}")
     
     # Check and add max_accounts_allowed
     if 'max_accounts_allowed' not in columns:
@@ -237,10 +237,10 @@ def migrate_user_fields():
             db.session.execute(db.text('UPDATE users SET max_accounts_allowed = 1 WHERE max_accounts_allowed IS NULL'))
             db.session.commit()
             new_fields_added = True
-            print("    ✅ max_accounts_allowed added")
+            print("    [OK] max_accounts_allowed added")
         except Exception as e:
             db.session.rollback()
-            print(f"    ⚠️  Could not add max_accounts_allowed: {e}")
+            print(f"    [WARN] Could not add max_accounts_allowed: {e}")
     
     # Signup improvements fields
     if 'username' not in columns:
@@ -255,10 +255,10 @@ def migrate_user_fields():
             except:
                 pass  # Index might already exist or not supported
             new_fields_added = True
-            print("    ✅ username added")
+            print("    [OK] username added")
         except Exception as e:
             db.session.rollback()
-            print(f"    ⚠️  Could not add username: {e}")
+            print(f"    [WARN] Could not add username: {e}")
     
     if 'profile_picture_url' not in columns:
         print("  - Adding profile_picture_url column...")
@@ -266,10 +266,10 @@ def migrate_user_fields():
             db.session.execute(db.text('ALTER TABLE users ADD COLUMN profile_picture_url VARCHAR(500)'))
             db.session.commit()
             new_fields_added = True
-            print("    ✅ profile_picture_url added")
+            print("    [OK] profile_picture_url added")
         except Exception as e:
             db.session.rollback()
-            print(f"    ⚠️  Could not add profile_picture_url: {e}")
+            print(f"    [WARN] Could not add profile_picture_url: {e}")
     
     if 'email_verified' not in columns:
         print("  - Adding email_verified column...")
@@ -277,10 +277,10 @@ def migrate_user_fields():
             db.session.execute(db.text('ALTER TABLE users ADD COLUMN email_verified BOOLEAN DEFAULT 0 NOT NULL'))
             db.session.commit()
             new_fields_added = True
-            print("    ✅ email_verified added")
+            print("    [OK] email_verified added")
         except Exception as e:
             db.session.rollback()
-            print(f"    ⚠️  Could not add email_verified: {e}")
+            print(f"    [WARN] Could not add email_verified: {e}")
     
     if 'email_verification_token' not in columns:
         print("  - Adding email_verification_token column...")
@@ -288,10 +288,10 @@ def migrate_user_fields():
             db.session.execute(db.text('ALTER TABLE users ADD COLUMN email_verification_token VARCHAR(255)'))
             db.session.commit()
             new_fields_added = True
-            print("    ✅ email_verification_token added")
+            print("    [OK] email_verification_token added")
         except Exception as e:
             db.session.rollback()
-            print(f"    ⚠️  Could not add email_verification_token: {e}")
+            print(f"    [WARN] Could not add email_verification_token: {e}")
     
     if 'terms_accepted' not in columns:
         print("  - Adding terms_accepted column...")
@@ -299,10 +299,10 @@ def migrate_user_fields():
             db.session.execute(db.text('ALTER TABLE users ADD COLUMN terms_accepted BOOLEAN DEFAULT 0 NOT NULL'))
             db.session.commit()
             new_fields_added = True
-            print("    ✅ terms_accepted added")
+            print("    [OK] terms_accepted added")
         except Exception as e:
             db.session.rollback()
-            print(f"    ⚠️  Could not add terms_accepted: {e}")
+            print(f"    [WARN] Could not add terms_accepted: {e}")
     
     if 'terms_accepted_at' not in columns:
         print("  - Adding terms_accepted_at column...")
@@ -310,15 +310,15 @@ def migrate_user_fields():
             db.session.execute(db.text('ALTER TABLE users ADD COLUMN terms_accepted_at DATETIME'))
             db.session.commit()
             new_fields_added = True
-            print("    ✅ terms_accepted_at added")
+            print("    [OK] terms_accepted_at added")
         except Exception as e:
             db.session.rollback()
-            print(f"    ⚠️  Could not add terms_accepted_at: {e}")
+            print(f"    [WARN] Could not add terms_accepted_at: {e}")
     
     if new_fields_added:
-        print("✅ New user fields migrated")
+        print("[OK] New user fields migrated")
     else:
-        print("✅ All user fields already exist")
+        print("[OK] All user fields already exist")
 
 
 def main():
@@ -332,7 +332,7 @@ def main():
         # Create Flask app for database context
         app = Flask(__name__)
         init_db(app)
-        print("✅ Database initialized")
+        print("[OK] Database initialized")
         print()
         
         # Use app context for all database operations
@@ -355,11 +355,11 @@ def main():
             print()
         
         print("=" * 60)
-        print("✅ Migration completed successfully!")
+        print("[SUCCESS] Migration completed successfully!")
         print("=" * 60)
         
     except Exception as e:
-        print(f"❌ Migration failed: {e}")
+        print(f"[ERROR] Migration failed: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)
