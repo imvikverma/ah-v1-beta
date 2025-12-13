@@ -27,10 +27,40 @@ admin_bp = Blueprint('admin', __name__, url_prefix='/api/admin')
 def require_admin(f):
     """Decorator to require admin authentication."""
     @wraps(f)
-    @require_auth
     def wrapper(*args, **kwargs):
-        if not request.current_user.is_admin:
+        # Allow OPTIONS requests without authentication (CORS preflight)
+        if request.method == 'OPTIONS':
+            return '', 200
+        
+        # For other methods, require authentication
+        from aurum_harmony.auth.auth_service import AuthService
+        token = request.headers.get('Authorization')
+        if not token:
+            return jsonify({'error': 'Authorization required'}), 401
+        
+        if token.startswith('Bearer '):
+            token = token[7:]
+        
+        # Get user from token with error handling
+        try:
+            user = AuthService.get_user_from_token(token)
+        except Exception as token_error:
+            # Log error for debugging but return user-friendly message
+            from flask import current_app
+            try:
+                current_app.logger.error(f"Error getting user from token in require_admin: {token_error}", exc_info=True)
+            except:
+                pass  # Logger might not be available
+            return jsonify({'error': 'Invalid token format'}), 401
+        
+        if not user:
+            return jsonify({'error': 'Invalid or expired token'}), 401
+        
+        if not user.is_admin:
             return jsonify({'error': 'Admin access required'}), 403
+        
+        # Store user in request context
+        request.current_user = user
         return f(*args, **kwargs)
     return wrapper
 

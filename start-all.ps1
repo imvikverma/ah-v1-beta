@@ -61,11 +61,13 @@ function Start-Backend {
     # Ensure wrapper exists
     if (-not (Test-Path $wrapperScript)) {
         Write-Host "[INFO] Creating backend wrapper..." -ForegroundColor Yellow
+        # Get full path to PowerShell executable (respects fallback logic)
+        $psExePath = (Get-Command $PowerShellExe -ErrorAction Stop).Source
         $wrapperContent = @"
 @echo off
 REM Wrapper for starting backend - avoids PowerShell 7.5.4 RemoteException
 cd /d "%~dp0\.."
-pwsh.exe -NoExit -ExecutionPolicy Bypass -NoProfile -File "%~dp0start_backend_silent.ps1"
+"$psExePath" -NoExit -ExecutionPolicy Bypass -NoProfile -File "%~dp0start_backend_silent.ps1"
 "@
         try {
             Set-Content -Path $wrapperScript -Value $wrapperContent -Encoding ASCII -ErrorAction Stop
@@ -90,9 +92,9 @@ pwsh.exe -NoExit -ExecutionPolicy Bypass -NoProfile -File "%~dp0start_backend_si
         
         Write-Host "   Starting backend via WMI (bypasses RemoteException)..." -ForegroundColor Gray
         
-        # Build command line for PowerShell
-        $pwshPath = (Get-Command pwsh.exe -ErrorAction Stop).Source
-        $commandLine = "`"$pwshPath`" -NoExit -ExecutionPolicy Bypass -NoProfile -File `"$backendScriptFullPath`""
+        # Build command line for PowerShell (use detected PowerShell executable with fallback)
+        $psExePath = (Get-Command $PowerShellExe -ErrorAction Stop).Source
+        $commandLine = "`"$psExePath`" -NoExit -ExecutionPolicy Bypass -NoProfile -File `"$backendScriptFullPath`""
         
         # Use WMI Win32_Process Create method - completely bypasses Start-Process
         $processClass = [WmiClass]"Win32_Process"
@@ -202,8 +204,9 @@ function Start-Frontend {
         
         try {
             # Use WMI Win32_Process Create method - bypasses Start-Process
-            $pwshPath = (Get-Command pwsh.exe -ErrorAction Stop).Source
-            $commandLine = "`"$pwshPath`" -NoExit -ExecutionPolicy Bypass -NoProfile -File `"$flutterScriptFullPath`""
+            # Use detected PowerShell executable with fallback (pwsh.exe or powershell.exe)
+            $psExePath = (Get-Command $PowerShellExe -ErrorAction Stop).Source
+            $commandLine = "`"$psExePath`" -NoExit -ExecutionPolicy Bypass -NoProfile -File `"$flutterScriptFullPath`""
             
             $processClass = [WmiClass]"Win32_Process"
             $startup = ([WmiClass]"Win32_ProcessStartup").CreateInstance()
@@ -680,43 +683,50 @@ function Invoke-BackendAndFrontend {
     $waited = 0
     $backendReady = $false
     
-    while ($waited -lt $maxWait -and -not $backendReady) {
-        Start-Sleep -Seconds 1
-        $waited++
-        
-        try {
-            # Use .NET HttpClient instead of Invoke-WebRequest to avoid PowerShell 7.5.4 RemoteException
-            $httpClient = New-Object System.Net.Http.HttpClient
-            $httpClient.Timeout = [System.TimeSpan]::FromSeconds(2)
-            $task = $httpClient.GetAsync("http://localhost:5000/api/health")
-            $task.Wait()
+    # Create HttpClient once outside loop to avoid resource leaks and improve performance
+    # Use .NET HttpClient instead of Invoke-WebRequest to avoid PowerShell 7.5.4 RemoteException
+    $httpClient = New-Object System.Net.Http.HttpClient
+    $httpClient.Timeout = [System.TimeSpan]::FromSeconds(2)
+    
+    try {
+        while ($waited -lt $maxWait -and -not $backendReady) {
+            Start-Sleep -Seconds 1
+            $waited++
             
-            if ($task.Result.IsSuccessStatusCode) {
-                $backendReady = $true
-                $content = $task.Result.Content.ReadAsStringAsync().Result
-                try {
-                    $data = $content | ConvertFrom-Json -ErrorAction SilentlyContinue
-                    Write-Host "`n      ✅ Backend ready! (took $waited seconds)" -ForegroundColor Green
-                    if ($data -and $data.status) {
-                        Write-Host "      Status: $($data.status)" -ForegroundColor Gray
+            try {
+                $task = $httpClient.GetAsync("http://localhost:5000/api/health")
+                $task.Wait()
+                
+                if ($task.Result.IsSuccessStatusCode) {
+                    $backendReady = $true
+                    $content = $task.Result.Content.ReadAsStringAsync().Result
+                    try {
+                        $data = $content | ConvertFrom-Json -ErrorAction SilentlyContinue
+                        Write-Host "`n      ✅ Backend ready! (took $waited seconds)" -ForegroundColor Green
+                        if ($data -and $data.status) {
+                            Write-Host "      Status: $($data.status)" -ForegroundColor Gray
+                        }
+                    } catch {
+                        Write-Host "`n      ✅ Backend ready! (took $waited seconds)" -ForegroundColor Green
                     }
-                } catch {
-                    Write-Host "`n      ✅ Backend ready! (took $waited seconds)" -ForegroundColor Green
+                    break
                 }
-                $httpClient.Dispose()
-                break
+            } catch {
+                # Ignore all errors (connection refused, timeout, RemoteException, etc.)
+                # Show progress every 10 seconds
+                if ($waited % 10 -eq 0) {
+                    Write-Host "`n      ⏳ Still waiting... ($waited seconds elapsed)" -NoNewline -ForegroundColor DarkGray
+                } elseif ($waited % 5 -eq 0) {
+                    Write-Host " $waited" -NoNewline -ForegroundColor DarkGray
+                } else {
+                    Write-Host "." -NoNewline -ForegroundColor DarkGray
+                }
             }
+        }
+    } finally {
+        # Always dispose HttpClient to prevent resource leaks
+        if ($httpClient) {
             $httpClient.Dispose()
-        } catch {
-            # Ignore all errors (connection refused, timeout, RemoteException, etc.)
-            # Show progress every 10 seconds
-            if ($waited % 10 -eq 0) {
-                Write-Host "`n      ⏳ Still waiting... ($waited seconds elapsed)" -NoNewline -ForegroundColor DarkGray
-            } elseif ($waited % 5 -eq 0) {
-                Write-Host " $waited" -NoNewline -ForegroundColor DarkGray
-            } else {
-                Write-Host "." -NoNewline -ForegroundColor DarkGray
-            }
         }
     }
     
