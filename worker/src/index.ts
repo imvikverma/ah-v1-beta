@@ -1433,6 +1433,56 @@ const routes: Route[] = [
       }
     },
   },
+
+  // Paper Trading endpoints (mock responses for now - full implementation requires state management)
+  {
+    method: 'GET',
+    path: '/api/paper/portfolio',
+    handler: async (request, env: Env) => {
+      // Return mock portfolio data
+      // In production, this should use D1 database or external storage
+      return Response.json(
+        {
+          success: true,
+          balance: 100000.0,
+          portfolio_value: 100000.0,
+          pnl: 0.0,
+          positions: [],
+        },
+        { status: 200, headers: corsHeaders }
+      );
+    },
+  },
+  {
+    method: 'GET',
+    path: '/api/paper/balance',
+    handler: async (request, env: Env) => {
+      return Response.json(
+        {
+          success: true,
+          balance: 100000.0,
+          portfolio_value: 100000.0,
+          pnl: 0.0,
+          statistics: {},
+          currency: 'INR',
+        },
+        { status: 200, headers: corsHeaders }
+      );
+    },
+  },
+  {
+    method: 'GET',
+    path: '/api/paper/positions',
+    handler: async (request, env: Env) => {
+      return Response.json(
+        {
+          success: true,
+          positions: [],
+        },
+        { status: 200, headers: corsHeaders }
+      );
+    },
+  },
 ];
 
 // Match route helper

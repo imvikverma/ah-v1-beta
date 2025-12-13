@@ -54,7 +54,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _load();
     _loadUserReport('user001');
     _startBalanceUpdates();
-    _loadPaperPortfolio();
+    // Delay portfolio loading to respect grace period after login
+    // This prevents "Session expired" error immediately after login
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) {
+        _loadPaperPortfolio();
+      }
+    });
   }
 
   Future<void> _loadUserId() async {
@@ -64,7 +70,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
     });
     if (userId != null) {
       _loadUserReport(userId);
-      _loadPaperPortfolio();
+      // Delay portfolio loading to respect grace period after login
+      Future.delayed(const Duration(seconds: 2), () {
+        if (mounted) {
+          _loadPaperPortfolio();
+        }
+      });
     }
   }
 
@@ -94,7 +105,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
         }
       });
     } catch (e) {
-      // Silently fail - paper trading is optional
+      // Handle 501 (Not Implemented) gracefully - stop retrying
+      final errorStr = e.toString().toLowerCase();
+      if (errorStr.contains('501') || errorStr.contains('not implemented')) {
+        // Worker doesn't support paper trading yet - disable it silently
+        setState(() {
+          _paperTradingEnabled = false;
+          _loadingPaperPortfolio = false;
+        });
+        return;
+      }
+      // Silently fail for other errors - paper trading is optional
       print('Paper trading error: $e');
     } finally {
       setState(() {
