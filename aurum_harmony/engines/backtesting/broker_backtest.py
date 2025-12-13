@@ -91,9 +91,9 @@ class BrokerBacktestingEngine(BacktestingEngine):
             logger.info(f"Fetching historical data for {symbol}...")
             historical_data = self.data_fetcher.fetch_historical_data(
                 symbol=symbol,
-                exchange=exchange,
                 start_date=period_start,
                 end_date=period_end,
+                exchange=exchange,
                 interval=interval
             )
             

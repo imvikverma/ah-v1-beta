@@ -81,12 +81,24 @@ try {
     Write-Log "Starting Flask app: $appPath" "INFO"
     Write-Log "Backend will be available at: http://localhost:5000" "INFO"
     
+    # Show window title and initial message
+    Write-Host "`n═══════════════════════════════════════" -ForegroundColor Cyan
+    Write-Host "  AurumHarmony Backend Starting..." -ForegroundColor Yellow
+    Write-Host "═══════════════════════════════════════" -ForegroundColor Cyan
+    Write-Host "  Backend: http://localhost:5000" -ForegroundColor Green
+    Write-Host "  Admin: http://localhost:5001" -ForegroundColor Green
+    Write-Host "  Logs: $logFile" -ForegroundColor Gray
+    Write-Host "═══════════════════════════════════════" -ForegroundColor Cyan
+    Write-Host ""
+    
     # Run Flask (output to log, errors to console)
     python $appPath 2>&1 | ForEach-Object {
         $line = $_
         Write-Log $line "INFO"
-        # Check for critical errors
-        if ($line -match "CRITICAL|FATAL|Traceback|Exception") {
+        # Show all output in window (not just errors) so user can see what's happening
+        Write-Host $line
+        # Highlight critical errors
+        if ($line -match "CRITICAL|FATAL|Traceback|Exception|Error") {
             Write-Host $line -ForegroundColor Red
         }
     }

@@ -99,7 +99,9 @@ cd /d "%~dp0\.."
         # Use WMI Win32_Process Create method - completely bypasses Start-Process
         $processClass = [WmiClass]"Win32_Process"
         $startup = ([WmiClass]"Win32_ProcessStartup").CreateInstance()
-        $startup.ShowWindow = 7  # SW_SHOWMINNOACTIVE (minimized)
+        # Use SW_SHOW (5) instead of SW_SHOWMINNOACTIVE (7) to see window initially
+        # This helps debug RemoteException issues - window will be visible
+        $startup.ShowWindow = 5  # SW_SHOW (normal window, visible)
         
         $result = $processClass.Create($commandLine, $projectRoot, $startup)
         

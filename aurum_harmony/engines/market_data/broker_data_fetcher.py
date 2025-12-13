@@ -69,9 +69,9 @@ class BrokerDataFetcher:
     def fetch_historical_data(
         self,
         symbol: str,
-        exchange: str = "NSE",
         start_date: datetime,
         end_date: datetime,
+        exchange: str = "NSE",
         interval: str = "DAY"
     ) -> List[HistoricalDataPoint]:
         """
@@ -92,7 +92,7 @@ class BrokerDataFetcher:
         # Priority 1: Try HDFC Sky (best for historical data)
         if self.hdfc_available:
             try:
-                data = self._fetch_from_hdfc(symbol, exchange, start_date, end_date, interval)
+                data = self._fetch_from_hdfc(symbol, start_date, end_date, exchange, interval)
                 if data:
                     logger.info(f"Successfully fetched {len(data)} data points from HDFC Sky")
                     return data
@@ -102,7 +102,7 @@ class BrokerDataFetcher:
         # Priority 2: Try Kotak Neo (good for recent data)
         if self.kotak_available:
             try:
-                data = self._fetch_from_kotak(symbol, exchange, start_date, end_date, interval)
+                data = self._fetch_from_kotak(symbol, start_date, end_date, exchange, interval)
                 if data:
                     logger.info(f"Successfully fetched {len(data)} data points from Kotak Neo")
                     return data
@@ -112,7 +112,7 @@ class BrokerDataFetcher:
         # Priority 3: Fallback to NSE/BSE Option Chain (for indices)
         if self.use_nse_fallback:
             try:
-                data = self._fetch_from_nse_bse(symbol, exchange, start_date, end_date, interval)
+                data = self._fetch_from_nse_bse(symbol, start_date, end_date, exchange, interval)
                 if data:
                     logger.info(f"Successfully fetched {len(data)} data points from NSE/BSE")
                     return data
@@ -198,10 +198,10 @@ class BrokerDataFetcher:
     def _fetch_from_kotak(
         self,
         symbol: str,
-        exchange: str,
         start_date: datetime,
         end_date: datetime,
-        interval: str
+        exchange: str = "NSE",
+        interval: str = "DAY"
     ) -> List[HistoricalDataPoint]:
         """Fetch historical data from Kotak Neo."""
         try:
@@ -262,10 +262,10 @@ class BrokerDataFetcher:
     def _fetch_from_nse_bse(
         self,
         symbol: str,
-        exchange: str,
         start_date: datetime,
         end_date: datetime,
-        interval: str
+        exchange: str = "NSE",
+        interval: str = "DAY"
     ) -> List[HistoricalDataPoint]:
         """Fetch historical data from NSE/BSE Option Chain (for indices only)."""
         try:
