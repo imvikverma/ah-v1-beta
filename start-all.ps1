@@ -541,6 +541,20 @@ function Invoke-AllProcessesWithFixes {
 
 function Invoke-QuickDeploy {
     Write-Host "`n=== Quick Deploy (1-Click) ===" -ForegroundColor Magenta
+    Write-Host "Using incremental deployment - only deploys changed files" -ForegroundColor Yellow
+    Write-Host ""
+    
+    # Check if incremental deployment script exists
+    $incrementalScript = Join-Path $projectRoot "scripts\deploy_incremental.ps1"
+    if (Test-Path $incrementalScript) {
+        Write-Host "🚀 Using optimized incremental deployment..." -ForegroundColor Cyan
+        Set-Location $projectRoot
+        & $incrementalScript
+        return
+    }
+    
+    # Fallback to full deployment
+    Write-Host "⚠️  Incremental script not found, using full deployment" -ForegroundColor Yellow
     Write-Host "Building Flutter web and pushing to GitHub → Cloudflare auto-deploys" -ForegroundColor Yellow
     Write-Host ""
     
@@ -595,7 +609,7 @@ function Invoke-QuickDeploy {
     
     if ($stagedFiles) {
         $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-        git commit -m "Quick deploy: Update Flutter web build ($timestamp)" 2>&1 | Out-Null
+        git commit -m "Quick deploy: Update Flutter web build ($timestamp) [skip ci]" 2>&1 | Out-Null
         
         Write-Host "   Pushing to GitHub..." -ForegroundColor Gray
         $pushOutput = git push origin main 2>&1 | Out-String

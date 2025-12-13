@@ -8,7 +8,7 @@ on:
     paths:
       - 'aurum_harmony/frontend/**'
       - '.github/workflows/cloudflare-deploy.yml'
-      - 'docs/**'  # Also trigger when docs/ changes
+      # Removed 'docs/**' to prevent infinite loop - workflows commit to docs/ which would retrigger
   workflow_dispatch:  # Allow manual trigger
 
 jobs:
@@ -73,7 +73,7 @@ jobs:
           git status
           if ! git diff --staged --quiet; then
             echo "Committing fallback changes..."
-            git commit -m "Auto-deploy: Update Flutter web build (fallback)"
+            git commit -m "Auto-deploy: Update Flutter web build (fallback) [skip ci]"
             echo "Pushing to GitHub..."
             git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
             # Pull with rebase first to handle diverged branches

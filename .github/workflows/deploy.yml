@@ -6,7 +6,7 @@ on:
     paths:
       - 'aurum_harmony/frontend/**'
       - '.github/workflows/deploy.yml'
-      - 'docs/**'
+      # Removed 'docs/**' to prevent infinite loop - workflows commit to docs/ which would retrigger
   workflow_dispatch:  # Allow manual trigger
 
 jobs:
