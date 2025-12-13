@@ -58,26 +58,32 @@ jobs:
           echo "Build files copied. Contents of docs/:"
           ls -la docs/ | head -20
 
-      - name: Commit and push docs
+      - name: Deploy to Cloudflare Pages (via build hook)
         run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git add docs
-          git status
-          if git diff --staged --quiet; then
-            echo "No changes to commit"
+          # Check if Cloudflare deploy hook is available
+          if [ -z "${{ secrets.CLOUDFLARE_DEPLOY_HOOK }}" ]; then
+            echo "⚠️  CLOUDFLARE_DEPLOY_HOOK not set - skipping direct deploy"
+            echo "💡 Cloudflare Pages should auto-deploy from GitHub connection"
+            echo "   Or configure CLOUDFLARE_DEPLOY_HOOK secret to trigger deployment"
           else
-            echo "Committing changes..."
-            git commit -m "Auto-deploy: Update Flutter web build [skip ci]"
-            echo "Pushing to GitHub..."
-            # Pull with rebase first to handle diverged branches
-            git pull --rebase origin ${{ github.ref_name }} || true
-            # Push with force-with-lease for safety
-            git push origin HEAD:${{ github.ref_name }} || {
-              echo "Push failed, trying with force-with-lease..."
-              git push --force-with-lease origin HEAD:${{ github.ref_name }}
-            }
-            echo "Push completed successfully"
+            echo "🚀 Triggering Cloudflare Pages deployment via webhook..."
+            response=$(curl -s -w "\n%{http_code}" -X POST "${{ secrets.CLOUDFLARE_DEPLOY_HOOK }}")
+            http_code=$(echo "$response" | tail -n1)
+            if [ "$http_code" -eq 200 ] || [ "$http_code" -eq 204 ]; then
+              echo "✅ Deployment triggered successfully"
+            else
+              echo "⚠️  Deployment trigger returned HTTP $http_code"
+            fi
           fi
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
+          # Note: We don't commit/push to docs/ anymore because:
+          # 1. Branch is protected and requires PRs
+          # 2. Cloudflare Pages should build from source (aurum_harmony/frontend/)
+          # 3. Or use Cloudflare Pages GitHub integration to auto-build
+          echo ""
+          echo "💡 Deployment options:"
+          echo "   1. Connect Cloudflare Pages to GitHub (recommended)"
+          echo "      → Cloudflare will build from aurum_harmony/frontend/"
+          echo "   2. Use CLOUDFLARE_DEPLOY_HOOK to trigger builds"
+          echo "   3. Manual deployment via Cloudflare Dashboard"
+        continue-on-error: true
