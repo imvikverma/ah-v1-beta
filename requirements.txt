@@ -9,7 +9,7 @@ SQLAlchemy==2.0.23
 # Authentication & Security
 bcrypt==4.0.1
 PyJWT==2.8.0
-cryptography==41.0.7
+cryptography==44.0.1
 
 # Data Science (Stable - Compatible with Python 3.11)
 pandas==2.0.3
