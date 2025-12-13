@@ -37,10 +37,16 @@ jobs:
         working-directory: worker
         run: |
           if [ -f "package.json" ]; then
-            npm ci
+            if [ -f "package-lock.json" ]; then
+              echo "📦 Using npm ci (package-lock.json found)"
+              npm ci
+            else
+              echo "📦 Using npm install (no package-lock.json)"
+              npm install
+            fi
           else
-            echo "⚠️  package.json not found in worker/, installing dependencies..."
-            npm install
+            echo "❌ package.json not found in worker/"
+            exit 1
           fi
 
       - name: TypeScript type check
