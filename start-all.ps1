@@ -37,7 +37,9 @@ function Show-Menu {
     Write-Host "  3. Quick Deploy [1-Click: Build & Push to GitHub → Cloudflare]" -ForegroundColor Magenta
     Write-Host "  4. Invoke Backend + Frontend [Sequential with Health Check]" -ForegroundColor Cyan
     Write-Host "  5. Stop All Services [Clean shutdown of Backend + Frontend]" -ForegroundColor Red
-    Write-Host "  6. Exit" -ForegroundColor Gray
+    Write-Host "  6. Start Flask Backend Only [Silent/Minimized]" -ForegroundColor Cyan
+    Write-Host "  7. Start Flutter Frontend Only [Silent/Minimized]" -ForegroundColor Cyan
+    Write-Host "  8. Exit" -ForegroundColor Gray
     Write-Host ""
 }
 
@@ -871,7 +873,7 @@ do {
     
     Show-Menu
     # Get user choice (trim to handle any whitespace issues)
-    $choice = (Read-Host "Enter your choice (1-6)").Trim()
+    $choice = (Read-Host "Enter your choice (1-8)").Trim()
     
     switch ($choice) {
         "1" {
@@ -905,11 +907,27 @@ do {
             $null = Read-Host
         }
         "6" {
+            Set-Location $projectRoot
+            Write-Host "`n🚀 Starting Flask Backend Only..." -ForegroundColor Cyan
+            Start-Backend
+            Write-Host "`n✅ Backend started! Check: http://localhost:5000" -ForegroundColor Green
+            Write-Host "`nPress any key to return to menu..."
+            $null = Read-Host
+        }
+        "7" {
+            Set-Location $projectRoot
+            Write-Host "`n🚀 Starting Flutter Frontend Only..." -ForegroundColor Cyan
+            Start-Frontend
+            Write-Host "`n✅ Frontend started! Check: http://localhost:58643" -ForegroundColor Green
+            Write-Host "`nPress any key to return to menu..."
+            $null = Read-Host
+        }
+        "8" {
             Write-Host "`nExiting..." -ForegroundColor Yellow
             exit 0
         }
         default {
-            Write-Host "`nInvalid choice. Please select 1-6." -ForegroundColor Red
+            Write-Host "`nInvalid choice. Please select 1-8." -ForegroundColor Red
             Start-Sleep -Seconds 1
         }
     }
