@@ -69,14 +69,34 @@ jobs:
             exit 1
           fi
           
-          # Deploy from root (wrangler.toml is here)
-          wrangler deploy --env production --config wrangler.toml
+          # Check if secrets are set (for debugging)
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "❌ CLOUDFLARE_API_TOKEN is not set!"
+            echo "   Check if GitHub secret 'Cloudflare_API_Token' exists"
+            exit 1
+          else
+            echo "✅ CLOUDFLARE_API_TOKEN is set (length: ${#CLOUDFLARE_API_TOKEN})"
+          fi
           
-          if [ $? -eq 0 ]; then
+          if [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "❌ CLOUDFLARE_ACCOUNT_ID is not set!"
+            echo "   Check if GitHub secret 'Cloudflare_Account_ID' exists"
+            exit 1
+          else
+            echo "✅ CLOUDFLARE_ACCOUNT_ID is set: $CLOUDFLARE_ACCOUNT_ID"
+          fi
+          
+          # Deploy from root (wrangler.toml is here)
+          echo "📤 Running wrangler deploy..."
+          wrangler deploy --env production --config wrangler.toml 2>&1
+          DEPLOY_EXIT_CODE=$?
+          
+          if [ $DEPLOY_EXIT_CODE -eq 0 ]; then
             echo "✅ Worker deployed successfully!"
             echo "🌐 URL: https://api.ah.saffronbolt.in"
           else
-            echo "❌ Worker deployment failed"
+            echo "❌ Worker deployment failed with exit code: $DEPLOY_EXIT_CODE"
+            echo "📋 Full error output above"
             exit 1
           fi
 
