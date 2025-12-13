@@ -1483,6 +1483,123 @@ const routes: Route[] = [
       );
     },
   },
+  {
+    method: 'GET',
+    path: '/api/paper/orders',
+    handler: async (request, env: Env) => {
+      return Response.json(
+        {
+          success: true,
+          orders: [],
+        },
+        { status: 200, headers: corsHeaders }
+      );
+    },
+  },
+  {
+    method: 'GET',
+    path: '/api/paper/orders/history',
+    handler: async (request, env: Env) => {
+      return Response.json(
+        {
+          success: true,
+          orders: [],
+        },
+        { status: 200, headers: corsHeaders }
+      );
+    },
+  },
+  {
+    method: 'POST',
+    path: '/api/paper/orders',
+    handler: async (request, env: Env) => {
+      return Response.json(
+        {
+          success: false,
+          error: 'Paper trading orders not yet implemented in Worker. Use localhost backend.',
+        },
+        { status: 501, headers: corsHeaders }
+      );
+    },
+  },
+  {
+    method: 'POST',
+    path: '/api/paper/reset',
+    handler: async (request, env: Env) => {
+      return Response.json(
+        {
+          success: true,
+          message: 'Portfolio reset (mock)',
+        },
+        { status: 200, headers: corsHeaders }
+      );
+    },
+  },
+  // Report endpoints
+  {
+    method: 'GET',
+    path: new RegExp('^/report/user/'),
+    handler: async (request, env: Env) => {
+      return Response.json(
+        {
+          success: true,
+          message: 'Report endpoint not yet implemented in Worker. Use localhost backend.',
+        },
+        { status: 501, headers: corsHeaders }
+      );
+    },
+  },
+  // Admin endpoints
+  {
+    method: 'GET',
+    path: '/api/admin/users',
+    handler: async (request, env: Env) => {
+      const authHeader = request.headers.get('Authorization');
+      if (!authHeader) {
+        return Response.json(
+          { error: 'Authorization required' },
+          { status: 401, headers: corsHeaders }
+        );
+      }
+      return Response.json(
+        {
+          success: true,
+          users: [],
+          message: 'Admin endpoint not yet implemented in Worker. Use localhost backend.',
+        },
+        { status: 501, headers: corsHeaders }
+      );
+    },
+  },
+  // Broker endpoints
+  {
+    method: 'GET',
+    path: '/api/brokers/list',
+    handler: async (request, env: Env) => {
+      return Response.json(
+        {
+          success: true,
+          brokers: [],
+          message: 'Broker endpoints not yet implemented in Worker. Use localhost backend.',
+        },
+        { status: 501, headers: corsHeaders }
+      );
+    },
+  },
+  // Orchestrator endpoint
+  {
+    method: 'POST',
+    path: '/api/orchestrator/run',
+    handler: async (request, env: Env) => {
+      return Response.json(
+        {
+          success: false,
+          error: 'Orchestrator endpoint not yet implemented in Worker. Use localhost backend.',
+        },
+        { status: 501, headers: corsHeaders }
+      );
+    },
+  },
 ];
 
 // Match route helper
