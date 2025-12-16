@@ -45,16 +45,46 @@ const routes: Route[] = [
   {
     method: 'GET',
     path: '/health',
-    handler: async () => {
-      return Response.json(
-        {
-          status: 'ok',
-          service: 'AurumHarmony API',
-          version: '1.0',
-          diagnostic_tag: 'worker-2025-12-16-a',
-        },
-        { status: 200, headers: corsHeaders }
-      );
+    handler: async (_request, env: Env) => {
+      const startedAt = new Date().toISOString();
+
+      // Default health payload
+      const basePayload: any = {
+        status: 'ok',
+        service: 'AurumHarmony API',
+        version: '1.0',
+        diagnostic_tag: 'worker-2025-12-16-b',
+        started_at: startedAt,
+      };
+
+      // Check DB connectivity (best‑effort)
+      try {
+        if (env.DB) {
+          const result = await env.DB.prepare('SELECT 1 as ok').first();
+          basePayload.db = {
+            status: 'ok',
+            message: 'D1 reachable',
+            result,
+          };
+        } else {
+          basePayload.db = {
+            status: 'missing',
+            message: 'D1 binding DB not configured on this Worker',
+          };
+        }
+      } catch (dbError: any) {
+        basePayload.db = {
+          status: 'error',
+          message: dbError?.message || 'Unknown DB error',
+        };
+      }
+
+      // JWT secret presence (do not expose the value)
+      basePayload.jwt = {
+        configured: !!env.JWT_SECRET,
+      };
+
+      return Response.json(basePayload, { status: 200, headers: corsHeaders });
     },
   },
   {
