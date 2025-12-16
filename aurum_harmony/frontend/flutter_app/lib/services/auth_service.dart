@@ -36,7 +36,7 @@ class AuthService {
   static DateTime? _lastLoginTime;
   static DateTime? _lastValidationTime;
   static int _validationFailureCount = 0;
-  static const _validationGracePeriod = Duration(seconds: 15); // Don't validate for 15s after login (increased for production)
+  static const _validationGracePeriod = Duration(seconds: 30); // Don't validate for 30s after login (increased for v2 API)
   static const _validationInterval = Duration(minutes: 2); // Only validate every 2 minutes
   static const _maxValidationFailures = 3; // Allow 3 failures before clearing token (increased for production)
 
