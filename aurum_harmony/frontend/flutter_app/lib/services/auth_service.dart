@@ -294,7 +294,7 @@ class AuthService {
             // Backend is not running or not reachable
             final isProduction = apiUrl.contains('saffronbolt.in') || apiUrl.contains('pages.dev');
             if (isProduction) {
-              throw Exception('Cannot connect to backend APIs.\n\nBoth production API and local backend failed:\n• Production API (https://api.ah.saffronbolt.in) is unreachable\n• Local backend (http://localhost:5000) is not running\n\nTo fix:\n1. Start Flask backend: Run Option 1 or 4 in start-all.ps1\n2. Access app from http://localhost (not production URL)');
+              throw Exception('Cannot connect to backend APIs.\n\nBoth production API and local backend failed:\n• Production API (https://api-v2.saffronbolt.in) is unreachable\n• Local backend (http://localhost:5000) is not running\n\nTo fix:\n1. Start Flask backend: Run Option 1 or 4 in start-all.ps1\n2. Access app from http://localhost (not production URL)');
             } else {
               throw Exception('Cannot connect to backend API. Please ensure the Flask backend is running on localhost:5000.\n\nStart it with: Option 1 or 4 in start-all.ps1');
             }
@@ -494,7 +494,7 @@ class AuthService {
             // Backend is not running or not reachable
             final isProduction = apiUrl.contains('saffronbolt.in') || apiUrl.contains('pages.dev');
             if (isProduction) {
-              throw Exception('Cannot connect to backend APIs.\n\nBoth production API and local backend failed:\n• Production API (https://api.ah.saffronbolt.in) is unreachable\n• Local backend (http://localhost:5000) is not running\n\nTo fix:\n1. Start Flask backend: Run Option 1 or 4 in start-all.ps1\n2. Access app from http://localhost (not production URL)');
+              throw Exception('Cannot connect to backend APIs.\n\nBoth production API and local backend failed:\n• Production API (https://api-v2.saffronbolt.in) is unreachable\n• Local backend (http://localhost:5000) is not running\n\nTo fix:\n1. Start Flask backend: Run Option 1 or 4 in start-all.ps1\n2. Access app from http://localhost (not production URL)');
             } else {
               throw Exception('Cannot connect to backend API. Please ensure the Flask backend is running on localhost:5000.\n\nStart it with: Option 1 or 4 in start-all.ps1');
             }

@@ -5,11 +5,11 @@ import 'dart:html' as html;
 String get kBackendBaseUrl {
   final hostname = html.window.location.hostname;
   
-  // Use production Cloudflare Worker API for production domains
+  // Use production Cloudflare Worker API v2 for production domains
   if (hostname != null && 
       (hostname.contains('saffronbolt.in') || 
        hostname.contains('aurumharmony-v1-beta.pages.dev'))) {
-    return 'https://api.ah.saffronbolt.in';
+    return 'https://api-v2.saffronbolt.in';
   }
   
   // Use localhost for local development
