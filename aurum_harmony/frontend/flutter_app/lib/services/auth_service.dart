@@ -36,7 +36,7 @@ class AuthService {
   static DateTime? _lastLoginTime;
   static DateTime? _lastValidationTime;
   static int _validationFailureCount = 0;
-  static const _validationGracePeriod = Duration(seconds: 30); // Don't validate for 30s after login (increased for v2 API)
+  static const _validationGracePeriod = Duration(minutes: 5); // Don't validate for 5 minutes after login (skip /me validation entirely)
   static const _validationInterval = Duration(minutes: 2); // Only validate every 2 minutes
   static const _maxValidationFailures = 3; // Allow 3 failures before clearing token (increased for production)
 
@@ -46,10 +46,13 @@ class AuthService {
     if (token == null) return null;
     
     // Skip validation if we just logged in (grace period)
+    // This prevents "session expired" errors immediately after login
     if (_lastLoginTime != null) {
       final timeSinceLogin = DateTime.now().difference(_lastLoginTime!);
       if (timeSinceLogin < _validationGracePeriod) {
-        return token; // Trust the token, skip validation immediately after login
+        // Trust the token, skip /me validation entirely after login
+        // Other API calls (like portfolio) will validate the token naturally
+        return token;
       }
     }
     
