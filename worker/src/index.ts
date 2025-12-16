@@ -47,7 +47,12 @@ const routes: Route[] = [
     path: '/health',
     handler: async () => {
       return Response.json(
-        { status: 'ok', service: 'AurumHarmony API', version: '1.0' },
+        {
+          status: 'ok',
+          service: 'AurumHarmony API',
+          version: '1.0',
+          diagnostic_tag: 'worker-2025-12-16-a',
+        },
         { status: 200, headers: corsHeaders }
       );
     },
