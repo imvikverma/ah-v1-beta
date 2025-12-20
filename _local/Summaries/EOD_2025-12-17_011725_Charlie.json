@@ -1,0 +1,94 @@
+{
+  "key_files": {
+    "worker/src/index.ts": "Cloudflare Worker API (v1 and v2)",
+    "aurum_harmony/master_codebase/Master_AurumHarmony_261125.py": "Flask backend API",
+    "scripts/generate-readme.ps1": "Dynamic README generator with version control",
+    "start-all.ps1": "Master launcher script for all services",
+    "CHANGELOG.md": "Project changelog",
+    "scripts/update-changelog.ps1": "Interactive changelog updater",
+    ".version": "Version tracking file (auto-increments)",
+    "aurum_harmony/frontend/flutter_app/lib/services/auth_service.dart": "Frontend authentication service",
+    "scripts/run-eod-flow.ps1": "End of Day workflow automation",
+    "wrangler.toml": "Cloudflare Worker configuration"
+  },
+  "project_status": {
+    "version": "1.0.2",
+    "current_update": "011725",
+    "last_commit": {
+      "date": "2025-12-16",
+      "hash": "442f8c8895e832f0b6a596adb0f7d8f414bdae2f",
+      "message": "fix: skip /me validation for 5 minutes after login to prevent session expired errors"
+    },
+    "last_update": "17/12/2025 01:07:12 IST"
+  },
+  "deployment_status": {
+    "v1_api": "https://api.ah.saffronbolt.in",
+    "v2_admin": "https://admin-v2.saffronbolt.in (pending deployment)",
+    "v2_api": "https://api-v2.saffronbolt.in",
+    "v1_frontend": "https://ah.saffronbolt.in",
+    "v2_frontend": "https://ah-v2.saffronbolt.in"
+  },
+  "eod_flow": {
+    "steps": [
+      "Update README & CHANGELOG",
+      "Clean up/Organise file structure",
+      "Check ML training status",
+      "Generate EOD summary (this file)"
+    ],
+    "script": "scripts/run-eod-flow.ps1"
+  },
+  "metadata": {
+    "user": "Vik",
+    "assistant": "Charlie",
+    "generated_at": "011725",
+    "date": "2025-12-17",
+    "session_type": "EOD Summary",
+    "version": "1.0.2"
+  },
+  "configurations": {
+    "date_format": "DD/MM/YYYY",
+    "deployment": "Cloudflare Pages (frontend) + Workers (API)",
+    "timezone": "IST (UTC+5:30)",
+    "database": "Cloudflare D1 (aurum-harmony-db)",
+    "version_format": "MAJOR.MINOR.PATCH (auto-increments patch on EOD)",
+    "jwt_secret": "Configured in Worker and local .env"
+  },
+  "pending_tasks": [
+    "Verify Session Expired fix works (system check tomorrow)",
+    "Run system integrity tests",
+    "Test broker API connectivity (HDFC Sky, Kotak Neo)",
+    "Run backtesting tests (realistic and edge cases)",
+    "Review IMPLEMENTATION_STATUS.md and MVP_COMPLETION_ASSESSMENT.md",
+    "Deploy v2 admin panel to Cloudflare Pages"
+  ],
+  "important_paths": {
+    "version_file": ".version",
+    "scripts": "scripts/",
+    "changelog": "CHANGELOG.md",
+    "frontend": "aurum_harmony/frontend/flutter_app/",
+    "backend": "aurum_harmony/master_codebase/Master_AurumHarmony_261125.py",
+    "readme": "README.md",
+    "documentation": "_local/documentation/",
+    "worker": "worker/src/index.ts",
+    "project_root": "D:\\Projects\\AI Projects\\Testbed\\Downloads Repo\\AurumHarmonyTest"
+  },
+  "recent_work": [
+    "Fixed Session Expired issue (5-minute grace period after login)",
+    "Set up v2 admin panel with Astro + shadcn/ui",
+    "Created EOD flow automation script",
+    "Updated README generator with IST timestamps and version auto-increment",
+    "Created comprehensive documentation for pending work"
+  ],
+  "notes": [
+    "Session Expired fix: 5-minute grace period in auth_service.dart (both v1 and v2)",
+    "Version auto-increments on each README generation (patch version)",
+    "All timestamps in IST (Indian Standard Time, UTC+5:30)",
+    "Date format: DD/MM/YYYY",
+    "EOD flow runs automatically: README generator, changelog updater, cleanup, ML check, summary"
+  ],
+  "project_stats": {
+    "python_files": 25671,
+    "powershell_scripts": 84,
+    "flutter_files": 237
+  }
+}

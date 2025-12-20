@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: aurumharmony
+  labels:
+    name: aurumharmony
+    environment: production
+

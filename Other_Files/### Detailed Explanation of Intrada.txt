@@ -1,0 +1,106 @@
+### Detailed Explanation of Intraday Index Options Trading Setups in AurumHarmony
+
+AurumHarmony is designed as a **completely hands-free intraday index options trading system** targeting Nifty/BankNifty/Sensex. The core philosophy is to eliminate user-driven trading decisions (the primary cause of 95% retail failure rates) by fully automating signal generation, execution, and risk management via AI and broker APIs.
+
+#### 1. System Architecture – Hands-Free Trading Flow
+- **No User Inputs on Trades**: Users only interact for viewing (dashboard/reports), configuring brokers/subscriptions, or triggering "Run Prediction" (which is backend-orchestrated only). No manual order placement, modifications, or strategy selection.
+- **Automation Pipeline**:
+  - User App (Flutter) → "Run Prediction" button → Backend Worker (Cloudflare) → Golden Guardrails (8 engines) → Broker APIs (HDFC Sky/Kotak Neo) → Execution on NSE/BSE.
+  - All trades executed automatically in paper mode initially, with real mode post-verification.
+- **Broker Integration**: Live via HDFC Sky and Kotak Neo APIs for order placement, position monitoring, and real-time data feeds. Latency target <0.2s for HFT-style execution.
+- **Guardrails Enforcement**: Compliance (SEBI exposure limits), volatility filters, and dynamic scaling prevent halts.
+
+#### 2. Data Handling & Backtesting
+- **Data Sources**: Intraday 5-min candles from NSE/BSE (via yfinance for backtesting), supplemented by broker feeds for live.
+- **Backtesting Framework**: Python + backtrader library.
+  - Dataset: 3-6 months historical intraday data (realistic + edge cases like high VIX days).
+  - Process: Fetch → Clean → Feature engineering → Strategy simulation → Analyzers (Sharpe, DrawDown, TradeAnalyzer for win rate).
+- **Trade Volume Implication (18-27/day)**: Indicates high-frequency setup—likely scanning multiple strikes/expiries, entering on signals, re-entering on pullbacks (max 4 trades per 15-min cycle), and exiting EOD or on targets. This volume requires low-latency API calls and broker support for rapid order routing.
+
+#### 3. ML Components for Volatility & Signals
+- **Current Implementation**:
+  - **LSTM (PyTorch)**: Time-series volatility forecasting using historical closes as proxy (trained on 200 bars, predicts next value to filter high-vol periods).
+  - **RandomForest (sklearn)**: Feature-based prediction with lagged closes (5), volume lag, RSI (14), ATR (14) to predict volatility; skips trades if >1.5x average ATR.
+- **Why This Works**: Combines sequential patterns (LSTM) with feature importance (RF) for robust filtering—sustaining simulated >70% confidence signals.
+- **Enhancement Suggestions**:
+  - Hybrid: Use RF predictions as additional input features for LSTM.
+  - Add VIX as external feature (fetch via APIs) for better market mood detection.
+  - Ensemble: Weight RF/LSTM outputs (e.g., 60/40) for final volatility score.
+  - Retrain weekly on rolling 30-day data (already in Guardrails engine 2).
+
+#### 4. User Tiers & Progression
+- **Tiers** (via Noble Growth Drivers):
+  - **Bronze Beat**: Entry level (₹5k capital, cyclical NGD).
+  - **Silver Surge**: Increments to ₹50k/₹1L (Restricted/Semi-Restricted).
+  - **Gold Glide**: Higher capital, better terms (lower fees).
+- **Logic**: Users "level up" based on performance/capital deposits—system auto-adjusts leverage, trade size, and fee share.
+- **Fee Structure**: 30% (Restricted), 12.5% (Semi-Restricted) deducted from profits.
+
+#### 5. Current Status
+- **MVP**: 90% complete (v2 separated/deployed at ah-v2/api-v2).
+- **Key Milestones**: Broker APIs live, backtesting with ML, Flutter apps in polish, 47+ waitlist.
+- **Next**: Admin panel deploy, full system tests, beta launch.
+
+### Updated Code Snippets
+
+#### User Tier Manager Module (Python Backend Example – Integrate into Flask Worker)
+```python
+class UserTierManager:
+    TIERS = {
+        "bronze": {"capital_min": 5000, "fee_rate": 0.30, "max_accounts": 1},
+        "silver": {"capital_min": 50000, "fee_rate": 0.20, "max_accounts": 2},
+        "gold": {"capital_min": 100000, "fee_rate": 0.125, "max_accounts": 6}
+    }
+
+    def get_tier(self, capital):
+        for tier, config in reversed(list(self.TIERS.items())):
+            if capital >= config["capital_min"]:
+                return tier, config
+        return "bronze", self.TIERS["bronze"]
+
+    def calculate_fee(self, profit, tier):
+        _, config = self.get_tier(profit)  # Placeholder – use user capital
+        return profit * config["fee_rate"]
+
+    def check_increment_eligibility(self, user):
+        current_tier, config = self.get_tier(user['capital'])
+        # Logic for Noble Growth Drivers progression
+        if user['performance_score'] > threshold and user['capital'] >= next_threshold:
+            return True, next_tier
+        return False, current_tier
+```
+
+#### Flutter Frontend Tier Display Widget (lib/widgets/tier_card.dart)
+```dart
+class TierCard extends StatelessWidget {
+  final String tier;
+  final double capital;
+  final double feeRate;
+
+  const TierCard({required this.tier, required this.capital, required this.feeRate});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 8,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(colors: [Color(0xFFFF9933), Color(0xFFFFD700)]),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        padding: EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Text(tier.toUpperCase(), style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white)),
+            Text("Capital: ₹${capital.toStringAsFixed(0)}", style: TextStyle(color: Colors.white)),
+            Text("Fee Rate: ${(feeRate * 100).toStringAsFixed(1)}%", style: TextStyle(color: Colors.white)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+```
+
+This covers the setup comprehensively. Ready for next tasks (e.g., integrate tier manager into backend or test simulations). 💪

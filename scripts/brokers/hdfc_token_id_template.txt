@@ -1,0 +1,15 @@
+# HDFC Sky Token ID Template
+# 
+# INSTRUCTIONS:
+# 1. After logging in to HDFC Sky developer portal, check the URL
+# 2. The URL should look like:
+#    https://developer.hdfcsky.com/oapi/v1/dashboard/apps?api_key=...&token_id=...
+# 3. Copy the ENTIRE URL and paste it below
+# 4. Save this file
+# 5. Run: .\scripts\brokers\import_hdfc_token_id.ps1
+#
+# IMPORTANT: This file will be deleted after importing for security
+
+# Paste the COMPLETE URL here (with ?api_key=...&token_id=...)
+URL=https://developer.hdfcsky.com/oapi/v1/dashboard/apps?api_key=3347f702031d45539a95e94a0f46d2f2&token_id=5ca3e34af252476b8e0b32254c657311
+

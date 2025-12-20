@@ -1,0 +1,5 @@
+How about we remove the admin tab from the normal user interface and only keep it on the admin interface (admin with elevated credentials - full access of user management with drop downs in every field)....I know it's jumping way ahead, but, put it down so I don't forget!
+
+.\scripts\test_paper_trade.ps1 -Token "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjo0LCJpYXQiOjE3NjU5ODg3NzksImV4cCI6MTc2NjU5MzU3OX0.o4bQ-hAeVH3pV9OUOOymKYEnXiUAp5PlXT-jVv7jhPM" -Symbol "RELIANCE" -Quantity 10
+
+.\scripts\test_paper_trade.ps1 -Token "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjo0LCJpYXQiOjE3NjU5ODg3NzksImV4cCI6MTc2NjU5MzU3OX0.o4bQ-hAeVH3pV9OUOOymKYEnXiUAp5PlXT-jVv7jhPM" -Symbol "NIFTY50" -Quantity 10

@@ -1,0 +1,89 @@
+name: Deploy to Cloudflare Pages (Simple)
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - 'aurum_harmony/frontend/**'
+      - '.github/workflows/cloudflare-deploy-simple.yml'
+      # Removed 'docs/**' to prevent infinite loop - workflows commit to docs/ which would retrigger
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    name: Build Flutter Web and Commit to docs/
+    permissions:
+      contents: write  # Required to push commits
+      deployments: write  # Required if using deployment features
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0  # Full history for git operations
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.27.0'  # Stable version
+          channel: 'stable'
+          cache: true
+
+      - name: Get Flutter dependencies
+        working-directory: aurum_harmony/frontend/flutter_app
+        run: flutter pub get
+
+      - name: Build Flutter web
+        working-directory: aurum_harmony/frontend/flutter_app
+        run: |
+          flutter clean
+          flutter pub get
+          flutter build web --release --verbose
+        continue-on-error: false
+
+      - name: Prepare docs directory
+        run: |
+          if [ -d "docs" ]; then
+            rm -rf docs
+          fi
+          mkdir -p docs
+
+      - name: Copy build to docs
+        run: |
+          cp -r aurum_harmony/frontend/flutter_app/build/web/* docs/
+          echo "Build files copied. Contents of docs/:"
+          ls -la docs/ | head -20
+
+      - name: Deploy to Cloudflare Pages (via build hook)
+        run: |
+          # Check if Cloudflare deploy hook is available
+          if [ -z "${{ secrets.CLOUDFLARE_DEPLOY_HOOK }}" ]; then
+            echo "⚠️  CLOUDFLARE_DEPLOY_HOOK not set - skipping direct deploy"
+            echo "💡 Cloudflare Pages should auto-deploy from GitHub connection"
+            echo "   Or configure CLOUDFLARE_DEPLOY_HOOK secret to trigger deployment"
+          else
+            echo "🚀 Triggering Cloudflare Pages deployment via webhook..."
+            response=$(curl -s -w "\n%{http_code}" -X POST "${{ secrets.CLOUDFLARE_DEPLOY_HOOK }}")
+            http_code=$(echo "$response" | tail -n1)
+            if [ "$http_code" -eq 200 ] || [ "$http_code" -eq 204 ]; then
+              echo "✅ Deployment triggered successfully"
+            else
+              echo "⚠️  Deployment trigger returned HTTP $http_code"
+            fi
+          fi
+          
+          # Note: We don't commit/push to docs/ anymore because:
+          # 1. Branch is protected and requires PRs
+          # 2. Cloudflare Pages should build from source (aurum_harmony/frontend/)
+          # 3. Or use Cloudflare Pages GitHub integration to auto-build
+          echo ""
+          echo "💡 Deployment options:"
+          echo "   1. Connect Cloudflare Pages to GitHub (recommended)"
+          echo "      → Cloudflare will build from aurum_harmony/frontend/"
+          echo "   2. Use CLOUDFLARE_DEPLOY_HOOK to trigger builds"
+          echo "   3. Manual deployment via Cloudflare Dashboard"
+        continue-on-error: true

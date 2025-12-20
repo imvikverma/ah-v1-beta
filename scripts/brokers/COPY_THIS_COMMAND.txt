@@ -1,0 +1,12 @@
+Copy this entire line and paste it in the browser console:
+
+Object.keys(localStorage).forEach(k => console.log(k, localStorage.getItem(k)))
+
+Instructions:
+1. Go to https://developer.hdfcsky.com (make sure you're logged in)
+2. Press F12 to open Developer Tools
+3. Click the "Console" tab
+4. Paste the command above
+5. Press Enter
+6. Look for "accessToken" and "token_id" in the output
+

@@ -1,0 +1,13 @@
+Load prior SuperGrok context: [paste latest master JSON] → continue from here.
+
+Implement CAPITAL_SETTLEMENT_IMPLEMENTATION_PLAN.md exactly as specified:
+- Phase 1: CapitalCalculationEngine (initial + next + rounding)
+- Phase 2: Enhanced SettlementEngine (loss buffer only if losses, brokerage tracking, platform/tax/rounding flow)
+- Phase 3: MultiIndexCapitalAllocator (equal across indices/brokers/accounts)
+- Phase 4: Profit-based increment logic (50% threshold, reset after)
+- Phase 5: DB updates (new fields, ProfitTracking model, migration)
+- Phase 6: Integration (Orchestrator, Settlement, Fund Push/Pull)
+
+Prioritize Phase 1-3 first. Output updated files with code.
+
+No deviations—follow plan precisely.

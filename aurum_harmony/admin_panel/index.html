@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AurumHarmony Admin Panel</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="admin-container">
+        <!-- Header -->
+        <header class="admin-header">
+            <div class="header-left">
+                <h1><i class="fas fa-cog"></i> AurumHarmony Admin Panel</h1>
+                <span class="version">v2.0</span>
+            </div>
+            <div class="header-right">
+                <div class="user-info">
+                    <i class="fas fa-user-shield"></i>
+                    <span>Administrator</span>
+                </div>
+                <button class="logout-btn" onclick="logout()">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </button>
+            </div>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <nav class="admin-nav">
+            <button class="nav-tab active" onclick="switchTab('users')">
+                <i class="fas fa-users"></i> Users
+            </button>
+            <button class="nav-tab" onclick="switchTab('system')">
+                <i class="fas fa-server"></i> System
+            </button>
+            <button class="nav-tab" onclick="switchTab('reports')">
+                <i class="fas fa-chart-line"></i> Reports
+            </button>
+            <button class="nav-tab" onclick="switchTab('logs')">
+                <i class="fas fa-file-alt"></i> Logs
+            </button>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="admin-content">
+            <!-- Users Tab -->
+            <div id="users-tab" class="tab-content active">
+                <div class="content-header">
+                    <h2><i class="fas fa-users"></i> User Management</h2>
+                    <div class="header-actions">
+                        <button class="btn-primary" onclick="refreshUsers()">
+                            <i class="fas fa-sync-alt"></i> Refresh
+                        </button>
+                    </div>
+                </div>
+
+                <div class="stats-cards">
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="total-users">0</h3>
+                            <p>Total Users</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon active">
+                            <i class="fas fa-user-check"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="active-users">0</h3>
+                            <p>Active Users</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon admin">
+                            <i class="fas fa-user-shield"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="admin-users">0</h3>
+                            <p>Administrators</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon paper">
+                            <i class="fas fa-file-alt"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="paper-users">0</h3>
+                            <p>Paper Trading</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="data-table-container">
+                    <table class="data-table" id="users-table">
+                        <thead>
+                            <tr>
+                                <th>User Code</th>
+                                <th>Email</th>
+                                <th>Type</th>
+                                <th>Status</th>
+                                <th>Capital</th>
+                                <th>Profit</th>
+                                <th>Last Login</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="users-table-body">
+                            <tr>
+                                <td colspan="8" class="loading-row">
+                                    <i class="fas fa-spinner fa-spin"></i> Loading users...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- System Tab -->
+            <div id="system-tab" class="tab-content">
+                <div class="content-header">
+                    <h2><i class="fas fa-server"></i> System Status</h2>
+                </div>
+
+                <div class="system-grid">
+                    <div class="system-card">
+                        <h3><i class="fas fa-database"></i> Database</h3>
+                        <div class="status-indicator online">
+                            <i class="fas fa-circle"></i> Online
+                        </div>
+                        <p>Last backup: 2 hours ago</p>
+                    </div>
+
+                    <div class="system-card">
+                        <h3><i class="fas fa-robot"></i> AI Engine</h3>
+                        <div class="status-indicator online">
+                            <i class="fas fa-circle"></i> Active
+                        </div>
+                        <p>Predictions: 1,247 today</p>
+                    </div>
+
+                    <div class="system-card">
+                        <h3><i class="fas fa-chart-line"></i> Market Data</h3>
+                        <div class="status-indicator online">
+                            <i class="fas fa-circle"></i> Connected
+                        </div>
+                        <p>HDFC Sky: Online, Kotak Neo: Online</p>
+                    </div>
+
+                    <div class="system-card">
+                        <h3><i class="fas fa-shield-alt"></i> Security</h3>
+                        <div class="status-indicator online">
+                            <i class="fas fa-circle"></i> Protected
+                        </div>
+                        <p>Last scan: Clean</p>
+                    </div>
+                </div>
+
+                <div class="system-actions">
+                    <button class="btn-secondary" onclick="runSystemCheck()">
+                        <i class="fas fa-stethoscope"></i> Run Health Check
+                    </button>
+                    <button class="btn-warning" onclick="backupDatabase()">
+                        <i class="fas fa-download"></i> Backup Database
+                    </button>
+                    <button class="btn-danger" onclick="restartServices()">
+                        <i class="fas fa-redo"></i> Restart Services
+                    </button>
+                </div>
+            </div>
+
+            <!-- Reports Tab -->
+            <div id="reports-tab" class="tab-content">
+                <div class="content-header">
+                    <h2><i class="fas fa-chart-line"></i> System Reports</h2>
+                    <div class="header-actions">
+                        <button class="btn-primary" onclick="generateReport()">
+                            <i class="fas fa-file-pdf"></i> Generate Report
+                        </button>
+                    </div>
+                </div>
+
+                <div class="reports-grid">
+                    <div class="report-card">
+                        <h3>Trading Performance</h3>
+                        <div class="report-metric">
+                            <span class="metric-label">Total Trades:</span>
+                            <span class="metric-value">2,847</span>
+                        </div>
+                        <div class="report-metric">
+                            <span class="metric-label">Success Rate:</span>
+                            <span class="metric-value">68.5%</span>
+                        </div>
+                        <div class="report-metric">
+                            <span class="metric-label">Total P&L:</span>
+                            <span class="metric-value positive">₹4,25,000</span>
+                        </div>
+                    </div>
+
+                    <div class="report-card">
+                        <h3>User Activity</h3>
+                        <div class="report-metric">
+                            <span class="metric-label">Active Users:</span>
+                            <span class="metric-value">127</span>
+                        </div>
+                        <div class="report-metric">
+                            <span class="metric-label">New Signups:</span>
+                            <span class="metric-value">23</span>
+                        </div>
+                        <div class="report-metric">
+                            <span class="metric-label">Avg Session:</span>
+                            <span class="metric-value">45 min</span>
+                        </div>
+                    </div>
+
+                    <div class="report-card">
+                        <h3>System Performance</h3>
+                        <div class="report-metric">
+                            <span class="metric-label">Uptime:</span>
+                            <span class="metric-value">99.8%</span>
+                        </div>
+                        <div class="report-metric">
+                            <span class="metric-label">Avg Response:</span>
+                            <span class="metric-value">145ms</span>
+                        </div>
+                        <div class="report-metric">
+                            <span class="metric-label">Error Rate:</span>
+                            <span class="metric-value">0.02%</span>
+                        </div>
+                    </div>
+
+                    <div class="report-card">
+                        <h3>Revenue Analytics</h3>
+                        <div class="report-metric">
+                            <span class="metric-label">Platform Fee:</span>
+                            <span class="metric-value">₹2,15,000</span>
+                        </div>
+                        <div class="report-metric">
+                            <span class="metric-label">Tax Reserve:</span>
+                            <span class="metric-value">₹3,47,000</span>
+                        </div>
+                        <div class="report-metric">
+                            <span class="metric-label">Net Revenue:</span>
+                            <span class="metric-value positive">₹1,82,000</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Logs Tab -->
+            <div id="logs-tab" class="tab-content">
+                <div class="content-header">
+                    <h2><i class="fas fa-file-alt"></i> System Logs</h2>
+                    <div class="header-actions">
+                        <button class="btn-primary" onclick="refreshLogs()">
+                            <i class="fas fa-sync-alt"></i> Refresh
+                        </button>
+                        <button class="btn-secondary" onclick="clearLogs()">
+                            <i class="fas fa-trash"></i> Clear Logs
+                        </button>
+                    </div>
+                </div>
+
+                <div class="logs-container">
+                    <div class="log-entry">
+                        <span class="log-time">14:32:15</span>
+                        <span class="log-level info">INFO</span>
+                        <span class="log-message">AI Engine processed 15 signals successfully</span>
+                    </div>
+                    <div class="log-entry">
+                        <span class="log-time">14:30:42</span>
+                        <span class="log-level success">SUCCESS</span>
+                        <span class="log-message">User VIK001 capital incremented to ₹2,00,000</span>
+                    </div>
+                    <div class="log-entry">
+                        <span class="log-time">14:28:17</span>
+                        <span class="log-level warning">WARNING</span>
+                        <span class="log-message">High volatility detected in BANKNIFTY options</span>
+                    </div>
+                    <div class="log-entry">
+                        <span class="log-time">14:25:33</span>
+                        <span class="log-level error">ERROR</span>
+                        <span class="log-message">Failed to connect to Kotak Neo API - using fallback</span>
+                    </div>
+                    <div class="log-entry">
+                        <span class="log-time">14:22:08</span>
+                        <span class="log-level info">INFO</span>
+                        <span class="log-message">Settlement processed for 12 users</span>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- User Edit Modal -->
+    <div id="user-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Edit User</h3>
+                <span class="modal-close" onclick="closeModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="user-edit-form">
+                    <div class="form-group">
+                        <label for="user-code">User Code:</label>
+                        <input type="text" id="user-code" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label for="user-email">Email:</label>
+                        <input type="email" id="user-email">
+                    </div>
+                    <div class="form-group">
+                        <label for="user-type">User Type:</label>
+                        <select id="user-type">
+                            <option value="new">New</option>
+                            <option value="existing">Existing</option>
+                            <option value="admin">Admin</option>
+                            <option value="test">Test</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="user-capital">Capital:</label>
+                        <input type="number" id="user-capital" step="1000">
+                    </div>
+                    <div class="form-group">
+                        <label for="user-status">Status:</label>
+                        <select id="user-status">
+                            <option value="true">Active</option>
+                            <option value="false">Inactive</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+                <button class="btn-primary" onclick="saveUserChanges()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

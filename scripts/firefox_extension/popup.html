@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      width: 320px;
+      padding: 16px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f5f5;
+    }
+    
+    h1 {
+      font-size: 18px;
+      color: #333;
+      margin-bottom: 12px;
+    }
+    
+    .status {
+      background: white;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 12px;
+      border-left: 4px solid #667eea;
+    }
+    
+    .status-item {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    
+    .status-item:last-child {
+      margin-bottom: 0;
+    }
+    
+    .status-label {
+      color: #666;
+      font-size: 13px;
+    }
+    
+    .status-value {
+      color: #333;
+      font-weight: 600;
+      font-size: 13px;
+    }
+    
+    .status-value.enabled {
+      color: #4caf50;
+    }
+    
+    .status-value.disabled {
+      color: #999;
+    }
+    
+    .controls {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    
+    button {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
+    
+    button:active {
+      transform: translateY(0);
+    }
+    
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+    
+    .btn-secondary {
+      background: #e0e0e0;
+      color: #333;
+    }
+    
+    .btn-success {
+      background: #4caf50;
+      color: white;
+    }
+    
+    .btn-danger {
+      background: #f44336;
+      color: white;
+    }
+    
+    .info {
+      background: #e3f2fd;
+      padding: 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      color: #1976d2;
+      line-height: 1.4;
+    }
+    
+    .interval-input {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    
+    .interval-input label {
+      font-size: 12px;
+      color: #666;
+    }
+    
+    .interval-input input {
+      flex: 1;
+      padding: 6px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🚀 AurumHarmony Auto-Refresh</h1>
+  
+  <div class="status" id="status">
+    <div class="status-item">
+      <span class="status-label">Status:</span>
+      <span class="status-value" id="statusText">Loading...</span>
+    </div>
+    <div class="status-item">
+      <span class="status-label">Interval:</span>
+      <span class="status-value" id="intervalText">--</span>
+    </div>
+    <div class="status-item">
+      <span class="status-label">Monitored Tabs:</span>
+      <span class="status-value" id="tabsText">--</span>
+    </div>
+  </div>
+  
+  <div class="interval-input">
+    <label for="intervalInput">Interval (seconds):</label>
+    <input type="number" id="intervalInput" min="10" max="300" value="30">
+  </div>
+  
+  <div class="controls">
+    <button class="btn-primary" id="startBtn">▶ Start</button>
+    <button class="btn-secondary" id="stopBtn">⏸ Stop</button>
+  </div>
+  
+  <div class="controls">
+    <button class="btn-success" id="refreshBtn">🔄 Refresh Now</button>
+  </div>
+  
+  <div class="info">
+    <strong>💡 How it works:</strong><br>
+    This extension automatically refreshes monitored tabs (Cloudflare Pages, Dashboard, GitHub) at the configured interval, bypassing cross-origin restrictions.
+  </div>
+  
+  <script src="popup.js"></script>
+</body>
+</html>
+

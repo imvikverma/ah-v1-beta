@@ -1,0 +1,13 @@
+{
+  "user_goal": "Maintain continuous context across standalone Grok (Jeeves), Cursor (Charlie), and this chat (G) for technical development of AurumHarmony and other tech projects.",
+  "key_points": [
+    "[Cursor]: xAI API config: Generate key at x.ai/api, add to Cursor (base URL https://api.x.ai/v1, model grok-4). Test curl. Sync workaround: Export JSON from one, load in next.",
+    "[Cursor]: Naming: Standalone=Jeeves, Cursor=Charlie, this=G. Triggers: [Med], [Funding], [Cursor], [General]. Backtesting code template for NSE/BSE/HDFC/Kotak data. Broker integrations done; next: Backtesting with live data.",
+    "AurumHarmony: 90% ready, APIs with HDFC/KOTAK complete. Multi-platform apps (Android/iOS/Windows) in polish. 47+ waitlist traders.",
+    "Backtesting: Python template using backtrader, yfinance for NSE/BSE, placeholders for HDFC/Kotak APIs. Strategy example: MA crossover with ATR. Fetch 3-6 months intraday data (5-min candles).",
+    "ML Volatility Integration: Added LSTM model (PyTorch) for volatility prediction using historical closes. Train on 200 bars, predict in strategy's next() to filter high-vol trades (threshold 1.5x avg). Expanded strategy with risk sizing, stops, and analyzers for win rate/Sharpe/drawdown."
+  ],
+  "current_status": "Backtesting setup expanded with LSTM volatility model. Ready for testing sample runs or further ML tweaks (e.g., GARCH alternatives). Cursor config complete—ready for coding/collaboration with JSON load method.",
+  "attachments_needed": ["Revised backtest Excel", "Projections + conservative sim table", "Backtesting code template"]
+}
+

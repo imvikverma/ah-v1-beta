@@ -1,0 +1,131 @@
+name: Deploy Cloudflare Worker (aurum-api)
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - 'worker/**'
+      - 'wrangler.toml'
+      - '.github/workflows/deploy-worker.yml'
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  deploy-worker:
+    runs-on: ubuntu-latest
+    name: Build and Deploy aurum-api Worker
+    permissions:
+      contents: read
+      deployments: write  # For GitHub deployment status
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: worker/package.json
+
+      - name: Install Wrangler CLI
+        run: npm install -g wrangler@latest
+
+      - name: Install Worker dependencies
+        working-directory: worker
+        run: |
+          if [ -f "package.json" ]; then
+            if [ -f "package-lock.json" ]; then
+              echo "📦 Using npm ci (package-lock.json found)"
+              npm ci
+            else
+              echo "📦 Using npm install (no package-lock.json)"
+              npm install
+            fi
+          else
+            echo "❌ package.json not found in worker/"
+            exit 1
+          fi
+
+      - name: TypeScript type check
+        working-directory: worker
+        run: npx tsc --noEmit
+        continue-on-error: true  # Don't fail on type errors, but warn
+
+      - name: Deploy to Cloudflare Workers
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.Cloudflare_API_Token }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.Cloudflare_Account_ID }}
+        run: |
+          echo "🚀 Deploying aurum-api Worker to Cloudflare..."
+          echo "📁 Working directory: $(pwd)"
+          echo "📄 Checking wrangler.toml..."
+          if [ -f "wrangler.toml" ]; then
+            echo "✅ wrangler.toml found"
+          else
+            echo "❌ wrangler.toml not found in root!"
+            exit 1
+          fi
+          
+          # Check if secrets are set (for debugging)
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "❌ CLOUDFLARE_API_TOKEN is not set!"
+            echo "   Check if GitHub secret 'Cloudflare_API_Token' exists"
+            exit 1
+          else
+            echo "✅ CLOUDFLARE_API_TOKEN is set (length: ${#CLOUDFLARE_API_TOKEN})"
+          fi
+          
+          if [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "❌ CLOUDFLARE_ACCOUNT_ID is not set!"
+            echo "   Check if GitHub secret 'Cloudflare_Account_ID' exists"
+            exit 1
+          else
+            echo "✅ CLOUDFLARE_ACCOUNT_ID is set: $CLOUDFLARE_ACCOUNT_ID"
+          fi
+          
+          # Deploy from root (wrangler.toml is here)
+          echo "📤 Running wrangler deploy..."
+          wrangler deploy --env production --config wrangler.toml 2>&1
+          DEPLOY_EXIT_CODE=$?
+          
+          if [ $DEPLOY_EXIT_CODE -eq 0 ]; then
+            echo "✅ Worker deployed successfully!"
+            echo "🌐 URL: https://api.ah.saffronbolt.in"
+          else
+            echo "❌ Worker deployment failed with exit code: $DEPLOY_EXIT_CODE"
+            echo "📋 Full error output above"
+            exit 1
+          fi
+
+      - name: Verify deployment
+        run: |
+          echo "🔍 Verifying Worker deployment..."
+          sleep 5  # Wait for deployment to propagate
+          
+          response=$(curl -s -w "\n%{http_code}" -X GET "https://api.ah.saffronbolt.in/health" || echo "000")
+          http_code=$(echo "$response" | tail -n1)
+          
+          if [ "$http_code" -eq "200" ]; then
+            echo "✅ Worker is responding (HTTP $http_code)"
+          else
+            echo "⚠️  Worker verification returned HTTP $http_code"
+            echo "   This might be normal if health endpoint requires auth"
+          fi
+
+      - name: Create GitHub Deployment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.repos.createDeployment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: context.ref,
+              environment: 'production',
+              description: 'Deploy aurum-api Worker to Cloudflare',
+              auto_merge: false,
+              required_contexts: []
+            });
+

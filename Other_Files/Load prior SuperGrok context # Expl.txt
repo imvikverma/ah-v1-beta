@@ -1,0 +1,22 @@
+Load prior SuperGrok context: # Explanatory Prompt for Charlie on Intraday Index Options Trading Setups
+
+Charlie, using the synced master_history_file (v1.1.1), explain in detail the Intraday Index Options Trading setups in AurumHarmony. Cover:
+
+- System architecture: How hands-free trading works with HDFC Sky/Kotak Neo APIs, no user inputs.
+- Data handling: Intraday 5-min candles from NSE/BSE via yfinance, backtesting with backtrader (3-6 months data, realistic/edge cases).
+- ML components: LSTM (PyTorch) and RandomForest (sklearn) for volatility prediction; trade filtering logic (>1.5x avg vol).
+- User tiers: Bronze Beat, Silver Surge, Gold Glide progression via Noble Growth Drivers.
+- Current status: 90% MVP, waitlist, app polish.
+- Any code/templates: Provide full Python backtesting codebase as downloadable file if available in context.
+
+Keep explanations clear, step-by-step, no assumptions. Output as markdown with sections.
+
+The simulation data shows a high-frequency intraday index options trading setup with tiered users (NGD, Restricted, Semi-Restricted), 18-27 trades/day, and conservative monthly nets ₹35k-₹1.75L per category. Key implications: Fully automated execution (likely options strategies on Nifty/BankNifty), leverage (30% margin), AI-driven signals, and risk guardrails.
+
+Explain this setup in detail for AurumHarmony development:
+- Break down how the trade volume (18-27/day) and profits imply HFT-style automation with broker APIs (HDFC Sky/Kotak Neo).
+- Suggest ML enhancements (e.g., refine RandomForest/LSTM for volatility to sustain >70% win rate).
+- Update backtesting template to incorporate tiered capital/fee logic and simulate per-category P&L.
+- Generate code for a "User Tier Manager" module (Flutter/Python) to handle increments and fees.
+
+Output: Detailed explanation + updated code snippets.

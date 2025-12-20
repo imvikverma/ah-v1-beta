@@ -1,0 +1,87 @@
+name: Deploy to Cloudflare Pages
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - 'aurum_harmony/frontend/**'
+      - '.github/workflows/cloudflare-deploy.yml'
+      # Removed 'docs/**' to prevent infinite loop - workflows commit to docs/ which would retrigger
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    name: Build and Deploy Flutter Web
+    permissions:
+      contents: write  # Required to push commits
+      deployments: write  # Required for Cloudflare Pages action to create GitHub deployments
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for git operations
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.27.0'  # Latest stable
+          channel: 'stable'
+          cache: true
+
+      - name: Get Flutter dependencies
+        working-directory: aurum_harmony/frontend/flutter_app
+        run: flutter pub get
+
+      - name: Build Flutter web
+        working-directory: aurum_harmony/frontend/flutter_app
+        run: |
+          flutter clean
+          flutter pub get
+          flutter build web --release --verbose
+        continue-on-error: false
+
+      - name: Prepare docs directory
+        run: |
+          if [ -d "docs" ]; then
+            rm -rf docs
+          fi
+          mkdir -p docs
+
+      - name: Copy build to docs
+        run: |
+          cp -r aurum_harmony/frontend/flutter_app/build/web/* docs/
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/pages-action@v1
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          projectName: aurumharmony-v1-beta  # Update with your project name
+          directory: docs
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Fallback deployment info (if Cloudflare action fails)
+        if: failure()
+        run: |
+          echo "⚠️  Cloudflare Pages deployment failed"
+          echo ""
+          echo "💡 Alternative deployment options:"
+          echo "   1. Connect Cloudflare Pages to GitHub (recommended)"
+          echo "      → Settings → Pages → Connect to Git"
+          echo "      → Cloudflare will build from aurum_harmony/frontend/"
+          echo ""
+          echo "   2. Use Cloudflare Pages build hook"
+          echo "      → Set CLOUDFLARE_DEPLOY_HOOK secret"
+          echo "      → Trigger deployment via webhook"
+          echo ""
+          echo "   3. Manual deployment"
+          echo "      → Build Flutter web locally"
+          echo "      → Upload docs/ folder via Cloudflare Dashboard"
+          echo ""
+          echo "Note: Can't commit/push to protected 'main' branch (requires PR)"
+          echo "      Use Cloudflare Pages GitHub integration instead"
+        continue-on-error: true

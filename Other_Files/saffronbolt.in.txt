@@ -1,0 +1,55 @@
+;;
+;; Domain:     saffronbolt.in.
+;; Exported:   2025-12-06 18:13:23
+;;
+;; This file is intended for use for informational and archival
+;; purposes ONLY and MUST be edited before use on a production
+;; DNS server.  In particular, you must:
+;;   -- update the SOA record with the correct authoritative name server
+;;   -- update the SOA record with the contact e-mail address information
+;;   -- update the NS record(s) with the authoritative name servers for this domain.
+;;
+;; For further information, please consult the BIND documentation
+;; located on the following website:
+;;
+;; http://www.isc.org/
+;;
+;; And RFC 1035:
+;;
+;; http://www.ietf.org/rfc/rfc1035.txt
+;;
+;; Please note that we do NOT offer technical support for any use
+;; of this zone data, the BIND name server, or any other third-party
+;; DNS software.
+;;
+;; Use at your own risk.
+;; SOA Record
+saffronbolt.in	3600	IN	SOA	dara.ns.cloudflare.com. dns.cloudflare.com. 2051671140 10000 2400 604800 3600
+
+;; NS Records
+saffronbolt.in.	86400	IN	NS	dara.ns.cloudflare.com.
+saffronbolt.in.	86400	IN	NS	louis.ns.cloudflare.com.
+
+;; A Records
+saffronbolt.in.	1	IN	A	185.230.63.107 ; cf_tags=cf-proxied:true
+saffronbolt.in.	1	IN	A	185.230.63.186 ; cf_tags=cf-proxied:true
+saffronbolt.in.	1	IN	A	185.230.63.171 ; cf_tags=cf-proxied:true
+
+;; CNAME Records
+ah.saffronbolt.in.	1	IN	CNAME	aurumharmony-v1-beta.pages.dev. ; cf_tags=cf-proxied:true
+aurumharmony.saffronbolt.in.	1	IN	CNAME	aurumharmony-v1-beta.pages.dev. ; cf_tags=cf-proxied:true
+www.saffronbolt.in.	1	IN	CNAME	cdn1.wixdns.net. ; cf_tags=cf-proxied:true
+
+;; MX Records
+saffronbolt.in.	1	IN	MX	50 mx3.zoho.in.
+saffronbolt.in.	1	IN	MX	10 mx.zoho.in.
+saffronbolt.in.	1	IN	MX	20 mx2.zoho.in.
+
+;; NS Records
+saffronbolt.in.	1	IN	NS	ns1.wixdns.net.
+saffronbolt.in.	1	IN	NS	ns0.wixdns.net.
+
+;; TXT Records
+_dmarc.saffronbolt.in.	1	IN	TXT	"v=DMARC1; p=none; rua=mailto:78531ed3665c4779b8a98b42aee815e7@dmarc-reports.cloudflare.net"
+saffronbolt.in.	1	IN	TXT	"v=spf1 include:zoho.in ~all"
+saffronbolt.in.	1	IN	TXT	"zoho-verification=zb00523968.zmverify.zoho.in"

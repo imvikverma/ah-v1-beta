@@ -1,0 +1,12 @@
+name = "aurumharmony-admin"
+compatibility_date = "2025-12-19"
+
+[env.production]
+routes = ["admin-v2.saffronbolt.in/*"]
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"

@@ -1,0 +1,117 @@
+{
+  "important_paths": {
+    "version_file": ".version",
+    "documentation": "_local/documentation/",
+    "changelog": "CHANGELOG.md",
+    "scripts": "scripts/",
+    "v1_frontend": "aurum_harmony/frontend/flutter_app/",
+    "v2_worker": "AurumHarmony-v2/worker/src/index.ts",
+    "v1_worker": "worker/src/index.ts",
+    "v1_backend": "aurum_harmony/master_codebase/Master_AurumHarmony_261125.py",
+    "v2_frontend": "AurumHarmony-v2/frontend/flutter_app/",
+    "v2_admin": "D:\\Projects\\AI Projects\\Testbed\\Downloads Repo\\AurumHarmony-v2-admin",
+    "v2_repo": "D:\\Projects\\AI Projects\\Testbed\\Downloads Repo\\AurumHarmony-v2",
+    "project_root": "D:\\Projects\\AI Projects\\Testbed\\Downloads Repo\\AurumHarmonyTest",
+    "readme": "README.md"
+  },
+  "deployment_status": {
+    "v1_frontend": "https://ah.saffronbolt.in (Cloudflare Pages)",
+    "v2_admin_repo": "AurumHarmony-v2-admin (git initialized, ready for GitHub)",
+    "v1_api": "https://api.ah.saffronbolt.in (Cloudflare Worker)",
+    "v2_api": "https://api-v2.saffronbolt.in (Cloudflare Worker - deployed)",
+    "v2_frontend": "https://ah-v2.saffronbolt.in (Cloudflare Pages - deployed)",
+    "v2_repo": "AurumHarmony-v2 (separate GitHub repo)",
+    "v2_admin": "https://admin-v2.saffronbolt.in (pending - git repo ready, needs GitHub push)"
+  },
+  "project_status": {
+    "last_commit": {
+      "message": "fix: skip /me validation for 5 minutes after login to prevent session expired errors",
+      "date": "2025-12-16",
+      "hash": "442f8c8895e832f0b6a596adb0f7d8f414bdae2f"
+    },
+    "current_update": "014100",
+    "last_update": "17/12/2025 01:07:12 IST",
+    "version": "1.0.2"
+  },
+  "key_files": {
+    "aurum_harmony/frontend/flutter_app/lib/services/auth_service.dart": "Frontend authentication service",
+    "aurum_harmony/master_codebase/Master_AurumHarmony_261125.py": "Flask backend API",
+    "start-all.ps1": "Master launcher script for all services",
+    ".version": "Version tracking file (auto-increments)",
+    "scripts/update-changelog.ps1": "Interactive changelog updater",
+    "scripts/run-eod-flow.ps1": "End of Day workflow automation",
+    "CHANGELOG.md": "Project changelog",
+    "worker/src/index.ts": "Cloudflare Worker API (v1 and v2)",
+    "scripts/generate-readme.ps1": "Dynamic README generator with version control",
+    "wrangler.toml": "Cloudflare Worker configuration"
+  },
+  "metadata": {
+    "generated_at": "014100",
+    "date": "2025-12-17",
+    "user": "Vik",
+    "session_type": "EOD Summary",
+    "assistant": "Charlie",
+    "version": "1.0.2"
+  },
+  "notes": [
+    "Session Expired fix: 5-minute grace period in auth_service.dart (both v1 and v2)",
+    "v2 project completely separated from v1 - new repo, new deployments, new DNS",
+    "v2 Worker (aurum-api-v2) deployed and working at api-v2.saffronbolt.in",
+    "v2 Frontend deployed and working at ah-v2.saffronbolt.in",
+    "v2 Admin Panel ready - git initialized, needs GitHub push and Cloudflare Pages setup",
+    "Version auto-increments on each README generation (patch version)",
+    "All timestamps in IST (Indian Standard Time, UTC+5:30)",
+    "Date format: DD/MM/YYYY",
+    "EOD flow runs automatically: README generator, changelog updater, cleanup, ML check, summary",
+    "Reference files for tomorrow: COMPLETE_IMPLEMENTATION_SUMMARY.md, MVP_COMPLETION_ASSESSMENT.md, IMPLEMENTATION_STATUS.md, PENDING_WORK_SUMMARY_2025-12-16.md, TESTING_CHECKLIST.md, REDESIGN_PLAN.md"
+  ],
+  "recent_work": [
+    "Fixed Session Expired issue (5-minute grace period after login) - v1 & v2",
+    "Separated v2 frontend from v1 completely - new repo and deployment",
+    "Set up v2 Worker (aurum-api-v2) - deployed to api-v2.saffronbolt.in",
+    "Created v2 frontend deployment pipeline - GitHub Actions workflow",
+    "Set up Cloudflare Pages for v2 frontend - aurumharmony-v2-frontend project",
+    "Configured DNS for v2 - ah-v2.saffronbolt.in custom domain",
+    "Fixed session expired in v2 frontend - same 5-minute grace period",
+    "Created v2 admin panel - Astro + shadcn/ui, connected to v2 API",
+    "Set up admin panel git repo - initialized, committed, deployment workflow",
+    "Updated v2 frontend constants - points to api-v2.saffronbolt.in",
+    "Created EOD flow automation script - complete workflow",
+    "Updated README generator - IST timestamps, version auto-increment, DD/MM/YYYY format",
+    "Created EOD summary JSON system - comprehensive handoff document",
+    "Reviewed all _local documentation - caught up on pending work",
+    "Created pending work summary - documented all tasks"
+  ],
+  "eod_flow": {
+    "steps": [
+      "Update README & CHANGELOG",
+      "Clean up/Organise file structure",
+      "Check ML training status",
+      "Generate EOD summary (this file)"
+    ],
+    "script": "scripts/run-eod-flow.ps1"
+  },
+  "project_stats": {
+    "flutter_files": 237,
+    "python_files": 25671,
+    "powershell_scripts": 84
+  },
+  "pending_tasks": [
+    "Verify Session Expired fix works (system check tomorrow) - v1 & v2",
+    "Run system integrity tests",
+    "Test broker API connectivity (HDFC Sky, Kotak Neo)",
+    "Run backtesting tests (realistic and edge cases)",
+    "Review IMPLEMENTATION_STATUS.md and MVP_COMPLETION_ASSESSMENT.md",
+    "Deploy v2 admin panel to Cloudflare Pages (git repo ready, needs GitHub push)",
+    "Complete v2 admin panel deployment - create GitHub repo and push",
+    "Configure DNS for admin panel - admin-v2.saffronbolt.in"
+  ],
+  "configurations": {
+    "database": "Cloudflare D1 (aurum-harmony-db)",
+    "jwt_secret": "Configured in Worker and local .env",
+    "deployment": "Cloudflare Pages (frontend) + Workers (API)",
+    "timezone": "IST (UTC+5:30)",
+    "version_format": "MAJOR.MINOR.PATCH (auto-increments patch on EOD)",
+    "date_format": "DD/MM/YYYY"
+  }
+}

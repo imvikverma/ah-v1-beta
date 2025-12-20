@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>AurumHarmony Admin</title>
+    <style>
+        body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 0; padding: 20px; background: #0b1020; color: #f7f7ff; }
+        h1 { margin-bottom: 16px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 16px; background: #11172b; }
+        th, td { padding: 8px 10px; border-bottom: 1px solid #283047; text-align: left; }
+        th { background: #1b2340; }
+        tr:hover { background: #1a2136; }
+        .status-active { color: #4caf50; font-weight: 600; }
+        .pill { padding: 2px 8px; border-radius: 999px; font-size: 0.8rem; }
+        .pill-tier { background: #283a74; }
+    </style>
+</head>
+<body>
+    <h1>AurumHarmony Admin – v1.0 Beta</h1>
+    <p>In‑memory user overview (demo only).</p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>User ID</th>
+                <th>Tier</th>
+                <th>Capital</th>
+                <th>Trades Today</th>
+                <th>Max Trades</th>
+                <th>Accounts</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for u in users %}
+            <tr>
+                <td>{{ u["user_id"] }}</td>
+                <td><span class="pill pill-tier">{{ u["tier"] }}</span></td>
+                <td>₹{{ u["capital"] | int }}</td>
+                <td>{{ u["trades_today"] }}</td>
+                <td>{{ u["max_trades"] }}</td>
+                <td>{{ u["accounts"] }}</td>
+                <td class="status-active">{{ u["status"] }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>
+
+
