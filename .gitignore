@@ -1,84 +1,91 @@
-.env
-# Local env & secrets
-.env
-Other_Files/API Keys.txt
-Other_Files/api_mangal_keshav.json
-_local/documentation/other-files/API Keys.txt
-_local/documentation/other-files/api_mangal_keshav.json
-
 # Python
-.venv/
-.venv-backup-*/
 __pycache__/
-*.pyc
-
-# Flutter / Dart
+*.py[cod]
+*$py.class
+*.so
+.Python
 build/
-.dart_tool/
-.packages
-.pub-cache/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
 
-# Flutter generated plugin files (auto-generated, platform-specific)
-**/generated_plugin_registrant.*
-**/GeneratedPluginRegistrant.*
-**/generated_plugins.cmake
+# Flutter
+aurum_harmony/frontend/flutter_app/.flutter-plugins
+aurum_harmony/frontend/flutter_app/.flutter-plugins-dependencies
+aurum_harmony/frontend/flutter_app/.packages
+aurum_harmony/frontend/flutter_app/.dart_tool/
+aurum_harmony/frontend/flutter_app/build/
 
-# Flutter platform builds
-aurum_harmony/frontend/flutter_app/android/.gradle/
-aurum_harmony/frontend/flutter_app/ios/Pods/
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 
-# IDE / tooling
+# IDE artifacts
 .vscode/
 .idea/
-*.iml
-.DS_Store
 .cursor/
-
-# Local-only files (not for production/GitHub)
-_local/
-logs/
 .snapshots/
-Old_Files/
-Code_Files/
-Design/
-Other_Files/
-zzz-quick-access/
-documentation/
+*.swp
+*.swo
+*~
 
-# Instructional/documentation files (moved to _local)
-# Development/Setup documentation (keep local only)
-WORKER_*.md
-QUICK_START*.md
-WHY_*.md
-TESTING_*.md
-STATUS_*.md
-CLOUDFLARE_*.md
-requirements.md
-tatus
+# OS junk
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 
-# Keep only production-essential .md files in Git:
-# - README.md (root)
-# - CHANGELOG.md
-# - SECURITY.md
-# - FILE_STRUCTURE.md (optional, but useful for repo structure)
-# - rules.md (optional, but useful for repo)
-# - Code documentation within packages (aurum_harmony/docs/*, etc.)
-# - Script README files (scripts/*/README.md)
+# Logs
+*.log
+logs/
 
-# Node modules (local development)
-node_modules/
-package-lock.json
-
-# Database files (local)
+# Database and local data
 *.db
 *.sqlite
 *.sqlite3
+*.zip
 
-# Hyperledger Fabric - CRITICAL: Never commit private keys!
-fabric/crypto-config/
-**/priv_sk
-**/*_sk
-**/*.key
-fabric/**/keystore/
-fabric/**/ca/
-fabric/**/tlsca/
+# Local-only development
+_local/
+tools/
+local_docs/
+backup/
+Old_Files/
+Code_Files/
+EOD_*.json
+setup_info_*.json
+*.json.eod
+
+# Virtual environments
+.venv/
+venv/
+
+# Temporary
+tmp/
+temp/
+*.tmp
+
+# Secrets and keys
+secrets/
+keys/
+*.key
+*.pem
+*.crt
