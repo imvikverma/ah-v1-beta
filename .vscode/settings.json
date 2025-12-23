@@ -1,3 +1,17 @@
 {
-    "files.autoSave": "afterDelay"
+    "files.autoSave": "afterDelay",
+    "terminal.integrated.enablePersistentSessions": false,
+    "terminal.integrated.hover.enabled": false,
+    "terminal.integrated.showExitAlert": false,
+    "editor.hover.enabled": false,
+    "editor.hover.delay": 300,
+    "workbench.editor.enablePreview": false,
+    "editor.parameterHints.enabled": false,
+    "editor.quickSuggestions": {
+        "other": false,
+        "comments": false,
+        "strings": false
+    },
+    "editor.suggest.showStatusBar": false,
+    "editor.wordBasedSuggestions": false
 }

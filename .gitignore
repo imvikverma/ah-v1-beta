@@ -76,12 +76,22 @@ setup_info_*.json
 
 # Virtual environments
 .venv/
+.venv-backup*/
 venv/
 
 # Temporary
 tmp/
 temp/
 *.tmp
+
+# Local-only scripts (not needed on GitHub)
+start-all.ps1
+scripts/start_backend*.ps1
+scripts/start_flutter*.ps1
+scripts/start_both.ps1
+scripts/auto_start.ps1
+scripts/restart_flutter*.ps1
+scripts/start_backend_wrapper.bat
 
 # Secrets and keys
 secrets/

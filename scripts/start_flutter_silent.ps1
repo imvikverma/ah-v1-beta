@@ -5,7 +5,19 @@
 $host.ui.RawUI.WindowTitle = "AurumHarmony - Frontend (Flutter)"
 
 $ErrorActionPreference = "Continue"
-$projectRoot = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
+# Get project root (works from any location)
+$scriptPath = $MyInvocation.MyCommand.Path
+$projectRoot = Split-Path -Parent $scriptPath
+$maxDepth = 10
+$depth = 0
+while ($depth -lt $maxDepth) {
+    if (Test-Path (Join-Path $projectRoot ".git")) { break }
+    if (Test-Path (Join-Path $projectRoot "start-all.ps1")) { break }
+    $parent = Split-Path -Parent $projectRoot
+    if ($parent -eq $projectRoot) { break }
+    $projectRoot = $parent
+    $depth++
+}
 $flutterAppPath = Join-Path $projectRoot "aurum_harmony\frontend\flutter_app"
 
 # Ensure flutter app directory exists

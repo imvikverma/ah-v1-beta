@@ -117,6 +117,52 @@ if (Test-Path $generateSummaryPath) {
     Write-Host "  💡 Summary generation skipped" -ForegroundColor Cyan
 }
 
+# Step 5: Project Backup (CRITICAL - Prevents data loss!)
+Write-Host "`n💾 Step 5: Creating Project Backup" -ForegroundColor Yellow
+Write-Host "--------------------------------------" -ForegroundColor Gray
+
+$backupScriptPath = Join-Path $projectRoot "scripts\backup_project.ps1"
+if (Test-Path $backupScriptPath) {
+    Write-Host "  Running comprehensive backup..." -ForegroundColor Gray
+    try {
+        & $backupScriptPath -Compress -Verify
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "  ✅ Project backup completed successfully" -ForegroundColor Green
+        } else {
+            Write-Host "  ⚠️  Backup completed with warnings (check output above)" -ForegroundColor Yellow
+        }
+    } catch {
+        Write-Host "  ❌ Backup failed: $_" -ForegroundColor Red
+        Write-Host "  💡 Manual backup recommended!" -ForegroundColor Yellow
+    }
+} else {
+    Write-Host "  ❌ backup_project.ps1 not found!" -ForegroundColor Red
+    Write-Host "  💡 CRITICAL: Backup script missing - manual backup required!" -ForegroundColor Yellow
+}
+
+# Step 6: VS Code Workspace Mirror (Backup for usage limit downtime)
+Write-Host "`n� mirror Step 6: Creating VS Code Workspace Mirror" -ForegroundColor Yellow
+Write-Host "--------------------------------------" -ForegroundColor Gray
+
+$mirrorScriptPath = Join-Path $projectRoot "scripts\mirror_to_vscode.ps1"
+if (Test-Path $mirrorScriptPath) {
+    Write-Host "  Creating VS Code workspace backup..." -ForegroundColor Gray
+    try {
+        & $mirrorScriptPath -CreateWorkspace -SyncGit
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "  ✅ VS Code workspace mirror created" -ForegroundColor Green
+        } else {
+            Write-Host "  ⚠️  VS Code mirror had issues (check output above)" -ForegroundColor Yellow
+        }
+    } catch {
+        Write-Host "  ⚠️  VS Code mirror failed: $_" -ForegroundColor Yellow
+        Write-Host "  💡 Can continue without mirror" -ForegroundColor Gray
+    }
+} else {
+    Write-Host "  ⚠️  mirror_to_vscode.ps1 not found" -ForegroundColor Yellow
+    Write-Host "  💡 VS Code mirror skipped" -ForegroundColor Gray
+}
+
 # Summary
 Write-Host "`n✅ EOD Flow Complete!" -ForegroundColor Green
 Write-Host "`n📋 Summary:" -ForegroundColor Cyan
@@ -125,10 +171,14 @@ Write-Host "  ✅ CHANGELOG.md updated" -ForegroundColor Gray
 Write-Host "  ✅ File structure reviewed" -ForegroundColor Gray
 Write-Host "  ✅ ML training status checked" -ForegroundColor Gray
 Write-Host "  ✅ EOD summary JSON generated" -ForegroundColor Gray
+Write-Host "  ✅ Project backup created" -ForegroundColor Green
+Write-Host "  ✅ VS Code workspace mirror created" -ForegroundColor Green
 Write-Host "`n💡 Next Steps:" -ForegroundColor Yellow
 Write-Host "  - Review and commit any changes" -ForegroundColor White
 Write-Host "  - Check EOD summary in _local/Summaries/" -ForegroundColor White
+Write-Host "  - Verify backups in _local/backups/" -ForegroundColor White
 Write-Host "  - Push to GitHub if ready" -ForegroundColor White
 Write-Host "`n📝 EOD Summary Location: _local\Summaries\EOD_YYYY-MM-DD_Charlie.json" -ForegroundColor Cyan
+Write-Host "💾 Backup Location: _local\backups\backup_YYYYMMDD-HHMMSS.zip" -ForegroundColor Cyan
 Write-Host ""
 

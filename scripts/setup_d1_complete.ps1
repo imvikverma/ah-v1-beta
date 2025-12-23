@@ -3,7 +3,19 @@
 # All operations use --remote flag to avoid local database crashes
 
 $ErrorActionPreference = "Continue"
-$projectRoot = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
+# Get project root (works from any location)
+$scriptPath = $MyInvocation.MyCommand.Path
+$projectRoot = Split-Path -Parent $scriptPath
+$maxDepth = 10
+$depth = 0
+while ($depth -lt $maxDepth) {
+    if (Test-Path (Join-Path $projectRoot ".git")) { break }
+    if (Test-Path (Join-Path $projectRoot "start-all.ps1")) { break }
+    $parent = Split-Path -Parent $projectRoot
+    if ($parent -eq $projectRoot) { break }
+    $projectRoot = $parent
+    $depth++
+}
 $workerDir = Join-Path $projectRoot "worker"
 $wranglerToml = Join-Path $projectRoot "wrangler.toml"
 $schemaFile = Join-Path $workerDir "schema.sql"

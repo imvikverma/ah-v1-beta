@@ -2,7 +2,19 @@
 # Use this if start-all.ps1 still has RemoteException issues
 
 $ErrorActionPreference = "Stop"
-$projectRoot = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
+# Get project root (works from any location)
+$scriptPath = $MyInvocation.MyCommand.Path
+$projectRoot = Split-Path -Parent $scriptPath
+$maxDepth = 10
+$depth = 0
+while ($depth -lt $maxDepth) {
+    if (Test-Path (Join-Path $projectRoot ".git")) { break }
+    if (Test-Path (Join-Path $projectRoot "start-all.ps1")) { break }
+    $parent = Split-Path -Parent $projectRoot
+    if ($parent -eq $projectRoot) { break }
+    $projectRoot = $parent
+    $depth++
+}
 Set-Location $projectRoot
 
 Write-Host "Starting Backend Directly (No Start-Process)..." -ForegroundColor Green

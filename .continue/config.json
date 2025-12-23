@@ -1,0 +1,75 @@
+{
+  "models": [
+    {
+      "title": "Gemma 2.2B (Fast)",
+      "provider": "ollama",
+      "model": "gemma:2.2b",
+      "apiBase": "http://localhost:11434",
+      "contextLength": 2048,
+      "requestOptions": {
+        "temperature": 0.7,
+        "maxTokens": 512,
+        "topP": 0.9
+      }
+    },
+    {
+      "title": "Phi3 Mini (Faster)",
+      "provider": "ollama",
+      "model": "phi3:mini",
+      "apiBase": "http://localhost:11434",
+      "contextLength": 2048,
+      "requestOptions": {
+        "temperature": 0.7,
+        "maxTokens": 512,
+        "topP": 0.9
+      }
+    },
+    {
+      "title": "TinyLlama (Fastest)",
+      "provider": "ollama",
+      "model": "tinyllama",
+      "apiBase": "http://localhost:11434",
+      "contextLength": 1024,
+      "requestOptions": {
+        "temperature": 0.7,
+        "maxTokens": 256,
+        "topP": 0.9
+      }
+    }
+  ],
+  "customCommands": [
+    {
+      "name": "aurumharmony-context",
+      "prompt": "AurumHarmony: AI trading platform. Flutter frontend, Flask backend, HDFC Sky/Kotak Neo brokers. Check README.md and _local/documentation/ for details."
+    },
+    {
+      "name": "backup-check",
+      "prompt": "Check backups in _local/backups/ and scripts/backup_project.ps1"
+    },
+    {
+      "name": "broker-integration",
+      "prompt": "Broker API: Check api/ folder and _local/documentation/BROKER_API_INTEGRATION_GUIDE.md"
+    }
+  ],
+  "tabAutocompleteModel": {
+    "title": "TinyLlama (Fast)",
+    "provider": "ollama",
+    "model": "tinyllama",
+    "apiBase": "http://localhost:11434",
+    "contextLength": 512,
+    "requestOptions": {
+      "temperature": 0.3,
+      "maxTokens": 64,
+      "topP": 0.9
+    }
+  },
+  "allowAnonymousTelemetry": false,
+  "embeddingsProvider": {
+    "provider": "ollama",
+    "model": "tinyllama"
+  },
+  "disableIndexing": false,
+  "maxFileSize": 1000000,
+  "maxDepth": 10
+}
+
