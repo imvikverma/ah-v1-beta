@@ -13,5 +13,5 @@
         "strings": false
     },
     "editor.suggest.showStatusBar": false,
-    "editor.wordBasedSuggestions": false
+    "editor.wordBasedSuggestions": "off"
 }

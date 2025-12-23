@@ -36,9 +36,9 @@ class AuthService {
   static DateTime? _lastLoginTime;
   static DateTime? _lastValidationTime;
   static int _validationFailureCount = 0;
-  static const _validationGracePeriod = Duration(minutes: 5); // Don't validate for 5 minutes after login (skip /me validation entirely)
-  static const _validationInterval = Duration(minutes: 2); // Only validate every 2 minutes
-  static const _maxValidationFailures = 3; // Allow 3 failures before clearing token (increased for production)
+  static const _validationGracePeriod = Duration(minutes: 10); // Don't validate for 10 minutes after login (skip /me validation entirely)
+  static const _validationInterval = Duration(minutes: 5); // Only validate every 5 minutes (less aggressive)
+  static const _maxValidationFailures = 5; // Allow 5 failures before clearing token (more lenient for production Worker)
 
   /// Validate and refresh token if needed
   static Future<String?> getValidToken() async {
@@ -72,7 +72,7 @@ class AuthService {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
-      ).timeout(const Duration(seconds: 8)); // Increased timeout for production
+      ).timeout(const Duration(seconds: 10)); // Increased timeout for production Worker
       
       if (response.statusCode == 200) {
         // Token is valid - reset failure count
@@ -114,10 +114,18 @@ class AuthService {
           return null;
         }
         
-        // Return token anyway on first/second failure (might be temporary timing issue)
+        // Return token anyway on first/second/third/fourth failure (might be temporary timing issue)
         // Production Worker uses database sessions, so token might be valid even if JWT check fails
         // BUT: Don't update _lastValidationTime on failure - we want to retry soon
         // Only update on success to avoid caching failures
+        // Also, don't throw error - let the actual API call fail naturally if token is truly invalid
+        return token;
+      } else if (response.statusCode == 503 || response.statusCode == 525 || response.statusCode == 502) {
+        // Server errors (503 = Service Unavailable, 525 = SSL Handshake Failed, 502 = Bad Gateway)
+        // Worker might be starting up, down, or misconfigured
+        // Don't count this as a validation failure - it's a server issue
+        // Return token and let actual API calls handle it
+        // These errors mean the Worker isn't accessible, not that the session expired
         return token;
       }
     } catch (e) {
@@ -127,7 +135,9 @@ class AuthService {
       final isNetworkError = errorStr.contains('timeout') || 
                             errorStr.contains('socketexception') ||
                             errorStr.contains('failed host lookup') ||
-                            errorStr.contains('connection');
+                            errorStr.contains('connection') ||
+                            errorStr.contains('network') ||
+                            errorStr.contains('dns');
       
       if (!isNetworkError) {
         // Only count non-network errors as validation failures
@@ -144,6 +154,7 @@ class AuthService {
       
       // Return token anyway (network might be temporarily down, or it's a temporary error)
       // Don't update _lastValidationTime on error - we want to retry soon
+      // Network errors are common with Cloudflare Workers, so be lenient
       return token;
     }
   }

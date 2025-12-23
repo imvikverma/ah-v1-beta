@@ -76,6 +76,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
         setState(() {
           _error = 'Session expired. Please refresh the page and login again.';
         });
+      } else if (resp.statusCode == 503 || resp.statusCode == 525 || resp.statusCode == 502) {
+        // Server errors - Worker might be down or misconfigured
+        setState(() {
+          _error = 'API service unavailable. Please try again later.';
+        });
       } else {
         final errorData = jsonDecode(resp.body) as Map<String, dynamic>;
         setState(() {
@@ -136,6 +141,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
         // Session expired - clear token silently
         await AuthService.logout();
         throw Exception('Session expired. Please refresh the page and login again.');
+      } else if (resp.statusCode == 503 || resp.statusCode == 525 || resp.statusCode == 502) {
+        // Server errors - Worker might be down or misconfigured
+        throw Exception('API service unavailable. Please try again later.');
       } else {
         final errorData = jsonDecode(resp.body) as Map<String, dynamic>;
         throw Exception(errorData['error']?.toString() ?? 'Backtest failed');

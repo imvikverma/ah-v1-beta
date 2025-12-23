@@ -83,11 +83,14 @@ class _AdminScreenState extends State<AdminScreen> with SingleTickerProviderStat
         throw Exception(error['error'] ?? 'Error ${resp.statusCode}');
       }
     } catch (e) {
-      // Check if it's a session expiration error
+      // Check if it's a session expiration error (only if it's a 401 from API)
       final errorStr = e.toString().toLowerCase();
-      final isExpired = errorStr.contains('expired') || 
-                       errorStr.contains('session expired') ||
-                       errorStr.contains('authentication expired');
+      final isExpired = (errorStr.contains('401') || 
+                        errorStr.contains('unauthorized')) &&
+                       (errorStr.contains('expired') || 
+                        errorStr.contains('session expired') ||
+                        errorStr.contains('authentication expired') ||
+                        errorStr.contains('invalid token'));
       
       if (isExpired) {
         // Session expired - clear token and show message (no popup)
@@ -99,6 +102,7 @@ class _AdminScreenState extends State<AdminScreen> with SingleTickerProviderStat
         }
         // Don't show SnackBar popup - just set error message
       } else {
+        // Don't immediately assume session expired - might be network error
         setState(() {
           _error = 'Error: $e';
         });

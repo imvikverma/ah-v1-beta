@@ -1,9 +1,39 @@
 import 'dart:convert';
+import 'dart:html' as html;
 import 'package:http/http.dart' as http;
 import '../constants.dart';
 import 'auth_service.dart';
 
 class DbAdminService {
+  /// Try fallback to localhost backend (only works when already on localhost)
+  static Future<Map<String, dynamic>> _tryFallback(String path, Map<String, String> headers, String method) async {
+    // Only try fallback if we're already on localhost (can't access localhost from production)
+    final hostname = html.window.location.hostname ?? '';
+    if (hostname.contains('localhost') || hostname.contains('127.0.0.1')) {
+      // Try localhost backend as fallback
+      try {
+        final fallbackUri = Uri.parse('$kBackendBaseUrlFallback$path');
+        final response = method == 'GET'
+            ? await http.get(fallbackUri, headers: headers).timeout(const Duration(seconds: 5))
+            : await http.post(fallbackUri, headers: headers, body: headers['body'] ?? '').timeout(const Duration(seconds: 5));
+        
+        if (response.statusCode >= 200 && response.statusCode < 300) {
+          return jsonDecode(response.body) as Map<String, dynamic>;
+        } else if (response.statusCode == 401) {
+          await AuthService.logout();
+          throw Exception('Session expired. Please refresh the page and login again.');
+        } else {
+          final error = jsonDecode(response.body) as Map<String, dynamic>;
+          throw Exception(error['error'] ?? 'Failed to fetch data');
+        }
+      } catch (e) {
+        throw Exception('API service unavailable. Please ensure the backend is running on localhost:5000.');
+      }
+    }
+    // On production, Worker must be deployed
+    throw Exception('Worker API is not accessible. Please deploy the Worker using: .\\scripts\\deploy_worker.ps1');
+  }
+
   static Future<Map<String, dynamic>> _get(String path) async {
     final token = await AuthService.getValidToken();
     if (token == null) {
@@ -25,6 +55,10 @@ class DbAdminService {
         // Token expired - clear it and throw error
         await AuthService.logout();
         throw Exception('Session expired. Please refresh the page and login again.');
+      } else if (response.statusCode == 503 || response.statusCode == 525 || response.statusCode == 502) {
+        // Server errors - Worker might be down or misconfigured
+        // Try fallback to localhost backend
+        return await _tryFallback(path, headers, 'GET');
       } else {
         final error = jsonDecode(response.body) as Map<String, dynamic>;
         throw Exception(error['error'] ?? 'Failed to fetch data');
@@ -34,6 +68,27 @@ class DbAdminService {
       if (e.toString().contains('Session expired')) {
         rethrow;
       }
+      
+      // Check if it's a network error - try fallback to localhost
+      final errorStr = e.toString().toLowerCase();
+      final isNetworkError = errorStr.contains('networkerror') ||
+                            errorStr.contains('network error') ||
+                            errorStr.contains('failed host lookup') ||
+                            errorStr.contains('socketexception') ||
+                            errorStr.contains('connection') ||
+                            errorStr.contains('525') ||
+                            errorStr.contains('502') ||
+                            errorStr.contains('503');
+      
+      if (isNetworkError) {
+        // Try fallback to localhost backend
+        try {
+          return await _tryFallback(path, headers, 'GET');
+        } catch (fallbackError) {
+          throw Exception('API service unavailable. Please ensure the backend is running on localhost:5000 or deploy the Worker.');
+        }
+      }
+      
       throw Exception('Error: $e');
     }
   }
@@ -52,13 +107,19 @@ class DbAdminService {
 
     try {
       final uri = Uri.parse('$kBackendBaseUrl$path');
-      final response = await http.post(uri, headers: headers, body: jsonEncode(body)).timeout(const Duration(seconds: 10));
+      final headersWithBody = Map<String, String>.from(headers);
+      final response = await http.post(uri, headers: headersWithBody, body: jsonEncode(body)).timeout(const Duration(seconds: 10));
       if (response.statusCode >= 200 && response.statusCode < 300) {
         return jsonDecode(response.body) as Map<String, dynamic>;
       } else if (response.statusCode == 401) {
         // Token expired - clear it and throw error
         await AuthService.logout();
         throw Exception('Session expired. Please refresh the page and login again.');
+      } else if (response.statusCode == 503 || response.statusCode == 525 || response.statusCode == 502) {
+        // Server errors - Worker might be down or misconfigured
+        // Try fallback to localhost backend
+        headersWithBody['body'] = jsonEncode(body);
+        return await _tryFallback(path, headersWithBody, 'POST');
       } else {
         final error = jsonDecode(response.body) as Map<String, dynamic>;
         throw Exception(error['error'] ?? 'Failed to execute query');
@@ -68,6 +129,29 @@ class DbAdminService {
       if (e.toString().contains('Session expired')) {
         rethrow;
       }
+      
+      // Check if it's a network error - try fallback to localhost
+      final errorStr = e.toString().toLowerCase();
+      final isNetworkError = errorStr.contains('networkerror') ||
+                            errorStr.contains('network error') ||
+                            errorStr.contains('failed host lookup') ||
+                            errorStr.contains('socketexception') ||
+                            errorStr.contains('connection') ||
+                            errorStr.contains('525') ||
+                            errorStr.contains('502') ||
+                            errorStr.contains('503');
+      
+      if (isNetworkError) {
+        // Try fallback to localhost backend
+        try {
+          final headersWithBody = Map<String, String>.from(headers);
+          headersWithBody['body'] = jsonEncode(body);
+          return await _tryFallback(path, headersWithBody, 'POST');
+        } catch (fallbackError) {
+          throw Exception('API service unavailable. Please ensure the backend is running on localhost:5000 or deploy the Worker.');
+        }
+      }
+      
       throw Exception('Error: $e');
     }
   }
