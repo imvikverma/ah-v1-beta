@@ -37,9 +37,7 @@ function Show-Menu {
     Write-Host "  3. Quick Deploy [1-Click: Build & Push to GitHub → Cloudflare]" -ForegroundColor Magenta
     Write-Host "  4. Invoke Backend + Frontend [Sequential with Health Check]" -ForegroundColor Cyan
     Write-Host "  5. Stop All Services [Clean shutdown of Backend + Frontend]" -ForegroundColor Red
-    Write-Host "  6. Start Flask Backend Only [Silent/Minimized]" -ForegroundColor Cyan
-    Write-Host "  7. Start Flutter Frontend Only [Silent/Minimized]" -ForegroundColor Cyan
-    Write-Host "  8. Exit" -ForegroundColor Gray
+    Write-Host "  6. Exit" -ForegroundColor Gray
     Write-Host ""
 }
 
@@ -368,7 +366,7 @@ function Invoke-AllOtherProcesses {
     Write-Host ""
     Write-Host "Select what to run:" -ForegroundColor Yellow
     Write-Host "  1. Deploy to Cloudflare Pages (Build + Push)" -ForegroundColor Cyan
-    Write-Host "  2. Deploy Cloudflare Worker (API - aurum-api)" -ForegroundColor Cyan
+    Write-Host "  2. Deploy Cloudflare Worker (API - aurum-api-v2)" -ForegroundColor Cyan
     Write-Host "  3. Setup D1 Database (Create & Migrate)" -ForegroundColor Cyan
     Write-Host "  4. Watch & Auto-Deploy (Watches file changes, auto-deploys)" -ForegroundColor Cyan
     Write-Host "  5. Run All (Deploy Pages + Worker + Setup D1)" -ForegroundColor Green
@@ -415,8 +413,8 @@ function Invoke-AllOtherProcesses {
 }
 
 function Deploy-Worker {
-    Write-Host "Deploying Cloudflare Worker (aurum-api)..." -ForegroundColor Magenta
-    Write-Host "This will deploy the API worker to: https://api.ah.saffronbolt.in" -ForegroundColor Yellow
+    Write-Host "Deploying Cloudflare Worker (aurum-api-v2)..." -ForegroundColor Magenta
+    Write-Host "This will deploy the API worker to: https://api-v2.saffronbolt.in" -ForegroundColor Yellow
     Write-Host ""
     
     $workerScript = Join-Path $projectRoot "scripts\deploy_worker.ps1"
@@ -887,7 +885,7 @@ do {
     
     Show-Menu
     # Get user choice (trim to handle any whitespace issues)
-    $choice = (Read-Host "Enter your choice (1-8)").Trim()
+    $choice = (Read-Host "Enter your choice (1-6)").Trim()
     
     switch ($choice) {
         "1" {
@@ -921,27 +919,11 @@ do {
             $null = Read-Host
         }
         "6" {
-            Set-Location $projectRoot
-            Write-Host "`n🚀 Starting Flask Backend Only..." -ForegroundColor Cyan
-            Start-Backend
-            Write-Host "`n✅ Backend started! Check: http://localhost:5000" -ForegroundColor Green
-            Write-Host "`nPress any key to return to menu..."
-            $null = Read-Host
-        }
-        "7" {
-            Set-Location $projectRoot
-            Write-Host "`n🚀 Starting Flutter Frontend Only..." -ForegroundColor Cyan
-            Start-Frontend
-            Write-Host "`n✅ Frontend started! Check: http://localhost:58643" -ForegroundColor Green
-            Write-Host "`nPress any key to return to menu..."
-            $null = Read-Host
-        }
-        "8" {
             Write-Host "`nExiting..." -ForegroundColor Yellow
             exit 0
         }
         default {
-            Write-Host "`nInvalid choice. Please select 1-8." -ForegroundColor Red
+            Write-Host "`nInvalid choice. Please select 1-6." -ForegroundColor Red
             Start-Sleep -Seconds 1
         }
     }

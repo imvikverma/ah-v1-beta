@@ -107,11 +107,12 @@ try {
 
 # Deploy
 Write-Host "`nDeploying to Cloudflare..." -ForegroundColor Yellow
-Write-Host "Worker: aurum-api" -ForegroundColor Gray
-Write-Host "URL: https://api.ah.saffronbolt.in" -ForegroundColor Gray
+Write-Host "Worker: aurum-api-v2" -ForegroundColor Gray
+Write-Host "Environment: production" -ForegroundColor Gray
+Write-Host "URL: https://api-v2.saffronbolt.in" -ForegroundColor Gray
 Write-Host ""
 
-Invoke-Expression "$wranglerCmd deploy"
+Invoke-Expression "$wranglerCmd deploy --env production"
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host ""
@@ -122,7 +123,7 @@ if ($LASTEXITCODE -eq 0) {
     
     try {
         Write-Host "Testing health endpoint..." -ForegroundColor Gray
-        $healthResponse = Invoke-WebRequest -Uri "https://api.ah.saffronbolt.in/health" -TimeoutSec 10 -UseBasicParsing
+        $healthResponse = Invoke-WebRequest -Uri "https://api-v2.saffronbolt.in/health" -TimeoutSec 10 -UseBasicParsing
         if ($healthResponse.StatusCode -eq 200) {
             Write-Host "✅ Health endpoint working!" -ForegroundColor Green
             $content = $healthResponse.Content | ConvertFrom-Json
@@ -134,7 +135,7 @@ if ($LASTEXITCODE -eq 0) {
         Write-Host "`nTesting login endpoint (should return 501 for bcrypt)..." -ForegroundColor Gray
         try {
             $loginBody = @{email="test@test.com";password="test"} | ConvertTo-Json
-            $loginResponse = Invoke-WebRequest -Uri "https://api.ah.saffronbolt.in/api/auth/login" -Method Post -Body $loginBody -ContentType "application/json" -TimeoutSec 10 -UseBasicParsing -ErrorAction Stop
+            $loginResponse = Invoke-WebRequest -Uri "https://api-v2.saffronbolt.in/api/auth/login" -Method Post -Body $loginBody -ContentType "application/json" -TimeoutSec 10 -UseBasicParsing -ErrorAction Stop
             Write-Host "   Status: $($loginResponse.StatusCode)" -ForegroundColor Gray
         } catch {
             $statusCode = $_.Exception.Response.StatusCode.value__
@@ -151,7 +152,7 @@ if ($LASTEXITCODE -eq 0) {
     }
     
     Write-Host "`n💡 Worker deployed successfully!" -ForegroundColor Green
-    Write-Host "   URL: https://api.ah.saffronbolt.in" -ForegroundColor Cyan
+    Write-Host "   URL: https://api-v2.saffronbolt.in" -ForegroundColor Cyan
     Write-Host "   Login will automatically fallback to Flask backend (localhost:5000)" -ForegroundColor Gray
 } else {
     Write-Host ""

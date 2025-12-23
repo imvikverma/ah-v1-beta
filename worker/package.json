@@ -1,5 +1,5 @@
 {
-  "name": "aurum-api-worker",
+  "name": "aurum-api-v2-worker",
   "version": "1.0.0",
   "description": "AurumHarmony API Cloudflare Worker",
   "main": "src/index.ts",

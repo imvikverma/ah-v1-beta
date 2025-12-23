@@ -12,3 +12,7 @@ tensorflow==2.13.0
 # torch==2.8.0  # Commented out due to dependency conflict with tensorflow - install separately if needed
 backtrader==1.9.76.123
 pytz==2023.3
+
+PyJWT>=2.8.0
+
+python-dotenv>=1.0.0

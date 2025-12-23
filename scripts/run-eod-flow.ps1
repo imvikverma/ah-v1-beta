@@ -107,7 +107,7 @@ if (Test-Path $mlTrainingPath) {
 Write-Host "`n📝 Step 4: Generating EOD Summary" -ForegroundColor Yellow
 Write-Host "--------------------------------------" -ForegroundColor Gray
 
-$generateSummaryPath = Join-Path $projectRoot "scripts\generate-eod-summary.ps1"
+$generateSummaryPath = Join-Path $projectRoot "generate-eod-summary.ps1"
 if (Test-Path $generateSummaryPath) {
     Write-Host "  Generating comprehensive JSON summary..." -ForegroundColor Gray
     & $generateSummaryPath

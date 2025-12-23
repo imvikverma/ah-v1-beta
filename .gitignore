@@ -28,6 +28,13 @@ aurum_harmony/frontend/flutter_app/.packages
 aurum_harmony/frontend/flutter_app/.dart_tool/
 aurum_harmony/frontend/flutter_app/build/
 
+# Node.js
+node_modules/
+npm-debug.log
+yarn-error.log
+package-lock.json
+yarn.lock
+
 # Environment variables
 .env
 .env.local
@@ -86,12 +93,20 @@ temp/
 
 # Local-only scripts (not needed on GitHub)
 start-all.ps1
+start-backend.ps1
+rebuild_flask_env.ps1
+generate-eod-summary.ps1
+watch-eod-trigger.ps1
 scripts/start_backend*.ps1
 scripts/start_flutter*.ps1
 scripts/start_both.ps1
 scripts/auto_start.ps1
 scripts/restart_flutter*.ps1
 scripts/start_backend_wrapper.bat
+
+# Trigger files
+_local/triggers/
+*.trigger
 
 # Secrets and keys
 secrets/

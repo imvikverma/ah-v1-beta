@@ -1,5 +1,5 @@
 /**
- * api.ah.saffronbolt.in – AurumHarmony API Worker
+ * api-v2.saffronbolt.in – AurumHarmony API Worker v2
  * 
  * This Worker handles:
  * - Health checks

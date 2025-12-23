@@ -301,9 +301,9 @@ Onboarding → Login/Signup → Dashboard (Main)
 ## 📡 API Integration
 
 ### **Base URLs:**
-- **Backend API:** `http://localhost:5000` (dev) / `https://api.ah.saffronbolt.in` (prod)
+- **Backend API:** `http://localhost:5000` (dev) / `https://api-v2.saffronbolt.in` (prod)
 - **Admin API:** `http://localhost:5001` (dev)
-- **Cloudflare Worker:** `https://api.ah.saffronbolt.in` (prod)
+- **Cloudflare Worker:** `https://api-v2.saffronbolt.in` (prod)
 
 ### **Authentication:**
 All authenticated requests include:

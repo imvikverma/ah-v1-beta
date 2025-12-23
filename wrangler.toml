@@ -1,7 +1,7 @@
-# Cloudflare Worker Configuration for aurum-api
+# Cloudflare Worker Configuration for aurum-api-v2
 # Handles API endpoints, webhooks, and broker callbacks
 
-name = "aurum-api"
+name = "aurum-api-v2"
 compatibility_date = "2025-12-07"
 main = "worker/src/index.ts"
 
@@ -25,7 +25,7 @@ database_id = "6d765373-aaa7-4443-9038-3eeda1297312"  # Will be set after creati
 
 [env.production]
 routes = [
-  { pattern = "api.ah.saffronbolt.in", zone_name = "saffronbolt.in" }
+  { pattern = "api-v2.saffronbolt.in", zone_name = "saffronbolt.in" }
 ]
 
 # D1 Database binding for production environment
