@@ -1,18 +1,28 @@
-Flask==2.3.3
-Flask-CORS==4.0.0
-Flask-SQLAlchemy==3.0.5
+# Core Flask Framework
+Flask==3.1.2
+Flask-CORS==6.0.2
+Flask-SQLAlchemy==3.1.1
+
+# Authentication & Security
 python-jose[cryptography]==3.3.0
 passlib==1.7.4
-bcrypt==4.0.1
-requests==2.31.0
-pandas==2.0.3
-numpy==1.24.3
-scikit-learn==1.3.0
-tensorflow==2.13.0
-# torch==2.8.0  # Commented out due to dependency conflict with tensorflow - install separately if needed
-backtrader==1.9.76.123
-pytz==2023.3
-
+bcrypt==5.0.0
 PyJWT>=2.8.0
 
+# HTTP & API
+requests==2.32.5
+
+# Data Processing
+pandas==2.3.3
+numpy==1.26.4  # Using 1.x for compatibility with tensorflow (2.x has breaking changes)
+scikit-learn==1.8.0
+
+# Machine Learning
+tensorflow==2.15.0  # Latest stable 2.x version (2.20.0 doesn't exist)
+
+# Trading & Backtesting
+backtrader==1.9.76.123
+
+# Utilities
+pytz==2023.3
 python-dotenv>=1.0.0
