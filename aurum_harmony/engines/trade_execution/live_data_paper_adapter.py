@@ -379,6 +379,38 @@ class LiveDataPaperAdapter(BrokerAdapter):
         with self._lock:
             return float(self._balance)
     
+    def update_balance(self, new_balance: float):
+        """
+        Update balance (for capital progression).
+        
+        Args:
+            new_balance: New balance amount
+        """
+        with self._lock:
+            old_balance = float(self._balance)
+            self._balance = Decimal(str(new_balance))
+            logger.info(
+                f"Balance updated: ₹{old_balance:,.2f} → ₹{new_balance:,.2f} "
+                f"(change: ₹{new_balance - old_balance:,.2f})"
+            )
+    
+    def get_portfolio_value(self) -> float:
+        """Get total portfolio value (balance + positions value)."""
+        with self._lock:
+            balance = float(self._balance)
+            positions_value = sum(
+                pos.current_price * abs(pos.quantity) 
+                for pos in self._positions.values()
+            )
+            return balance + positions_value
+    
+    def get_pnl(self) -> float:
+        """Get total PnL (realized + unrealized)."""
+        with self._lock:
+            realized_pnl = float(self._balance - self._initial_balance)
+            unrealized_pnl = sum(pos.unrealized_pnl for pos in self._positions.values())
+            return realized_pnl + unrealized_pnl
+    
     def get_statistics(self) -> Dict[str, Any]:
         """
         Get trading statistics with explanatory notes for novice users.

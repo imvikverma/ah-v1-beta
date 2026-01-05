@@ -2,9 +2,12 @@
 Broker Data Fetcher for Backtesting
 
 Fetches real historical market data from multiple sources:
-- NSE/BSE (via NSE Option Chain API)
-- HDFC Sky (via their historical data API)
-- Kotak Neo (via their quotes API)
+Priority Order:
+1. HDFC Sky (if authenticated) - most reliable for historical data
+2. Kotak Neo (if authenticated) - good for quotes and recent data
+3. Yahoo Finance (FREE) - extensive historical data, no API key required
+4. Alpha Vantage (FREE tier) - 5 calls/min, 500 calls/day, requires API key
+5. NSE/BSE Option Chain - free, reliable for indices
 
 Provides unified interface for backtesting with real broker data.
 """
@@ -46,6 +49,8 @@ class BrokerDataFetcher:
         self,
         hdfc_client: Optional[object] = None,
         kotak_client: Optional[object] = None,
+        use_yahoo_finance: bool = True,
+        use_alpha_vantage: bool = True,
         use_nse_fallback: bool = True
     ):
         """
@@ -58,7 +63,36 @@ class BrokerDataFetcher:
         """
         self.hdfc_client = hdfc_client
         self.kotak_client = kotak_client
+        self.use_yahoo_finance = use_yahoo_finance
+        self.use_alpha_vantage = use_alpha_vantage
         self.use_nse_fallback = use_nse_fallback
+        
+        # Initialize Yahoo Finance (FREE - no API key)
+        if self.use_yahoo_finance:
+            try:
+                from aurum_harmony.engines.market_data.yahoo_finance_data import yahoo_finance_fetcher
+                self.yahoo_fetcher = yahoo_finance_fetcher
+                logger.info("Yahoo Finance data fetcher initialized (FREE)")
+            except Exception as e:
+                logger.warning(f"Failed to initialize Yahoo Finance fetcher: {e}")
+                self.yahoo_fetcher = None
+        else:
+            self.yahoo_fetcher = None
+        
+        # Initialize Alpha Vantage (FREE tier - requires API key)
+        if self.use_alpha_vantage:
+            try:
+                from aurum_harmony.engines.market_data.alpha_vantage_data import alpha_vantage_fetcher
+                self.alpha_vantage_fetcher = alpha_vantage_fetcher
+                if self.alpha_vantage_fetcher.api_key:
+                    logger.info("Alpha Vantage data fetcher initialized (FREE tier)")
+                else:
+                    logger.warning("Alpha Vantage available but no API key set (set ALPHA_VANTAGE_API_KEY)")
+            except Exception as e:
+                logger.warning(f"Failed to initialize Alpha Vantage fetcher: {e}")
+                self.alpha_vantage_fetcher = None
+        else:
+            self.alpha_vantage_fetcher = None
         
         # Check if clients are authenticated
         self.hdfc_available = hdfc_client is not None and hasattr(hdfc_client, 'is_authenticated') and hdfc_client.is_authenticated()
@@ -109,7 +143,59 @@ class BrokerDataFetcher:
             except Exception as e:
                 logger.warning(f"Kotak Neo historical data fetch failed: {e}")
         
-        # Priority 3: Fallback to NSE/BSE Option Chain (for indices)
+        # Priority 3: Yahoo Finance (FREE - no API key required)
+        if self.use_yahoo_finance and self.yahoo_fetcher:
+            try:
+                # Map interval to Yahoo Finance format
+                yahoo_interval = "1d" if interval == "DAY" else "1wk" if interval == "WEEK" else "1mo" if interval == "MONTH" else "1d"
+                data = self.yahoo_fetcher.get_historical_data(symbol, start_date, end_date, yahoo_interval)
+                if data:
+                    # Convert to our format
+                    converted_data = [
+                        HistoricalDataPoint(
+                            timestamp=dp.timestamp,
+                            open=dp.open,
+                            high=dp.high,
+                            low=dp.low,
+                            close=dp.close,
+                            volume=dp.volume,
+                            exchange=dp.exchange,
+                            symbol=dp.symbol
+                        )
+                        for dp in data
+                    ]
+                    logger.info(f"Successfully fetched {len(converted_data)} data points from Yahoo Finance")
+                    return converted_data
+            except Exception as e:
+                logger.warning(f"Yahoo Finance historical data fetch failed: {e}")
+        
+        # Priority 4: Alpha Vantage (FREE tier - requires API key)
+        if self.use_alpha_vantage and self.alpha_vantage_fetcher and self.alpha_vantage_fetcher.api_key:
+            try:
+                # Map interval to Alpha Vantage format
+                av_interval = "daily" if interval == "DAY" else "weekly" if interval == "WEEK" else "monthly" if interval == "MONTH" else "daily"
+                data = self.alpha_vantage_fetcher.get_historical_data(symbol, start_date, end_date, av_interval)
+                if data:
+                    # Convert to our format
+                    converted_data = [
+                        HistoricalDataPoint(
+                            timestamp=dp.timestamp,
+                            open=dp.open,
+                            high=dp.high,
+                            low=dp.low,
+                            close=dp.close,
+                            volume=dp.volume,
+                            exchange=dp.exchange,
+                            symbol=dp.symbol
+                        )
+                        for dp in data
+                    ]
+                    logger.info(f"Successfully fetched {len(converted_data)} data points from Alpha Vantage")
+                    return converted_data
+            except Exception as e:
+                logger.warning(f"Alpha Vantage historical data fetch failed: {e}")
+        
+        # Priority 5: Fallback to NSE/BSE Option Chain (for indices)
         if self.use_nse_fallback:
             try:
                 data = self._fetch_from_nse_bse(symbol, start_date, end_date, exchange, interval)

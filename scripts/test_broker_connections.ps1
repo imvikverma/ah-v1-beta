@@ -64,23 +64,26 @@ if ($hdfcKey -and $hdfcSecret) {
 }
 
 # Check Kotak Neo credentials
-$kotakApiKey = $env:KOTAK_NEO_API_KEY
-$kotakApiSecret = $env:KOTAK_NEO_API_SECRET
-$kotakUserId = $env:KOTAK_NEO_USER_ID
-$kotakPassword = $env:KOTAK_NEO_PASSWORD
-$kotakPin = $env:KOTAK_NEO_PIN
+$kotakAccessToken = $env:KOTAK_NEO_ACCESS_TOKEN
+$kotakMobile = $env:KOTAK_NEO_MOBILE_NUMBER
+$kotakClientCode = $env:KOTAK_NEO_CLIENT_CODE
 
-if ($kotakApiKey -and $kotakApiSecret) {
-    Write-Host "  [OK] Kotak Neo API Key: Found" -ForegroundColor Green
-    Write-Host "  [OK] Kotak Neo API Secret: Found" -ForegroundColor Green
-    if ($kotakUserId -and $kotakPassword) {
-        Write-Host "  [OK] Kotak Neo User Credentials: Found" -ForegroundColor Green
-    } else {
-        Write-Host "  [WARN] Kotak Neo User Credentials: Not set" -ForegroundColor Yellow
-    }
+if ($kotakAccessToken -and $kotakMobile -and $kotakClientCode) {
+    Write-Host "  [OK] Kotak Neo Access Token: Found" -ForegroundColor Green
+    Write-Host "  [OK] Kotak Neo Mobile Number: Found" -ForegroundColor Green
+    Write-Host "  [OK] Kotak Neo Client Code: Found" -ForegroundColor Green
 } else {
-    Write-Host "  [WARN] Kotak Neo credentials: Not configured" -ForegroundColor Yellow
-    Write-Host "    Set KOTAK_NEO_API_KEY and KOTAK_NEO_API_SECRET environment variables" -ForegroundColor Gray
+    Write-Host "  [WARN] Kotak Neo credentials: Not fully configured" -ForegroundColor Yellow
+    if (-not $kotakAccessToken) {
+        Write-Host "    Missing: KOTAK_NEO_ACCESS_TOKEN" -ForegroundColor Gray
+    }
+    if (-not $kotakMobile) {
+        Write-Host "    Missing: KOTAK_NEO_MOBILE_NUMBER" -ForegroundColor Gray
+    }
+    if (-not $kotakClientCode) {
+        Write-Host "    Missing: KOTAK_NEO_CLIENT_CODE" -ForegroundColor Gray
+    }
+    Write-Host "    Run: .\scripts\brokers\setup_kotak_credentials.ps1" -ForegroundColor Gray
 }
 
 Write-Host "`n[2] Testing broker connections..." -ForegroundColor Yellow
@@ -159,27 +162,25 @@ from api.kotak_neo import KotakNeoAPI
 
 # Try to create client
 try:
-    api_key = os.getenv('KOTAK_NEO_API_KEY')
-    api_secret = os.getenv('KOTAK_NEO_API_SECRET')
-    user_id = os.getenv('KOTAK_NEO_USER_ID')
-    password = os.getenv('KOTAK_NEO_PASSWORD')
-    pin = os.getenv('KOTAK_NEO_PIN')
+    access_token = os.getenv('KOTAK_NEO_ACCESS_TOKEN')
+    mobile_number = os.getenv('KOTAK_NEO_MOBILE_NUMBER')
+    client_code = os.getenv('KOTAK_NEO_CLIENT_CODE')
     
-    if not api_key or not api_secret:
-        print('ERROR: Kotak Neo credentials not configured')
+    if not access_token or not mobile_number or not client_code:
+        print('ERROR: Kotak Neo credentials not fully configured')
+        print('Required: KOTAK_NEO_ACCESS_TOKEN, KOTAK_NEO_MOBILE_NUMBER, KOTAK_NEO_CLIENT_CODE')
+        print('Run: .\\scripts\\brokers\\setup_kotak_credentials.ps1')
         sys.exit(1)
     
     client = KotakNeoAPI(
-        api_key=api_key,
-        api_secret=api_secret,
-        user_id=user_id,
-        password=password,
-        pin=pin
+        access_token=access_token,
+        mobile_number=mobile_number,
+        client_code=client_code
     )
     
-    # Test authentication
+    # Check if already authenticated (has tokens from previous session)
     if client.is_authenticated():
-        print('SUCCESS: Kotak Neo client authenticated')
+        print('SUCCESS: Kotak Neo client authenticated (using existing tokens)')
         
         # Try to get account info
         try:
@@ -188,9 +189,13 @@ try:
         except Exception as e:
             print(f'WARNING: Could not fetch account info: {e}')
     else:
-        print('ERROR: Kotak Neo client not authenticated')
-        print('You may need to login first')
-        sys.exit(1)
+        print('INFO: Kotak Neo client created but not authenticated')
+        print('You need to login with TOTP and MPIN:')
+        print('  1. Get TOTP from authenticator app')
+        print('  2. Call client.login_with_totp(totp)')
+        print('  3. Call client.validate_mpin(mpin)')
+        print('See: scripts/brokers/test_kotak_connection.py for example')
+        sys.exit(0)  # Not an error, just needs login
         
 except Exception as e:
     print(f'ERROR: {e}')

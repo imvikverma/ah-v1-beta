@@ -16,7 +16,7 @@ if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
 
 from aurum_harmony.database.db import db
-from aurum_harmony.database.models import User
+from aurum_harmony.database.models import User, KYCDocument
 from aurum_harmony.auth.routes import require_auth
 from aurum_harmony.admin.notifications import get_upcoming_birthdays_and_anniversaries
 from aurum_harmony.admin.email_service import admin_email_service
@@ -100,6 +100,34 @@ def get_user(user_id):
             'success': True,
             'user': user.to_dict()
         }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@admin_bp.route('/users/<int:user_id>/kyc', methods=['GET', 'OPTIONS'])
+@require_admin
+def get_user_kyc(user_id):
+    """Get KYC status for a specific user (admin only)."""
+    if request.method == 'OPTIONS':
+        return '', 200
+    
+    try:
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        from aurum_harmony.database.models import KYCDocument
+        kyc_docs = KYCDocument.query.filter_by(user_id=user_id).all()
+        
+        return jsonify({
+            'success': True,
+            'user_id': user_id,
+            'kyc_verified': user.kyc_verified,
+            'kyc_verified_at': user.kyc_verified_at.isoformat() if user.kyc_verified_at else None,
+            'verification_method': user.kyc_verification_method,
+            'documents': [doc.to_dict() for doc in kyc_docs]
+        }), 200
+        
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

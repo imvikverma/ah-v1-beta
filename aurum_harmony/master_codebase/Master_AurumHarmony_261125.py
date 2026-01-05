@@ -37,6 +37,7 @@ try:
     from aurum_harmony.admin.db_console_routes import db_console_bp
     from aurum_harmony.auth.password_change_routes import password_change_bp
     from aurum_harmony.backtesting.routes import backtest_bp
+    from aurum_harmony.app.kyc_routes import kyc_bp
     from aurum_harmony.database.db import init_db
     AUTH_AVAILABLE = True
 except ImportError as e:
@@ -112,7 +113,8 @@ if AUTH_AVAILABLE:
         app.register_blueprint(db_console_bp)
         if backtest_bp:
             app.register_blueprint(backtest_bp)
-        print("SUCCESS: Auth, broker, paper trading, admin, database admin, and backtesting blueprints registered")
+        app.register_blueprint(kyc_bp)
+        print("SUCCESS: Auth, broker, paper trading, admin, database admin, backtesting, and KYC blueprints registered")
         if kotak_bp:
             print("  - Kotak Neo broker routes registered")
         if hdfc_bp:

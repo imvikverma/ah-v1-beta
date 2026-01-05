@@ -1,14 +1,18 @@
-"""Risk management engine package."""
+"""
+Risk Management Module
+Includes trailing stop loss and take profit management
+"""
 
-from aurum_harmony.engines.risk_management.leverage_engine import (
-    LeverageEngine,
-    LeverageConfig,
-    leverage_engine,
+from aurum_harmony.engines.risk_management.trailing_sl_tp import (
+    TrailingSLTPManager,
+    PositionTracker,
+    Entry,
+    ExitReason
 )
 
 __all__ = [
-    "LeverageEngine",
-    "LeverageConfig",
-    "leverage_engine",
+    "TrailingSLTPManager",
+    "PositionTracker",
+    "Entry",
+    "ExitReason"
 ]
-

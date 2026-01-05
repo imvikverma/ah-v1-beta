@@ -40,9 +40,18 @@ class User(db.Model):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     
+    # KYC fields
+    kyc_verified = Column(Boolean, default=False, nullable=False)
+    kyc_verified_at = Column(DateTime, nullable=True)
+    kyc_verification_method = Column(String(50), nullable=True)  # DIGILOCKER, MANUAL, etc.
+    digilocker_access_token = Column(Text, nullable=True)  # Encrypted
+    digilocker_refresh_token = Column(Text, nullable=True)  # Encrypted
+    digilocker_token_expires_at = Column(DateTime, nullable=True)
+    
     # Relationships
     broker_credentials = relationship('BrokerCredential', back_populates='user', cascade='all, delete-orphan')
     sessions = relationship('Session', back_populates='user', cascade='all, delete-orphan')
+    kyc_documents = relationship('KYCDocument', back_populates='user', cascade='all, delete-orphan')
     
     def to_dict(self, include_sensitive=False):
         """Convert user to dictionary, optionally including sensitive data."""
@@ -168,4 +177,48 @@ class Session(db.Model):
     
     def __repr__(self):
         return f'<Session {self.session_token[:10]}... for User {self.user_id}>'
+
+
+class KYCDocument(db.Model):
+    """
+    KYC documents from DigiLocker or manual upload.
+    """
+    __tablename__ = 'kyc_documents'
+    
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True)
+    document_type = Column(String(50), nullable=False, index=True)  # AADHAAR, PAN, etc.
+    document_number = Column(String(100), nullable=True)  # Masked: XXXX-XXXX-1234 for Aadhaar
+    document_name = Column(String(255), nullable=True)
+    document_uri = Column(String(500), nullable=True)  # DigiLocker document URI
+    document_url = Column(Text, nullable=True)  # Encrypted storage URL (if downloaded)
+    verified = Column(Boolean, default=False, nullable=False, index=True)
+    verification_date = Column(DateTime, nullable=True)
+    verification_method = Column(String(50), nullable=True)  # DIGILOCKER, MANUAL, etc.
+    digilocker_doc_uri = Column(String(500), nullable=True)  # DigiLocker reference URI
+    metadata = Column(JSON, nullable=True)  # JSON metadata (name, dob, address, etc.)
+    
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    
+    # Relationships
+    user = relationship('User', back_populates='kyc_documents')
+    
+    def to_dict(self):
+        """Convert KYC document to dictionary."""
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'document_type': self.document_type,
+            'document_number': self.document_number,
+            'document_name': self.document_name,
+            'verified': self.verified,
+            'verification_date': self.verification_date.isoformat() if self.verification_date else None,
+            'verification_method': self.verification_method,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+        }
+    
+    def __repr__(self):
+        return f'<KYCDocument {self.document_type} for user {self.user_id}>'
 

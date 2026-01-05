@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:confetti/confetti.dart';
 import 'package:vibration/vibration.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:url_launcher/url_launcher.dart';
 import '../services/auth_service.dart';
 import '../services/broker_service.dart';
 import '../widgets/lottie_loading.dart';
 import '../widgets/success_animation.dart';
+import '../constants.dart';
 import 'dashboard_screen.dart';
 
 class OnboardingWizardScreen extends StatefulWidget {
@@ -408,25 +412,158 @@ class _OnboardingWizardScreenState extends State<OnboardingWizardScreen> {
           style: Theme.of(context).textTheme.bodyText1,
           textAlign: TextAlign.center,
         ),
-        SizedBox(height: 20),
+        SizedBox(height: 8),
+        Text(
+          'Securely fetch your Aadhaar and PAN documents from DigiLocker',
+          style: Theme.of(context).textTheme.bodySmall,
+          textAlign: TextAlign.center,
+        ),
+        SizedBox(height: 32),
 
-        ElevatedButton.icon(
-          onPressed: () {
-            // TODO: Implement DigiLocker integration
+        // DigiLocker Info Card
+        Card(
+          child: Padding(
+            padding: EdgeInsets.all(16),
+            child: Column(
+              children: [
+                Icon(Icons.verified_user, size: 48, color: Colors.blue),
+                SizedBox(height: 12),
+                Text(
+                  'DigiLocker Verification',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'Government of India\'s secure document storage',
+                  style: Theme.of(context).textTheme.bodySmall,
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: 16),
+                Row(
+                  children: [
+                    Icon(Icons.check_circle, size: 16, color: Colors.green),
+                    SizedBox(width: 8),
+                    Expanded(child: Text('Aadhaar verification', style: Theme.of(context).textTheme.bodySmall)),
+                  ],
+                ),
+                SizedBox(height: 4),
+                Row(
+                  children: [
+                    Icon(Icons.check_circle, size: 16, color: Colors.green),
+                    SizedBox(width: 8),
+                    Expanded(child: Text('PAN card verification', style: Theme.of(context).textTheme.bodySmall)),
+                  ],
+                ),
+                SizedBox(height: 4),
+                Row(
+                  children: [
+                    Icon(Icons.check_circle, size: 16, color: Colors.green),
+                    SizedBox(width: 8),
+                    Expanded(child: Text('Instant KYC completion', style: Theme.of(context).textTheme.bodySmall)),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+        SizedBox(height: 24),
+
+        // DigiLocker Button
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            onPressed: _isLoading ? null : _initiateDigiLocker,
+            icon: Icon(Icons.verified_user),
+            label: Text('Verify with DigiLocker'),
+            style: ElevatedButton.styleFrom(
+              padding: EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+              backgroundColor: Colors.blue,
+              foregroundColor: Colors.white,
+            ),
+          ),
+        ),
+        SizedBox(height: 16),
+        
+        // Skip Option
+        TextButton(
+          onPressed: _isLoading ? null : () {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('DigiLocker integration coming soon!')),
+              SnackBar(
+                content: Text('You can complete KYC verification later from settings'),
+                duration: Duration(seconds: 3),
+              ),
             );
-            // For now, skip to next step
             _goToNextStep();
           },
-          icon: Icon(Icons.verified_user),
-          label: Text('Verify with DigiLocker'),
-          style: ElevatedButton.styleFrom(
-            padding: EdgeInsets.symmetric(vertical: 12, horizontal: 24),
-          ),
+          child: Text('Skip for now'),
         ),
       ],
     );
+  }
+
+  Future<void> _initiateDigiLocker() async {
+    setState(() => _isLoading = true);
+    
+    try {
+      final token = await _authService.getValidToken();
+      if (token == null) {
+        throw Exception('Please login first');
+      }
+
+      // Call backend to get authorization URL
+      final response = await http.post(
+        Uri.parse('${kBackendBaseUrl}/api/kyc/digilocker/authorize'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true) {
+          final authUrl = data['authorization_url'];
+          
+          // Open DigiLocker OAuth in browser/webview
+          if (await canLaunchUrl(Uri.parse(authUrl))) {
+            await launchUrl(
+              Uri.parse(authUrl),
+              mode: LaunchMode.externalApplication,
+            );
+            
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Redirecting to DigiLocker...'),
+                duration: Duration(seconds: 2),
+              ),
+            );
+          } else {
+            throw Exception('Could not open DigiLocker');
+          }
+        } else {
+          throw Exception(data['error'] ?? 'Failed to initiate DigiLocker');
+        }
+      } else {
+        final error = jsonDecode(response.body);
+        throw Exception(error['error'] ?? 'Failed to initiate DigiLocker');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 5),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   Widget _buildReviewStep() {

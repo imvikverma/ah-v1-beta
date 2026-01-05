@@ -360,6 +360,21 @@ class PaperBrokerAdapter:
         """Get current account balance (thread-safe)."""
         with self._lock:
             return float(self._balance)
+    
+    def update_balance(self, new_balance: float):
+        """
+        Update balance (for capital progression).
+        
+        Args:
+            new_balance: New balance amount
+        """
+        with self._lock:
+            old_balance = float(self._balance)
+            self._balance = Decimal(str(new_balance))
+            logger.info(
+                f"Balance updated: ₹{old_balance:,.2f} → ₹{new_balance:,.2f} "
+                f"(change: ₹{new_balance - old_balance:,.2f})"
+            )
 
     def get_positions(self) -> Dict[str, Position]:
         """Get all open positions with updated prices (thread-safe)."""

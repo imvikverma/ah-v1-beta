@@ -11,7 +11,7 @@ $projectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $projectRoot
 
 # Step 1: Update README & CHANGELOG
-Write-Host "`n📝 Step 1: Updating README & CHANGELOG" -ForegroundColor Yellow
+Write-Host "`n📝 Step 1: Updating README and CHANGELOG" -ForegroundColor Yellow
 Write-Host "--------------------------------------" -ForegroundColor Gray
 
 # Generate README (always run)
@@ -141,7 +141,7 @@ if (Test-Path $backupScriptPath) {
 }
 
 # Step 6: VS Code Workspace Mirror (Backup for usage limit downtime)
-Write-Host "`n� mirror Step 6: Creating VS Code Workspace Mirror" -ForegroundColor Yellow
+Write-Host "`n�[Step 6] Step 6: Creating VS Code Workspace Mirror" -ForegroundColor Yellow
 Write-Host "--------------------------------------" -ForegroundColor Gray
 
 $mirrorScriptPath = Join-Path $projectRoot "scripts\mirror_to_vscode.ps1"
@@ -150,17 +150,17 @@ if (Test-Path $mirrorScriptPath) {
     try {
         & $mirrorScriptPath -CreateWorkspace -SyncGit
         if ($LASTEXITCODE -eq 0) {
-            Write-Host "  ✅ VS Code workspace mirror created" -ForegroundColor Green
+            Write-Host "  ✅ VS Code workspace[Step 6] created" -ForegroundColor Green
         } else {
-            Write-Host "  ⚠️  VS Code mirror had issues (check output above)" -ForegroundColor Yellow
+            Write-Host "  ⚠️  VS Code[Step 6] had issues (check output above)" -ForegroundColor Yellow
         }
     } catch {
-        Write-Host "  ⚠️  VS Code mirror failed: $_" -ForegroundColor Yellow
-        Write-Host "  💡 Can continue without mirror" -ForegroundColor Gray
+        Write-Host "  ⚠️  VS Code[Step 6] failed: $_" -ForegroundColor Yellow
+        Write-Host "  💡 Can continue without[Step 6]" -ForegroundColor Gray
     }
 } else {
-    Write-Host "  ⚠️  mirror_to_vscode.ps1 not found" -ForegroundColor Yellow
-    Write-Host "  💡 VS Code mirror skipped" -ForegroundColor Gray
+    Write-Host "  ⚠️ [Step 6]_to_vscode.ps1 not found" -ForegroundColor Yellow
+    Write-Host "  💡 VS Code[Step 6] skipped" -ForegroundColor Gray
 }
 
 # Summary
@@ -172,7 +172,7 @@ Write-Host "  ✅ File structure reviewed" -ForegroundColor Gray
 Write-Host "  ✅ ML training status checked" -ForegroundColor Gray
 Write-Host "  ✅ EOD summary JSON generated" -ForegroundColor Gray
 Write-Host "  ✅ Project backup created" -ForegroundColor Green
-Write-Host "  ✅ VS Code workspace mirror created" -ForegroundColor Green
+Write-Host "  ✅ VS Code workspace[Step 6] created" -ForegroundColor Green
 Write-Host "`n💡 Next Steps:" -ForegroundColor Yellow
 Write-Host "  - Review and commit any changes" -ForegroundColor White
 Write-Host "  - Check EOD summary in _local/Summaries/" -ForegroundColor White
