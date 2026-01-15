@@ -3,7 +3,7 @@
     "terminal.integrated.enablePersistentSessions": false,
     "terminal.integrated.hover.enabled": false,
     "terminal.integrated.showExitAlert": false,
-    "editor.hover.enabled": false,
+    "editor.hover.enabled": "off",
     "editor.hover.delay": 300,
     "workbench.editor.enablePreview": false,
     "editor.parameterHints.enabled": false,

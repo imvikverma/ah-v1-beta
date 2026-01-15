@@ -1,0 +1,135 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: aurumharmony-postgres
+    environment:
+      POSTGRES_DB: aurumharmony
+      POSTGRES_USER: aurum_user
+      POSTGRES_PASSWORD: aurum_password_change_in_production
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aurum_user -d aurumharmony"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - aurumharmony-network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: aurumharmony-redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - aurumharmony-network
+
+  # AurumHarmony Backend
+  backend:
+    build:
+      context: .
+      dockerfile: k8s/Dockerfile
+    container_name: aurumharmony-backend
+    environment:
+      # Database
+      DATABASE_URL: postgresql://aurum_user:aurum_password_change_in_production@postgres:5432/aurumharmony
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: aurumharmony
+      POSTGRES_USER: aurum_user
+      POSTGRES_PASSWORD: aurum_password_change_in_production
+      
+      # Redis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_URL: redis://redis:6379/0
+      
+      # Flask
+      FLASK_APP: app.py
+      FLASK_ENV: development
+      FLASK_DEBUG: 1
+      SECRET_KEY: dev-secret-key-change-in-production
+      
+      # JWT
+      JWT_SECRET_KEY: dev-jwt-secret-change-in-production
+      JWT_ACCESS_TOKEN_EXPIRES: 3600
+      
+      # Application
+      PYTHONUNBUFFERED: 1
+      PYTHONPATH: /app
+      
+      # API Keys (add your actual keys here)
+      # HDFC_API_KEY: your_hdfc_key
+      # KOTAK_API_KEY: your_kotak_key
+      # ZERODHA_API_KEY: your_zerodha_key
+      
+    volumes:
+      # Mount source code for development (comment out for production)
+      - ./aurum_harmony:/app/aurum_harmony
+      - ./api:/app/api
+      - ./engines:/app/engines
+      - ./config:/app/config
+      - ./logs:/app/logs
+    ports:
+      - "5000:5000"
+      - "5001:5001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:5000/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - aurumharmony-network
+    restart: unless-stopped
+
+  # pgAdmin (Optional - for database management)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: aurumharmony-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@aurumharmony.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+    networks:
+      - aurumharmony-network
+    profiles:
+      - tools
+
+networks:
+  aurumharmony-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  pgadmin_data:
+    driver: local
