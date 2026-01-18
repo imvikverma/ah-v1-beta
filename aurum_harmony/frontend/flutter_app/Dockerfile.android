@@ -1,0 +1,34 @@
+# Flutter Android Build Dockerfile
+FROM ghcr.io/cirruslabs/flutter:stable
+
+# Install Android SDK dependencies
+RUN apt-get update && apt-get install -y \
+    openjdk-11-jdk \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set environment variables for Android
+ENV ANDROID_HOME=/opt/android-sdk
+ENV PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools
+
+WORKDIR /app
+
+# Copy pubspec files
+COPY pubspec.* ./
+
+# Get dependencies
+RUN flutter pub get
+
+# Copy the rest of the application
+COPY . .
+
+# Accept Android licenses (if not already accepted)
+RUN yes | flutter doctor --android-licenses || true
+
+# Build the Android APK
+RUN flutter build apk --release
+
+# The built APK will be at /app/build/app/outputs/flutter-apk/app-release.apk
+# You can copy it to a volume or use it as needed
+
+# For development, keep the container running
+CMD ["tail", "-f", "/dev/null"]

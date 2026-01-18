@@ -1,0 +1,27 @@
+# Flutter iOS Build Dockerfile
+# Note: iOS builds require macOS. This is a placeholder for CI/CD environments
+# that have macOS runners. For local development, build iOS on a Mac directly.
+
+FROM ghcr.io/cirruslabs/flutter:stable
+
+WORKDIR /app
+
+# Copy pubspec files
+COPY pubspec.* ./
+
+# Get dependencies
+RUN flutter pub get
+
+# Copy the rest of the application
+COPY . .
+
+# Note: This will prepare the iOS build but cannot complete it on Linux
+# Use this in a CI/CD pipeline with macOS runners
+# For actual builds, use: flutter build ios --release
+
+# For now, just validate the setup
+RUN flutter precache --ios
+RUN flutter doctor
+
+# Keep container running for inspection
+CMD ["tail", "-f", "/dev/null"]

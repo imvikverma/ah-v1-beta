@@ -122,6 +122,54 @@ services:
     profiles:
       - tools
 
+  # Flutter Web Frontend
+  flutter-web:
+    build:
+      context: ./aurum_harmony/frontend/flutter_app
+      dockerfile: Dockerfile.web
+    container_name: aurumharmony-flutter-web
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+    networks:
+      - aurumharmony-network
+    restart: unless-stopped
+    environment:
+      - BACKEND_URL=http://backend:5000
+      - ADMIN_URL=http://backend:5001
+    profiles:
+      - frontend
+
+  # Flutter Android Build (for generating APKs)
+  flutter-android:
+    build:
+      context: ./aurum_harmony/frontend/flutter_app
+      dockerfile: Dockerfile.android
+    container_name: aurumharmony-flutter-android
+    volumes:
+      - ./aurum_harmony/frontend/flutter_app/build:/app/build
+      - android_build_cache:/root/.gradle
+    networks:
+      - aurumharmony-network
+    profiles:
+      - build
+    command: sh -c "flutter build apk --release && echo 'APK built at /app/build/app/outputs/flutter-apk/app-release.apk'"
+
+  # Flutter iOS Build (requires macOS - placeholder for CI/CD)
+  flutter-ios:
+    build:
+      context: ./aurum_harmony/frontend/flutter_app
+      dockerfile: Dockerfile.ios
+    container_name: aurumharmony-flutter-ios
+    volumes:
+      - ./aurum_harmony/frontend/flutter_app/build:/app/build
+    networks:
+      - aurumharmony-network
+    profiles:
+      - build
+    command: sh -c "echo 'iOS builds require macOS. Use this in CI/CD with macOS runners.' && tail -f /dev/null"
+
 networks:
   aurumharmony-network:
     driver: bridge
@@ -132,4 +180,6 @@ volumes:
   redis_data:
     driver: local
   pgadmin_data:
+    driver: local
+  android_build_cache:
     driver: local
