@@ -12,7 +12,12 @@ String get kBackendBaseUrl {
     return 'https://api-v2.saffronbolt.in';
   }
   
-  // Use localhost for local development
+  // When running on port 8080 (Docker), use empty string for same-origin requests
+  if (hostname != null && html.window.location.port == '8080') {
+    return '';
+  }
+  
+  // Use localhost for local development (flutter run)
   return 'http://localhost:5000';
 }
 
@@ -21,5 +26,14 @@ String get kBackendBaseUrlFallback {
   return 'http://localhost:5000';
 }
 
-const String kAdminBaseUrl = 'http://localhost:5001';
+String get kAdminBaseUrl {
+  final hostname = html.window.location.hostname;
+  
+  // When running on port 8080 (Docker), use empty string for same-origin requests
+  if (hostname != null && html.window.location.port == '8080') {
+    return '';
+  }
+  
+  return 'http://localhost:5001';
+}
 

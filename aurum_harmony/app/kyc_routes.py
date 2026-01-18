@@ -135,7 +135,7 @@ def digilocker_callback():
                     existing.document_uri = doc_info.get('uri')
                     existing.document_name = doc_info.get('name')
                     existing.digilocker_doc_uri = doc_info.get('uri')
-                    existing.metadata = {
+                    existing.doc_metadata = {
                         'type': doc_info.get('type'),
                         'date': doc_info.get('date'),
                     }
@@ -148,7 +148,7 @@ def digilocker_callback():
                         document_uri=doc_info.get('uri'),
                         digilocker_doc_uri=doc_info.get('uri'),
                         verification_method='DIGILOCKER',
-                        metadata={
+                        doc_metadata={
                             'type': doc_info.get('type'),
                             'date': doc_info.get('date'),
                         }

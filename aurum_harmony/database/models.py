@@ -196,7 +196,7 @@ class KYCDocument(db.Model):
     verification_date = Column(DateTime, nullable=True)
     verification_method = Column(String(50), nullable=True)  # DIGILOCKER, MANUAL, etc.
     digilocker_doc_uri = Column(String(500), nullable=True)  # DigiLocker reference URI
-    metadata = Column(JSON, nullable=True)  # JSON metadata (name, dob, address, etc.)
+    doc_metadata = Column(JSON, nullable=True)  # JSON metadata (name, dob, address, etc.)
     
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
