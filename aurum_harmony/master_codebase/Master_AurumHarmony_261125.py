@@ -56,12 +56,20 @@ except ImportError as e:
 
 app = Flask(__name__)
 # Configure CORS to handle OPTIONS requests properly
+# Allow specific origins for credentials support
 CORS(app, resources={
     r"/*": {
-        "origins": "*",
-        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "origins": [
+            "http://localhost:8080",
+            "http://localhost:3000",
+            "http://localhost:58643",
+            "https://saffronbolt.in",
+            "https://aurumharmony-v1-beta.pages.dev"
+        ],
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
         "allow_headers": ["Content-Type", "Authorization", "X-Requested-With"],
-        "supports_credentials": True
+        "supports_credentials": True,
+        "expose_headers": ["Content-Type", "Authorization"]
     }
 })
 

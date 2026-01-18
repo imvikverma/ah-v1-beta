@@ -1,15 +1,8 @@
 # Flutter Web Dockerfile
 # Stage 1: Build the Flutter web app
-FROM dart:stable AS build
+FROM ghcr.io/cirruslabs/flutter:stable AS build
 
 WORKDIR /app
-
-# Install Flutter
-RUN git clone https://github.com/flutter/flutter.git /flutter && \
-    /flutter/bin/flutter precache && \
-    /flutter/bin/flutter channel stable
-
-ENV PATH="/flutter/bin:/flutter/bin/cache/dart-sdk/bin:${PATH}"
 
 # Copy pubspec files
 COPY pubspec.* ./
@@ -21,7 +14,7 @@ RUN flutter pub get
 COPY . .
 
 # Build the web app for production
-RUN flutter build web --release --no-tree-shake-icons
+RUN flutter build web --release
 
 # Stage 2: Serve with nginx
 FROM nginx:alpine
